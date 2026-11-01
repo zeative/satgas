@@ -1,0 +1,41 @@
+{
+  "name": "satgas",
+  "version": "0.1.0",
+  "description": "Canvas-based agent development environment: one mission in, a task force of coding agents out.",
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "keywords": [
+    "agents",
+    "orchestration",
+    "claude-code",
+    "codex",
+    "ai",
+    "canvas",
+    "bun"
+  ],
+  "engines": {
+    "bun": ">=1.2.0"
+  },
+  "scripts": {
+    "dev": "bun --hot src/server/index.ts",
+    "start": "NODE_ENV=production bun src/server/index.ts",
+    "build": "NODE_ENV=production bun build --compile --minify src/server/index.ts --outfile dist/satgas",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check .",
+    "format": "biome check --write .",
+    "check": "bun run typecheck && bun run lint && bun test"
+  },
+  "dependencies": {
+    "@fontsource-variable/ibm-plex-sans": "^5.3.0",
+    "@fontsource/ibm-plex-mono": "^5.3.0",
+    "@preact/signals": "^2.11.4",
+    "preact": "^11.1.1"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.6.4",
+    "@types/bun": "^1.4.4",
+    "typescript": "^7.0.2"
+  }
+}
