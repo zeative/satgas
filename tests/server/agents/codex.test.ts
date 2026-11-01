@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import { rm } from "node:fs/promises";
-import { codexArgs, runCodex } from "../../../src/server/agents/codex";
+import { codexArgs, codexMcp, codexSpawnEnv, runCodex } from "../../../src/server/agents/codex";
+import { AgentError } from "../../../src/server/agents/process";
 import { config } from "../../../src/server/config";
 import { collector, jsonl, makeFakeCli, setFake } from "../../helpers/fake-cli";
 
@@ -47,9 +48,92 @@ test("a failed turn becomes an error even when the process exits cleanly", async
   await expect(runCodex(req())).rejects.toThrow("rate limited");
 });
 
+test("errors the turn recovered from are logged, not treated as a failure", async () => {
+  setFake({
+    FAKE_CLI_OUTPUT: jsonl(
+      { type: "error", message: "Reconnecting... 1/5" },
+      { type: "item.completed", item: { type: "agent_message", text: "Done" } },
+      { type: "turn.completed" },
+    ),
+  });
+  const r = req();
+  expect(await runCodex(r)).toEqual({ output: "Done" });
+  expect(r.logs[0]).toEqual({ kind: "error", text: "Reconnecting... 1/5" });
+});
+
+test("an error the turn never recovered from still fails the task", async () => {
+  setFake({ FAKE_CLI_EXIT: "1", FAKE_CLI_OUTPUT: jsonl({ type: "error", message: "stream disconnected" }) });
+  await expect(runCodex(req())).rejects.toThrow(new AgentError("stream disconnected"));
+});
+
+test("a failed turn keeps its reason when the process also exits non-zero", async () => {
+  setFake({ FAKE_CLI_EXIT: "1", FAKE_CLI_OUTPUT: jsonl({ type: "turn.failed", error: { message: "rate limited" } }) });
+  await expect(runCodex(req())).rejects.toThrow(new AgentError("rate limited"));
+});
+
 test("lean mode ignores config.toml but always runs ephemeral and sandboxed", () => {
   config.leanAgents = true;
   expect(codexArgs("/w")).toEqual(expect.arrayContaining(["--ephemeral", "--ignore-user-config", "-C", "/w", "-s", config.codexSandbox]));
   config.leanAgents = false;
   expect(codexArgs("/w")).not.toContain("--ignore-user-config");
+});
+
+test("hands MCP servers to Codex as TOML overrides whose secrets travel in the environment", () => {
+  const { args, env } = codexMcp(
+    [
+      {
+        id: "1",
+        name: "pw",
+        enabled: true,
+        transport: "stdio",
+        command: "npx",
+        args: ["-y", "@playwright/mcp"],
+        env: { GH_TOKEN: "s3cret" },
+      },
+      {
+        id: "2",
+        name: "docs",
+        enabled: true,
+        transport: "http",
+        url: "https://mcp.example.com/mcp",
+        headers: { Authorization: "Bearer t0ken" },
+      },
+      { id: "3", name: "off", enabled: false, transport: "stdio", command: "x" },
+    ],
+    {},
+  );
+  expect(args).toEqual([
+    "-c",
+    'mcp_servers.pw.command="npx"',
+    "-c",
+    'mcp_servers.pw.args=["-y","@playwright/mcp"]',
+    "-c",
+    'mcp_servers.pw.env_vars=["GH_TOKEN"]',
+    "-c",
+    'mcp_servers.docs.url="https://mcp.example.com/mcp"',
+    "-c",
+    'mcp_servers.docs.env_http_headers={ "Authorization" = "SATGAS_MCP_1_HEADER_0" }',
+  ]);
+  expect(args.join(" ")).not.toMatch(/s3cret|t0ken/);
+  expect(env).toEqual({ GH_TOKEN: "s3cret", SATGAS_MCP_1_HEADER_0: "Bearer t0ken" });
+});
+
+test("a variable Codex already has with another value stays inline instead of changing Codex itself", () => {
+  const { args, env } = codexMcp(
+    [
+      { id: "1", name: "a", enabled: true, transport: "stdio", command: "a", env: { KEY: "one", PATH: "/opt/bin" } },
+      { id: "2", name: "b", enabled: true, transport: "stdio", command: "b", env: { KEY: "two", HOME: "/home/me" } },
+    ],
+    { PATH: "/usr/bin", HOME: "/home/me" },
+  );
+  expect(env).toEqual({ KEY: "one" });
+  expect(args).toContain('mcp_servers.a.env_vars=["KEY"]');
+  expect(args).toContain('mcp_servers.a.env={ "PATH" = "/opt/bin" }');
+  expect(args).toContain('mcp_servers.b.env_vars=["HOME"]');
+  expect(args).toContain('mcp_servers.b.env={ "KEY" = "two" }');
+});
+
+test("the spawn environment carries the MCP secrets the arguments name", () => {
+  const mcp = codexMcp([{ id: "1", name: "pw", enabled: true, transport: "stdio", command: "npx", env: { SATGAS_TEST_TOKEN: "v" } }], {});
+  expect(codexSpawnEnv(mcp).set).toMatchObject({ SATGAS_TEST_TOKEN: "v" });
 });

@@ -47,3 +47,18 @@ test("bold can wrap inline code", () => {
     { type: "text", text: ": page" },
   ]);
 });
+
+test("parses tables, skipping the alignment row and keeping escaped pipes", () => {
+  expect(parseBlocks("Intro\n\n| Endpoint | Method |\n| --- | :---: |\n| /signup | POST |\n| a \\| b | GET |\n\nAfter")).toEqual([
+    { type: "p", text: "Intro" },
+    {
+      type: "table",
+      rows: [
+        ["Endpoint", "Method"],
+        ["/signup", "POST"],
+        ["a | b", "GET"],
+      ],
+    },
+    { type: "p", text: "After" },
+  ]);
+});

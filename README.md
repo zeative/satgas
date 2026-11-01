@@ -39,13 +39,15 @@ bun install
 bun run dev
 ```
 
-Open <http://localhost:4317>, write a mission, and press <kbd>⌘</kbd>/<kbd>Ctrl</kbd> + <kbd>Enter</kbd>.
+The terminal prints a sign-in link; open it once in your browser (it leaves a cookie), write a mission, and press
+<kbd>⌘</kbd>/<kbd>Ctrl</kbd> + <kbd>Enter</kbd>. In development the API runs on port 4317 and Vite serves the UI on 5317
+(override with `SATGAS_PORT` and `SATGAS_WEB_PORT`). Lost the link? Paste the token from `~/.satgas/token` on the sign-in page.
 
 To ship a single self-contained binary (server and UI included):
 
 ```sh
 bun run build      # → dist/satgas
-./dist/satgas
+./dist/satgas      # http://localhost:4317
 ```
 
 ## Using it
@@ -67,7 +69,10 @@ All settings are environment variables.
 
 | Variable                                 | Default                                             | Purpose                                                                    |
 | ---------------------------------------- | --------------------------------------------------- | -------------------------------------------------------------------------- |
-| `SATGAS_PORT`                            | `4317`                                              | HTTP port (always bound to `127.0.0.1`)                                    |
+| `SATGAS_PORT`                            | `4317`                                              | HTTP port                                                                  |
+| `SATGAS_HOST`                            | `127.0.0.1`                                         | Address to bind; `0.0.0.0` on a server or in a container                   |
+| `SATGAS_PUBLIC_URL`                      | none                                                | Public address behind a reverse proxy, e.g. `https://satgas.example.com`   |
+| `SATGAS_TOKEN`                           | generated into `<data dir>/token`                   | Sign-in token; set your own long random value on a server                  |
 | `SATGAS_DATA_DIR`                        | `~/.satgas`                                         | Where missions and logs are stored (`runs/*.json`)                         |
 | `SATGAS_DEFAULT_CWD`                     | current directory                                   | Working folder suggested for the first mission                             |
 | `SATGAS_CONCURRENCY`                     | `3`                                                 | Agents running at the same time per mission                                |
@@ -84,12 +89,46 @@ All settings are environment variables.
 starts in a few seconds and stays light. If your CLI depends on settings files (a custom provider, a proxy, a model
 set in `settings.json` or `config.toml`), set `SATGAS_LEAN_AGENTS=0`.
 
+## Self-hosting
+
+Satgas runs the same way on a laptop and on a server; only a few variables change.
+
+**On your own computer** nothing needs setting: the server listens on `127.0.0.1`, generates a token into
+`~/.satgas/token` (readable only by you) and prints a sign-in link when it starts.
+
+**On a server (VPS)** run it behind a reverse proxy that terminates HTTPS (Caddy, Traefik, Nginx, Dokploy) and point the
+proxy at the Satgas port:
+
+```sh
+bun run build
+SATGAS_HOST=0.0.0.0 \
+SATGAS_PUBLIC_URL=https://satgas.example.com \
+SATGAS_TOKEN="$(openssl rand -base64 32)" \
+SATGAS_DATA_DIR=/var/lib/satgas \
+./dist/satgas
+```
+
+- `SATGAS_PUBLIC_URL` is required for remote access: Satgas only answers requests addressed to this machine or to that
+  address, only trusts pages from it, and marks the sign-in cookie `Secure` when it is `https`.
+- Sign in by opening `https://satgas.example.com`, then paste `SATGAS_TOKEN`. The cookie lasts a year; sign out from the
+  command palette (<kbd>⌘K</kbd>).
+- The proxy must pass WebSocket upgrades on `/ws` (Caddy and Traefik do by default).
+- Agents run commands as the user running Satgas. Use a dedicated user (or container) whose home holds only what the
+  agents should see, sign `claude` and `codex` in as that user, and keep `SATGAS_DATA_DIR` on persistent storage.
+
 ## Security model
 
 Satgas runs agents that **read, write and execute commands in the folder you choose**. Treat a mission like running
 a script there.
 
-- The server listens on `127.0.0.1` only and refuses cross-origin requests, so a web page you visit cannot start missions.
+- Every API call and the live socket need the sign-in token (a `HttpOnly`, `SameSite=Strict` cookie or the
+  `x-satgas-token` header). Failed sign-ins are rate limited.
+- Requests must name this machine or `SATGAS_PUBLIC_URL`, and writes are refused from any other origin, so a web page you
+  visit (or a page an agent serves on another local port) cannot start missions. The UI cannot be framed by other sites.
+- Agent previews load through a per-board key in the URL, because sandboxed pages cannot send the cookie; the key opens
+  that board's files and nothing else.
+- Provider keys and MCP secrets never leave the server; the UI only ever sees `••••`. Settings and boards are stored
+  with owner-only permissions.
 - Claude Code tasks run with `acceptEdits` and an explicit tool allow-list; Codex tasks run in its `workspace-write` sandbox.
   Both are configurable above.
 - Agent output is rendered as text (a small markdown subset built as DOM nodes, never `innerHTML`); only `http(s)` links become links.
@@ -101,7 +140,8 @@ a script there.
 src/
   server/    Bun HTTP + WebSocket server, planner, scheduler, agent adapters, JSON store
   shared/    Types and graph logic (validation, layout, task codes) used by both sides
-  web/       Preact + signals UI, bundled by Bun (no Vite), design tokens in styles.css
+  web/       React UI built on the Shadcn Admin template: Vite, TanStack Router, Tailwind v4, shadcn/ui,
+             with the mission canvas on React Flow and React Flow UI
 tests/       bun test suites, mirroring src/
 .interface-design/system.md   The UI design system and its rationale
 ```
@@ -109,7 +149,7 @@ tests/       bun test suites, mirroring src/
 ## Development
 
 ```sh
-bun run dev        # server + UI with hot reload
+bun run dev        # API on :4317 and the Vite UI on :5317, both with hot reload
 bun run check      # typecheck, lint (Biome) and tests
 bun run format     # apply formatting
 ```
@@ -119,3 +159,6 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for conventions.
 ## License
 
 [MIT](LICENSE)
+
+The UI starts from [Shadcn Admin](https://github.com/satnaing/shadcn-admin) by Sat Naing (MIT) and uses
+[shadcn/ui](https://ui.shadcn.com) and [React Flow UI](https://reactflow.dev/ui) components.

@@ -1,8 +1,9 @@
 import type { Plan, PlanNode } from "./types";
 
-export const NODE_W = 232;
-export const NODE_H = 88;
-const GAP_X = 80;
+// Sized for the React Flow UI task node (w-60) so columns and rows never overlap.
+export const NODE_W = 240;
+export const NODE_H = 104;
+const GAP_X = 88;
 const GAP_Y = 32;
 
 export const MAX_NODES = 12;
@@ -72,6 +73,12 @@ export function layout<T extends PlanNode>(nodes: T[]): (T & { x: number; y: num
 export function taskCodes(nodes: { id: string; x: number; y: number }[]): Map<string, string> {
   const ordered = [...nodes].sort((a, b) => a.x - b.x || a.y - b.y);
   return new Map(ordered.map((n, i) => [n.id, `T-${String(i + 1).padStart(2, "0")}`]));
+}
+
+// The tasks of the latest prompt on the board.
+export function latestRound<T extends { round?: number }>(nodes: T[]): T[] {
+  const last = Math.max(0, ...nodes.map((n) => n.round ?? 0));
+  return nodes.filter((n) => (n.round ?? 0) === last);
 }
 
 export function sinks<T extends PlanNode>(nodes: T[]): T[] {

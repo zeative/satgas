@@ -2,7 +2,9 @@ export type Block =
   | { type: "p"; text: string }
   | { type: "h"; text: string }
   | { type: "ul" | "ol"; items: string[] }
-  | { type: "code"; text: string };
+  | { type: "code"; text: string }
+  // The first row is the header.
+  | { type: "table"; rows: string[][] };
 
 export type Inline =
   | { type: "text" | "code"; text: string }
@@ -16,12 +18,15 @@ export function parseBlocks(source: string): Block[] {
   let para: string[] = [];
   let list: { type: "ul" | "ol"; items: string[] } | null = null;
   let code: string[] | null = null;
+  let table: string[][] | null = null;
 
   const flush = () => {
     if (para.length) blocks.push({ type: "p", text: para.join(" ") });
     if (list) blocks.push(list);
+    if (table) blocks.push({ type: "table", rows: table });
     para = [];
     list = null;
+    table = null;
   };
 
   for (const line of lines) {
@@ -37,6 +42,16 @@ export function parseBlocks(source: string): Block[] {
       code = [];
       continue;
     }
+    if (/^\s*\|.*\|\s*$/.test(line)) {
+      const cells = splitRow(line);
+      // The |---|:---:| row only marks the header; it carries no content.
+      if (cells.every((c) => /^:?-{3,}:?$/.test(c))) continue;
+      if (!table) flush();
+      table ??= [];
+      table.push(cells);
+      continue;
+    }
+    if (table) flush();
     const heading = /^#{1,6}\s+(.*)/.exec(line);
     const item = /^\s*(?:([-*+])|\d+[.)])\s+(.*)/.exec(line);
     if (heading) {
@@ -58,6 +73,14 @@ export function parseBlocks(source: string): Block[] {
   if (code) blocks.push({ type: "code", text: code.join("\n") });
   flush();
   return blocks;
+}
+
+function splitRow(line: string): string[] {
+  return line
+    .trim()
+    .replace(/^\||\|$/g, "")
+    .split(/(?<!\\)\|/)
+    .map((c) => c.trim().replace(/\\\|/g, "|"));
 }
 
 // Bold is matched first so it can wrap inline code, e.g. **`file.ts`**.

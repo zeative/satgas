@@ -1,9 +1,20 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
-import { mkdir, mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { config } from "../../src/server/config";
-import { appendLog, createRun, deleteRun, flushAll, getLogs, getRun, listRuns, loadRuns, patchRun } from "../../src/server/store";
+import {
+  appendLog,
+  createRun,
+  deleteRun,
+  flushAll,
+  getLogs,
+  getRun,
+  listRuns,
+  loadRuns,
+  ownWorkspace,
+  patchRun,
+} from "../../src/server/store";
 import type { Run } from "../../src/shared/types";
 
 let dir = "";
@@ -24,8 +35,13 @@ beforeAll(async () => {
       { id: "b", title: "B", role: "r", agent: "claude", task: "t", dependsOn: ["a"], status: "done", x: 0, y: 0 },
     ],
   };
-  await Bun.write(join(dir, "runs", "live1.json"), JSON.stringify({ run: interrupted, logs: {} }));
+  const line = (seq: number) => ({ seq, t: 1, kind: "info", text: `line ${seq}` });
+  await Bun.write(
+    join(dir, "runs", "live1.json"),
+    JSON.stringify({ run: interrupted, logs: { planner: [line(3), line(9)], a: [line(6)] } }),
+  );
   await Bun.write(join(dir, "runs", "broken.json"), "{not json");
+  await Bun.write(join(dir, "runs", "live1.json.4f2a.tmp"), "{half");
   await loadRuns();
 });
 
@@ -73,4 +89,67 @@ test("log lines carry an increasing per-run sequence", () => {
   appendLog(run.id, "b", { kind: "info", text: "two" });
   const all = getLogs(run.id);
   expect([all.a?.[0]?.seq, all.b?.[0]?.seq]).toEqual([1, 2]);
+});
+
+test("log numbering continues after a restart, so the client does not drop new lines as already seen", () => {
+  appendLog("live1", "a", { kind: "info", text: "after restart" });
+  expect(getLogs("live1").a?.at(-1)?.seq).toBe(10);
+});
+
+test("a temp file left by an interrupted write is cleaned up on load", async () => {
+  expect(await Bun.file(join(dir, "runs", "live1.json.4f2a.tmp")).exists()).toBe(false);
+});
+
+test("run files are written whole and private, and the data folder is private", async () => {
+  const run = createRun("private", "/w");
+  await flushAll();
+  expect((await readdir(join(dir, "runs"))).filter((f) => f.endsWith(".tmp"))).toEqual([]);
+  expect((await stat(join(dir, "runs", `${run.id}.json`))).mode & 0o777).toBe(0o600);
+  expect((await stat(dir)).mode & 0o777).toBe(0o700);
+});
+
+test("a flush waits for a save that is already under way", async () => {
+  const run = createRun("in flight", "/w");
+  patchRun(run.id, { title: "Latest" });
+  void flushAll();
+  await flushAll();
+  expect((await Bun.file(join(dir, "runs", `${run.id}.json`)).json()).run.title).toBe("Latest");
+});
+
+test("a save under way cannot bring a deleted mission back", async () => {
+  const run = createRun("deleted mid-write", "/w");
+  void flushAll();
+  await deleteRun(run.id);
+  await Bun.sleep(20);
+  expect(await Bun.file(join(dir, "runs", `${run.id}.json`)).exists()).toBe(false);
+});
+
+test("deleting a board removes its own workspace but never a folder picked elsewhere", async () => {
+  const own = join(dir, "workspaces", "ownws01");
+  const picked = join(dir, "picked");
+  await mkdir(own, { recursive: true });
+  await mkdir(picked, { recursive: true });
+  await Bun.write(join(own, "index.html"), "made by an agent");
+  await Bun.write(join(picked, "keep.txt"), "mine");
+  expect(ownWorkspace(own)).toBe(true);
+  expect(ownWorkspace(join(dir, "workspaces"))).toBe(false);
+  expect(ownWorkspace(picked)).toBe(false);
+  expect(ownWorkspace(join(dir, "workspaces", "..", "picked"))).toBe(false);
+
+  const a = createRun("own", own, "ownws01");
+  const b = createRun("picked", picked);
+  await deleteRun(a.id);
+  await deleteRun(b.id);
+  expect(
+    await stat(own).then(
+      () => true,
+      () => false,
+    ),
+  ).toBe(false);
+  expect(
+    await stat(join(picked, "keep.txt")).then(
+      () => true,
+      () => false,
+    ),
+  ).toBe(true);
 });

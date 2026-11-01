@@ -1,0 +1,44 @@
+import { createContext, useContext, useState } from "react";
+import { getCookie } from "@/lib/cookies";
+
+export type Collapsible = "offcanvas" | "icon" | "none";
+type Variant = "inset" | "sidebar" | "floating";
+
+// Cookie constants following the pattern from sidebar.tsx
+const LAYOUT_COLLAPSIBLE_COOKIE_NAME = "layout_collapsible";
+const LAYOUT_VARIANT_COOKIE_NAME = "layout_variant";
+
+// Default values
+const DEFAULT_VARIANT = "sidebar";
+const DEFAULT_COLLAPSIBLE = "icon";
+
+type LayoutContextType = {
+  collapsible: Collapsible;
+  variant: Variant;
+};
+
+const LayoutContext = createContext<LayoutContextType | null>(null);
+
+type LayoutProviderProps = {
+  children: React.ReactNode;
+};
+
+export function LayoutProvider({ children }: LayoutProviderProps) {
+  // Read once from the cookies; nothing in the app changes the layout at runtime.
+  const [value] = useState<LayoutContextType>(() => ({
+    collapsible: (getCookie(LAYOUT_COLLAPSIBLE_COOKIE_NAME) as Collapsible) || DEFAULT_COLLAPSIBLE,
+    variant: (getCookie(LAYOUT_VARIANT_COOKIE_NAME) as Variant) || DEFAULT_VARIANT,
+  }));
+
+  return <LayoutContext value={value}>{children}</LayoutContext>;
+}
+
+// Define the hook for the provider
+// eslint-disable-next-line react-refresh/only-export-components
+export function useLayout() {
+  const context = useContext(LayoutContext);
+  if (!context) {
+    throw new Error("useLayout must be used within a LayoutProvider");
+  }
+  return context;
+}

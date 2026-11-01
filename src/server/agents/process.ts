@@ -1,3 +1,6 @@
+import { stat } from "node:fs/promises";
+import type { Subprocess } from "bun";
+import type { FileChange } from "../../shared/board";
 import type { LogLine } from "../../shared/types";
 
 export interface AgentRequest {
@@ -5,6 +8,8 @@ export interface AgentRequest {
   cwd: string;
   signal: AbortSignal;
   onLog: (line: Omit<LogLine, "t" | "seq">) => void;
+  // Files the agent writes, so the board can show what it produced.
+  onFile?: (path: string, change: FileChange["change"]) => void;
 }
 
 export interface AgentResult {
@@ -14,15 +19,33 @@ export interface AgentResult {
 
 export class AgentError extends Error {}
 
+// How long a CLI gets to exit after SIGTERM before its whole process group is killed.
+const KILL_GRACE_MS = 3000;
+
 // Spawns a JSONL-emitting CLI, feeds the prompt on stdin, and hands each parsed event to onEvent.
+// failureReason lets the adapter name what went wrong; CLIs exit non-zero after reporting it, and the exit code says less.
 export async function runJsonl(
   cmd: string[],
   { prompt, cwd, signal }: Pick<AgentRequest, "prompt" | "cwd" | "signal">,
   onEvent: (event: any) => void,
+  failureReason: () => string | undefined = () => undefined,
+  env: EnvChange = { set: {}, unset: [] },
 ): Promise<void> {
   if (signal.aborted) throw new AgentError("Cancelled.");
-  const proc = spawn(cmd, cwd);
-  const kill = () => proc.kill();
+  const isDir = await stat(cwd).then(
+    (s) => s.isDirectory(),
+    () => false,
+  );
+  if (!isDir) throw new AgentError(`Working folder not found: \`${cwd}\``);
+  const proc = spawn(cmd, cwd, env);
+  let forcing = false;
+  const kill = () => {
+    signalGroup(proc, "SIGTERM");
+    if (forcing) return;
+    forcing = true;
+    // A CLI that ignores SIGTERM would otherwise keep its run live (and undeletable) forever.
+    setTimeout(() => signalGroup(proc, "SIGKILL"), KILL_GRACE_MS);
+  };
   signal.addEventListener("abort", kill, { once: true });
 
   try {
@@ -49,19 +72,46 @@ export async function runJsonl(
     const code = await proc.exited;
     if (signal.aborted) throw new AgentError("Cancelled.");
     if (code !== 0) {
+      const reason = failureReason();
+      if (reason) throw new AgentError(reason);
       const tail = (await stderr).trim().split("\n").slice(-3).join(" ");
-      throw new AgentError(`${cmd[0]} exited with code ${code}${tail ? `: ${tail}` : ""}`);
+      throw new AgentError(`\`${cmd[0]}\` exited with code ${code}${tail ? `: ${tail}` : ""}`);
     }
   } finally {
     signal.removeEventListener("abort", kill);
+    // Reading failed while the CLI still runs; it must not outlive its task.
+    if (proc.exitCode === null && proc.signalCode === null) kill();
   }
 }
 
-function spawn(cmd: string[], cwd: string) {
+export interface EnvChange {
+  set: Record<string, string>;
+  unset: string[];
+}
+
+export function childEnv({ set, unset }: EnvChange): Record<string, string | undefined> {
+  const env: Record<string, string | undefined> = { ...process.env, NO_COLOR: "1" };
+  for (const k of unset) delete env[k];
+  return { ...env, ...set };
+}
+
+// Its own process group, so a stop also reaches what the agent started: dev servers, background commands, MCP servers.
+function spawn(cmd: string[], cwd: string, env: EnvChange) {
   try {
-    return Bun.spawn(cmd, { cwd, stdin: "pipe", stdout: "pipe", stderr: "pipe", env: { ...process.env, NO_COLOR: "1" } });
+    return Bun.spawn(cmd, { cwd, stdin: "pipe", stdout: "pipe", stderr: "pipe", env: childEnv(env), detached: true });
   } catch (e) {
-    throw new AgentError(`Could not start ${cmd[0]}: ${(e as Error).message}. Is it installed and on PATH?`);
+    throw new AgentError(`Could not start \`${cmd[0]}\`: ${(e as Error).message}. Is it installed and on \`PATH\`?`);
+  }
+}
+
+function signalGroup(proc: Subprocess, sig: NodeJS.Signals) {
+  try {
+    process.kill(-proc.pid, sig);
+  } catch {
+    // The group is gone, or this platform has no process groups.
+    try {
+      proc.kill(sig);
+    } catch {}
   }
 }
 
@@ -75,6 +125,9 @@ function parseLine(raw: string): unknown {
     return undefined;
   }
 }
+
+// Log lines are a live feed; a task's full answer is kept in its output.
+export const logText = (s: string, n = 4000) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
 
 export function clip(s: string, n = 160): string {
   const one = s.replace(/\s+/g, " ").trim();

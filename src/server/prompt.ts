@@ -3,15 +3,19 @@ import type { NodeState, Run } from "../shared/types";
 
 // Each agent sees only its task, the mission, and its direct upstream reports, which keeps prompts small and focused.
 export function buildNodePrompt(run: Run, node: NodeState, upstreamChars: number): string {
-  const upstream = node.dependsOn
+  // Earlier-round tasks this one continues from count as upstream too, so a follow-up sees what was already done.
+  const upstream = [...node.dependsOn, ...(node.after ?? [])]
     .map((d) => run.nodes.find((n) => n.id === d))
     .filter((n): n is NodeState => !!n)
     .map((n) => `### ${n.title} (${n.role})\n${clipTail(n.output ?? "", upstreamChars)}`)
     .join("\n\n");
-  const isFinal = sinks(run.nodes).some((s) => s.id === node.id);
+  const round = node.round ?? 0;
+  const isFinal = sinks(run.nodes.filter((n) => (n.round ?? 0) === round)).some((s) => s.id === node.id);
+  const request = round > 0 ? run.rounds?.[round - 1] : undefined;
   return [
     `You are the ${node.role} in a Satgas task force working in ${run.cwd}.`,
     `Overall mission:\n${run.prompt}`,
+    request && `Current request (the part you are working on now):\n${request}`,
     `Your task: ${node.title}\n${node.task}`,
     upstream && `Reports from the tasks you depend on:\n\n${upstream}`,
     "Do the work directly in the working directory. Stay within your task's scope; other agents may be working in parallel on other parts.",

@@ -2,22 +2,22 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#fff" />
+    <meta name="description" content="Satgas: a canvas-based agent development environment. One mission in, a task force of coding agents out." />
+    <title>Satgas</title>
     <script>
-      // Resolve the theme before first paint so the page never flashes the wrong one.
+      // Apply the saved theme before first paint so the page never flashes the wrong one.
       try {
-        const saved = localStorage.getItem("satgas.theme");
-        const system = matchMedia("(prefers-color-scheme: dark)").matches ? "night" : "chart";
-        document.documentElement.dataset.theme = saved === "night" || saved === "chart" ? saved : system;
+        const saved = document.cookie.match(/(?:^|; )vite-ui-theme=([^;]*)/)?.[1] ?? "system";
+        const dark = saved === "dark" || (saved === "system" && matchMedia("(prefers-color-scheme: dark)").matches);
+        document.documentElement.classList.add(dark ? "dark" : "light");
       } catch {}
     </script>
-    <meta name="description" content="Satgas: a canvas-based agent development environment. One mission in, a task force of coding agents out." />
-    <link rel="icon" type="image/svg+xml" href="./icon.svg" />
-    <title>Satgas</title>
   </head>
   <body>
-    <div id="app"></div>
-    <script type="module" src="./main.tsx"></script>
+    <div id="root"></div>
+    <script type="module" src="/main.tsx"></script>
   </body>
 </html>

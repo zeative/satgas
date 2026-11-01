@@ -1,9 +1,11 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { rm } from "node:fs/promises";
+import { rm, stat } from "node:fs/promises";
 import { join } from "node:path";
-import { claudeArgs, runClaude } from "../../../src/server/agents/claude";
+import { claudeArgs, claudeMcpConfig, runClaude } from "../../../src/server/agents/claude";
 import { AgentError } from "../../../src/server/agents/process";
 import { config } from "../../../src/server/config";
+import { defaultSettings } from "../../../src/server/settings";
+import type { Settings } from "../../../src/shared/settings";
 import { collector, jsonl, makeFakeCli, setFake } from "../../helpers/fake-cli";
 
 let dir = "";
@@ -57,9 +59,51 @@ describe("runClaude", () => {
     await expect(runClaude(req())).rejects.toThrow(new AgentError("error_max_turns"));
   });
 
+  test("keeps the agent's own reason when the CLI exits non-zero after an error result", async () => {
+    setFake({
+      FAKE_CLI_EXIT: "1",
+      FAKE_CLI_OUTPUT: jsonl({ type: "result", subtype: "error_during_execution", is_error: true, result: "2 of 6 tests failed" }),
+    });
+    await expect(runClaude(req())).rejects.toThrow(new AgentError("2 of 6 tests failed"));
+  });
+
   test("reports the exit code and stderr tail when the CLI crashes", async () => {
     setFake({ FAKE_CLI_EXIT: "2", FAKE_CLI_STDERR: "boom: not logged in\n" });
     await expect(runClaude(req())).rejects.toThrow("exited with code 2: boom: not logged in");
+  });
+
+  test("hands MCP servers over in a private file, never on the command line, and removes it afterwards", async () => {
+    const g = globalThis as { __satgasSettings?: Settings };
+    const saved = g.__satgasSettings;
+    const server = { id: "1", name: "gh", enabled: true, transport: "stdio" as const, command: "npx", env: { GH_TOKEN: "s3cret" } };
+    g.__satgasSettings = { ...defaultSettings(), mcpServers: [server] };
+    const argsOut = join(dir, "mcp-args.json");
+    try {
+      setFake({
+        FAKE_CLI_ARGS_OUT: argsOut,
+        FAKE_CLI_SLEEP: "1000",
+        FAKE_CLI_OUTPUT: jsonl({ type: "result", subtype: "success", is_error: false, result: "ok" }),
+      });
+      const running = runClaude(req());
+      let args: string[] = [];
+      for (let i = 0; i < 150 && !args.length; i++) {
+        await Bun.sleep(20);
+        args = await Bun.file(argsOut)
+          .json()
+          .catch(() => []);
+      }
+      const path = args[args.indexOf("--mcp-config") + 1] ?? "";
+      expect(args.join(" ")).not.toContain("s3cret");
+      expect(args[args.indexOf("--allowedTools") + 1]).toContain("mcp__gh");
+      expect(await Bun.file(path).json()).toEqual({
+        mcpServers: { gh: { type: "stdio", command: "npx", args: [], env: { GH_TOKEN: "s3cret" } } },
+      });
+      expect((await stat(path)).mode & 0o777).toBe(0o600);
+      await running;
+      expect(await Bun.file(path).exists()).toBe(false);
+    } finally {
+      g.__satgasSettings = saved;
+    }
   });
 
   test("kills the process and reports cancellation on abort", async () => {
@@ -91,5 +135,21 @@ describe("claudeArgs", () => {
     const args = claudeArgs({ tools: "" });
     expect(args).toContain("--tools");
     expect(args).not.toContain("--permission-mode");
+  });
+});
+
+test("passes enabled MCP servers in Claude's config shape and skips disabled ones", () => {
+  expect(claudeMcpConfig([])).toBeNull();
+  expect(
+    claudeMcpConfig([
+      { id: "1", name: "pw", enabled: true, transport: "stdio", command: "npx", args: ["-y", "@playwright/mcp"], env: { DEBUG: "1" } },
+      { id: "2", name: "docs", enabled: true, transport: "http", url: "https://mcp.example.com/mcp", headers: {} },
+      { id: "3", name: "off", enabled: false, transport: "stdio", command: "x" },
+    ]),
+  ).toEqual({
+    mcpServers: {
+      pw: { type: "stdio", command: "npx", args: ["-y", "@playwright/mcp"], env: { DEBUG: "1" } },
+      docs: { type: "http", url: "https://mcp.example.com/mcp", headers: {} },
+    },
   });
 });
