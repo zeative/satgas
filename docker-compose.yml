@@ -1,0 +1,25 @@
+# Satgas in a container. Locally: `docker compose up -d`, then open the sign-in link from `docker compose logs`.
+# On a server: copy .env.example to .env, set SATGAS_PUBLIC_URL and SATGAS_TOKEN, and put HTTPS in front of port 4317.
+services:
+  satgas:
+    build: .
+    image: satgas:latest
+    restart: unless-stopped
+    # Loopback only: a reverse proxy on the host (Caddy, Nginx) forwards to it. With Traefik or Dokploy on a Docker
+    # network, drop `ports` and route to the service on 4317 instead.
+    ports:
+      - "127.0.0.1:4317:4317"
+    environment:
+      SATGAS_PUBLIC_URL: ${SATGAS_PUBLIC_URL:-}
+      SATGAS_TOKEN: ${SATGAS_TOKEN:-}
+    volumes:
+      # Boards, settings, the generated token and every board's workspace.
+      - satgas-data:/data
+      # The agents' home: Claude Code and Codex sign-ins and settings.
+      - satgas-home:/home/node
+    # A clean stop lets Satgas cancel agents and save boards.
+    stop_grace_period: 15s
+
+volumes:
+  satgas-data:
+  satgas-home:

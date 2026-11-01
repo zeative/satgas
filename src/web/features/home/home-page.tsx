@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { ClaudeMark, CodexMark, GitHubMark } from "@/components/brand-marks";
 import { PageHeader } from "@/components/layout/page-header";
 import { LogoMark } from "@/components/logo";
+import { RichText } from "@/components/rich-text";
 import { StatusIcon, statusLabel } from "@/components/status";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -175,7 +176,9 @@ function RecentBoards() {
 
       {error && !runs ? (
         <div className="flex items-center gap-3 text-sm text-muted-foreground">
-          <p>{error}</p>
+          <p>
+            <RichText text={error} />
+          </p>
           <Button variant="outline" size="sm" onClick={() => void loadRuns()}>
             {t.retry}
           </Button>

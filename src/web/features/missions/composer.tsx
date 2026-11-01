@@ -1,5 +1,6 @@
 import { ArrowUp } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { RichText } from "@/components/rich-text";
 import { Button } from "@/components/ui/button";
 import { t } from "@/i18n";
 import { openMission } from "@/lib/actions";
@@ -87,7 +88,7 @@ export function Composer({ value, onChange, className }: Props) {
         />
         {error && (
           <p id="compose-error" role="alert" className="px-4 pt-1 text-sm text-destructive">
-            {error}
+            <RichText text={error} />
           </p>
         )}
         <div className="flex items-center gap-1 px-2.5 pt-1 pb-2.5">

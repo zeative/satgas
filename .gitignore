@@ -3,3 +3,4 @@ dist/
 *.log
 .DS_Store
 src/server/assets.gen.ts
+.env

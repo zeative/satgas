@@ -113,6 +113,20 @@ SATGAS_DATA_DIR=/var/lib/satgas \
 - Sign in by opening `https://satgas.example.com`, then paste `SATGAS_TOKEN`. The cookie lasts a year; sign out from the
   command palette (<kbd>⌘K</kbd>).
 - The proxy must pass WebSocket upgrades on `/ws` (Caddy and Traefik do by default).
+
+**With Docker**, the image carries Satgas, Claude Code, Codex, `git` and `ripgrep`, and runs everything as an unprivileged
+user:
+
+```sh
+cp .env.example .env        # on a server: set SATGAS_PUBLIC_URL and SATGAS_TOKEN
+docker compose up -d
+docker compose logs satgas  # the sign-in link, when SATGAS_TOKEN is not set
+```
+
+Boards, settings and workspaces live in the `satgas-data` volume; the agents' home (their sign-ins) in `satgas-home`.
+Sign the agents in from Integrations (a Claude subscription token or an API key per provider), or once inside the
+container with `docker compose exec -it satgas claude`. Compose publishes the port on `127.0.0.1` for a proxy on the
+host; behind Traefik or Dokploy, drop `ports` and route to the service on port `4317`.
 - Agents run commands as the user running Satgas. Use a dedicated user (or container) whose home holds only what the
   agents should see, sign `claude` and `codex` in as that user, and keep `SATGAS_DATA_DIR` on persistent storage.
 

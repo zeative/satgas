@@ -2,6 +2,7 @@ import { type Node, type NodeProps, Position } from "@xyflow/react";
 import { memo } from "react";
 import { BaseHandle } from "@/components/flow/base-handle";
 import { BaseNode, BaseNodeContent, BaseNodeHeader, BaseNodeHeaderTitle } from "@/components/flow/base-node";
+import { RichText } from "@/components/rich-text";
 import { StatusIcon } from "@/components/status";
 import { useNow } from "@/hooks/use-now";
 import { fmtElapsed, t } from "@/i18n";
@@ -33,7 +34,9 @@ export const TaskNode = memo(function TaskNode({ data }: NodeProps<TaskNodeType>
         </BaseNodeHeader>
         <BaseNodeContent className="gap-1 px-3 pt-2 pb-3 text-xs text-muted-foreground">
           {task.status === "failed" && task.error ? (
-            <p className="line-clamp-2 text-destructive">{task.error}</p>
+            <p className="line-clamp-2 text-destructive">
+              <RichText text={task.error} />
+            </p>
           ) : (
             <p className="truncate">{task.role}</p>
           )}

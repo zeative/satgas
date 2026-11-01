@@ -31,6 +31,7 @@ import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from "rea
 import { toast } from "sonner";
 import { ClaudeMark, CodexMark } from "@/components/brand-marks";
 import { Markdown } from "@/components/markdown";
+import { RichText } from "@/components/rich-text";
 import { StatusIcon } from "@/components/status";
 import { Button } from "@/components/ui/button";
 import { useNow } from "@/hooks/use-now";
@@ -212,7 +213,7 @@ function RoundView({
             className="flex items-start justify-between gap-3 rounded-xl border border-destructive/30 px-3 py-2 text-xs text-destructive"
           >
             <p className="min-w-0">
-              <span className="font-medium">{failed.title}</span> · {failed.error ?? t.run.failed}
+              <span className="font-medium">{failed.title}</span> · <RichText text={failed.error ?? t.run.failed} />
             </p>
             <button
               type="button"
@@ -225,7 +226,7 @@ function RoundView({
         )}
         {latest && run.status === "failed" && !failed && run.error && (
           <p role="alert" className="rounded-xl border border-destructive/30 px-3 py-2 text-xs text-destructive">
-            {run.error}
+            <RichText text={run.error} />
           </p>
         )}
         {round.outcome && (

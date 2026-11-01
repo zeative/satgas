@@ -1,6 +1,7 @@
 import { ArrowLeft, CircleAlert, X } from "lucide-react";
 import { useLayoutEffect, useRef, useState } from "react";
 import { Markdown } from "@/components/markdown";
+import { RichText } from "@/components/rich-text";
 import { StatusBadge, StatusIcon } from "@/components/status";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -81,7 +82,9 @@ function MissionPanel({ run, codes, onSelect, onClose }: PanelProps) {
             <CircleAlert />
             <AlertTitle>{t.failedTitle}</AlertTitle>
             <AlertDescription>
-              <p>{run.error}</p>
+              <p>
+                <RichText text={run.error} />
+              </p>
               {firstFailed && (
                 <Button variant="outline" size="sm" className="mt-2" onClick={() => onSelect(firstFailed.id)}>
                   {t.openFailed}
@@ -197,7 +200,9 @@ function TaskPanel({ run, task, codes, onSelect, onClose }: PanelProps & { task:
           <Alert variant="destructive">
             <CircleAlert />
             <AlertTitle>{t.taskFailed}</AlertTitle>
-            <AlertDescription>{task.error}</AlertDescription>
+            <AlertDescription>
+              <RichText text={task.error} />
+            </AlertDescription>
           </Alert>
         )}
         {task.status === "skipped" && (

@@ -22,6 +22,7 @@ import { toast } from "sonner";
 import { ClaudeMark, CodexMark } from "@/components/brand-marks";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { LogoMark } from "@/components/logo";
+import { RichText } from "@/components/rich-text";
 import { StatusIcon } from "@/components/status";
 import { Button } from "@/components/ui/button";
 import {
@@ -279,7 +280,11 @@ function BoardTitle({ run, panelOpen, onTogglePanel }: TitleProps) {
               desc={
                 <div className="flex flex-col gap-2">
                   <p>{run.ownWorkspace === false ? t.confirmDeleteKeepFiles : t.confirmDeleteText}</p>
-                  {deleteError && <p className="text-destructive">{deleteError}</p>}
+                  {deleteError && (
+                    <p className="text-destructive">
+                      <RichText text={deleteError} />
+                    </p>
+                  )}
                 </div>
               }
               cancelBtnText={t.keepMission}
