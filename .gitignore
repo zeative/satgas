@@ -1,5 +1,6 @@
 node_modules/
 dist/
+.tanstack/
 *.log
 .DS_Store
 src/server/assets.gen.ts

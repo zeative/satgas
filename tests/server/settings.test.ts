@@ -54,3 +54,19 @@ test("an invalid save is refused without touching the file", async () => {
   expect(await saveSettings({ mcpServers: "nope" })).toBeString();
   expect(await Bun.file(join(dir, "settings.json")).text()).toBe(before);
 });
+
+test("a default tool added in a later version joins an existing setup once, and turning it off sticks", () => {
+  const g = globalThis as { __satgasSettings?: Settings };
+  const before = g.__satgasSettings;
+  const base = defaultSettings();
+  // An older setup: no record of which defaults it was offered, and only the first two tools stored.
+  g.__satgasSettings = { ...base, tools: [{ id: "rtk", catalogId: "rtk", enabled: true }], toolsOffered: undefined };
+  try {
+    expect(getSettings().tools.map((t) => t.catalogId)).toEqual(["rtk", "guard", "agent-browser"]);
+    const s = getSettings();
+    s.tools = s.tools.filter((t) => t.catalogId !== "agent-browser");
+    expect(getSettings().tools.map((t) => t.catalogId)).toEqual(["rtk", "guard"]);
+  } finally {
+    g.__satgasSettings = before;
+  }
+});

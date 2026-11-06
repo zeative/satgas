@@ -8,6 +8,13 @@ const defaults: Settings = {
   },
   providers: {},
   mcpServers: [],
+  tools: [],
+  taskMinutes: 20,
+  concurrency: 3,
+  teamTalk: false,
+  worktrees: true,
+  commitStyle: { mode: "repo", instructions: "" },
+  watchPulls: true,
 };
 
 describe("sanitizeSettings", () => {
@@ -167,4 +174,11 @@ test("keeps the catalog entry a server came from, and drops one that is not a va
     defaults,
   ) as Settings;
   expect(s.mcpServers.map((m) => m.catalogId)).toEqual(["playwright", undefined]);
+});
+
+test("tasks at once only takes a value from the list", () => {
+  const ok = sanitizeSettings({ concurrency: 6 }, defaults);
+  const bad = sanitizeSettings({ concurrency: 500 }, defaults);
+  expect(typeof ok === "object" && ok.concurrency).toBe(6);
+  expect(typeof bad === "object" && bad.concurrency).toBe(3);
 });

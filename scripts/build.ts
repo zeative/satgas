@@ -36,7 +36,7 @@ try {
       "--minify",
       "--define",
       'process.env.NODE_ENV="production"',
-      "src/server/index.ts",
+      "src/server/main.ts",
       "--outfile",
       "dist/satgas",
     ],

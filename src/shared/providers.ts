@@ -99,7 +99,8 @@ export const PROVIDERS: ProviderDef[] = [
     auth: "key",
     keyLabel: { en: "Model Studio API key", id: "API key Model Studio" },
     keyHelp: "https://modelstudio.console.alibabacloud.com/",
-    baseUrl: "https://dashscope.aliyuncs.com/apps/anthropic",
+    // The international (Singapore) region; Beijing and US keys get pointed at their own endpoint by the check.
+    baseUrl: "https://dashscope-intl.aliyuncs.com/apps/anthropic",
     baseUrlEditable: true,
     docs: "https://www.alibabacloud.com/help/en/model-studio/claude-code",
   },

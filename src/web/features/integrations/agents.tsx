@@ -254,7 +254,8 @@ export function AgentDetail({ settings, runtime, onBack }: { settings: Settings;
                 id="claude-planner"
                 value={settings.agents.claude.plannerModel}
                 suggestions={["sonnet", "opus", "haiku", "fable"]}
-                onSave={(plannerModel) => set({ plannerModel: plannerModel || "sonnet" })}
+                placeholder={ti.sameAsTasks}
+                onSave={(plannerModel) => set({ plannerModel })}
               />
             </Row>
           )}
@@ -332,11 +333,13 @@ function ModelInput({
   id,
   value,
   suggestions,
+  placeholder,
   onSave,
 }: {
   id: string;
   value: string;
   suggestions?: string[];
+  placeholder?: string;
   onSave: (v: string) => void;
 }) {
   const [draft, setDraft] = useState(value);
@@ -347,7 +350,7 @@ function ModelInput({
       <Input
         id={id}
         value={draft}
-        placeholder={ti.defaultModel}
+        placeholder={placeholder ?? ti.defaultModel}
         list={listId}
         spellCheck={false}
         autoComplete="off"
@@ -401,3 +404,5 @@ function Choice({
     </Select>
   );
 }
+
+// A text setting saved when the person leaves the field or presses Enter, not on every key.

@@ -46,6 +46,7 @@ export function ThemeProvider({ children, storageKey = THEME_COOKIE_NAME, ...pro
     const root = window.document.documentElement;
     root.classList.remove("light", "dark");
     root.classList.add(resolvedTheme);
+    document.querySelector("meta[name='theme-color']")?.setAttribute("content", resolvedTheme === "dark" ? "#141414" : "#ffffff");
   }, [resolvedTheme]);
 
   const setTheme = (theme: Theme) => {

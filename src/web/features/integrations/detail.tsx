@@ -1,4 +1,5 @@
 import { ArrowLeft, ArrowUpRight } from "lucide-react";
+import { OutboundLink } from "@/components/outbound-link";
 import { RichText } from "@/components/rich-text";
 import { t } from "@/i18n";
 
@@ -65,15 +66,13 @@ export function Fact({ label, children }: { label: string; children: React.React
 
 export function ExternalText({ href, children }: { href: string; children: React.ReactNode }) {
   return (
-    <a
+    <OutboundLink
       href={href}
-      target="_blank"
-      rel="noopener noreferrer"
       className="inline-flex items-center gap-1 rounded underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
     >
       {children}
       <ArrowUpRight className="size-3.5 text-muted-foreground" aria-hidden="true" />
-    </a>
+    </OutboundLink>
   );
 }
 

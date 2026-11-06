@@ -68,3 +68,39 @@ test("log text is clipped, short text is left alone", () => {
   expect(long.length).toBe(4000);
   expect(long.endsWith("…")).toBe(true);
 });
+
+test("background work left by a finished CLI is waited for, then stopped when it runs too long", async () => {
+  const { background } = await import("../../../src/server/agents/process");
+  const saved = { ...background };
+  Object.assign(background, { waitMs: 400, pollMs: 50 });
+  try {
+    const logs: string[] = [];
+    const onLog = (l: { text: string }) => logs.push(l.text);
+    const pidFile = join(dir, "bg.pid");
+    await runJsonl(
+      ["sh", "-c", `sleep 30 >/dev/null 2>&1 & echo $! > ${pidFile}`],
+      { prompt: "", cwd: dir, signal: new AbortController().signal, onLog },
+      () => {},
+    );
+    expect(logs[0]).toStartWith("Waiting for background work to finish: sleep 30");
+    expect(logs.at(-1)).toStartWith("Stopped what was still running in the background");
+    const pid = await waitForPid(pidFile);
+    await Bun.sleep(100);
+    expect(alive(pid)).toBe(false);
+
+    logs.length = 0;
+    Object.assign(background, { waitMs: 5000 });
+    await runJsonl(
+      ["sh", "-c", "sleep 0.3 >/dev/null 2>&1 &"],
+      { prompt: "", cwd: dir, signal: new AbortController().signal, onLog },
+      () => {},
+    );
+    expect(logs).toEqual(["Waiting for background work to finish: sleep 0.3", "Background work finished"]);
+
+    logs.length = 0;
+    await runJsonl(["sh", "-c", "true"], { prompt: "", cwd: dir, signal: new AbortController().signal, onLog }, () => {});
+    expect(logs).toEqual([]);
+  } finally {
+    Object.assign(background, saved);
+  }
+});

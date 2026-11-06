@@ -9,7 +9,9 @@ interface Options {
 }
 
 // Runs a DAG with bounded parallelism; a failed node skips its whole downstream branch, siblings keep going.
-export async function schedule(nodes: { id: string; dependsOn: string[] }[], opts: Options): Promise<Map<string, Outcome>> {
+// Nodes sharing a lane never run at the same time.
+export async function schedule(nodes: { id: string; dependsOn: string[]; lane?: string }[], opts: Options): Promise<Map<string, Outcome>> {
+  const laneOf = new Map(nodes.map((n) => [n.id, n.lane]));
   const outcome = new Map<string, Outcome>();
   let waiting = [...nodes];
   const running = new Map<string, Promise<void>>();
@@ -46,6 +48,7 @@ export async function schedule(nodes: { id: string; dependsOn: string[] }[], opt
     for (const n of waiting) {
       if (running.size >= opts.concurrency) break;
       if (!n.dependsOn.every((d) => outcome.get(d) === "done")) continue;
+      if (n.lane && [...running.keys()].some((id) => laneOf.get(id) === n.lane)) continue;
       running.set(
         n.id,
         opts.run(n.id).then(

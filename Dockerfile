@@ -10,10 +10,14 @@ RUN bun run build
 
 # Run: agents are the Claude Code and Codex CLIs, so the image carries them plus the tools they reach for.
 FROM node:22-bookworm-slim
+# Debian's chromium is the agents' browser, driven through agent-browser; it lives outside /home/node, so the volume
+# mounted there never hides it. Python with python-pptx, python-docx, openpyxl and reportlab, plus pandoc, let agents
+# make decks, documents, spreadsheets and PDFs without installing anything.
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends ca-certificates git ripgrep tini \
+  && apt-get install -y --no-install-recommends ca-certificates git ripgrep tini chromium fonts-liberation \
+    python3 python3-pptx python3-docx python3-openpyxl python3-reportlab pandoc \
   && rm -rf /var/lib/apt/lists/*
-RUN npm install -g @anthropic-ai/claude-code @openai/codex && npm cache clean --force
+RUN npm install -g @anthropic-ai/claude-code @openai/codex agent-browser && npm cache clean --force
 
 COPY --from=build /app/dist/satgas /usr/local/bin/satgas
 
@@ -22,6 +26,7 @@ RUN mkdir -p /data && chown -R node:node /data /home/node
 USER node
 WORKDIR /data
 ENV HOME=/home/node \
+  AGENT_BROWSER_EXECUTABLE_PATH=/usr/bin/chromium \
   SATGAS_HOST=0.0.0.0 \
   SATGAS_PORT=4317 \
   SATGAS_DATA_DIR=/data

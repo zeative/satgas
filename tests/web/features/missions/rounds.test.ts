@@ -65,3 +65,58 @@ describe("roundsOf", () => {
     expect(roundsOf(run({ status: "running", nodes: [task("a", { status: "running" })] }))[0]?.outcome).toBeNull();
   });
 });
+
+test("a round the planner answered shows the answer, and reports read without native-card blocks", () => {
+  const base = { id: "r", cwd: "/w", createdAt: 1, board: { cards: [], links: [], moved: {} } };
+  const talk = roundsOf({ ...base, prompt: "halo", status: "done", nodes: [], answers: { 0: "Halo! Ada yang bisa dibantu?" } } as Run);
+  expect(talk[0]).toMatchObject({ answer: "Halo! Ada yang bisa dibantu?", outcome: null, report: "" });
+
+  const work = roundsOf({
+    ...base,
+    prompt: "tabel sungai",
+    status: "done",
+    nodes: [
+      {
+        id: "t1",
+        title: "Table",
+        role: "Analyst",
+        agent: "claude",
+        task: "t",
+        dependsOn: [],
+        status: "done",
+        x: 0,
+        y: 0,
+        output: "Done.\n\n```satgas:table Rivers\n| River | km |\n|---|---|\n| Nile | 6650 |\n```",
+      },
+    ],
+  } as Run);
+  expect(work[0]?.report).toBe("Done.");
+});
+
+describe("questions in rounds", () => {
+  const asked = {
+    questions: [
+      {
+        header: "Platform",
+        question: "Which platform first?",
+        multiSelect: false,
+        options: [
+          { label: "TikTok", description: "" },
+          { label: "YouTube", description: "" },
+        ],
+      },
+    ],
+  };
+
+  test("a round waiting on answers is still live, so it reads as no plan yet", () => {
+    const [round] = roundsOf(run({ status: "asking", asks: { 0: asked } }));
+    expect(round?.asked).toEqual(asked);
+    expect(round?.outcome).toBeNull();
+  });
+
+  test("questions set aside say so themselves instead of a stopped or no-plan line", () => {
+    expect(roundsOf(run({ status: "cancelled", asks: { 0: asked } }))[0]?.outcome).toBeNull();
+    const [first] = roundsOf(run({ status: "done", rounds: ["just a logo"], asks: { 0: asked } }));
+    expect(first?.outcome).toBeNull();
+  });
+});

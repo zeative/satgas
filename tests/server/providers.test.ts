@@ -73,3 +73,66 @@ test("a CLI that is missing is reported as not installed", async () => {
     config.claudeBin = join(dir, "cli");
   }
 });
+
+test("a Qwen key rejected in one region points to the region that takes it", async () => {
+  const { defaultSettings } = await import("../../src/server/settings");
+  const realFetch = globalThis.fetch;
+  const asked: string[] = [];
+  globalThis.fetch = (async (input: RequestInfo | URL) => {
+    const url = String(input);
+    asked.push(new URL(url).host);
+    const ok = url.startsWith("https://dashscope-intl.aliyuncs.com/");
+    return new Response(JSON.stringify(ok ? { data: [{ id: "qwen3-coder-plus" }] } : { error: "invalid_api_key" }), {
+      status: ok ? 200 : 401,
+    });
+  }) as typeof fetch;
+  try {
+    g.__satgasProviders = undefined;
+    g.__satgasSettings = {
+      ...defaultSettings(),
+      providers: { qwen: { key: "sk-ws-test", baseUrl: "https://dashscope.aliyuncs.com/apps/anthropic" } },
+    };
+    const qwen = (await providerStatuses(true)).find((s) => s.kind === "qwen");
+    expect(qwen?.state).toBe("failed");
+    expect(qwen?.error).toContain("`https://dashscope-intl.aliyuncs.com/apps/anthropic`");
+    expect(asked).toContain("dashscope.aliyuncs.com");
+
+    g.__satgasProviders = undefined;
+    g.__satgasSettings = { ...defaultSettings(), providers: { qwen: { key: "sk-ws-test" } } };
+    const byDefault = (await providerStatuses(true)).find((s) => s.kind === "qwen");
+    expect(byDefault?.state).toBe("ok");
+  } finally {
+    globalThis.fetch = realFetch;
+    g.__satgasSettings = undefined;
+    g.__satgasProviders = undefined;
+  }
+});
+
+test("Model Studio's list keeps chat models and drops other kinds, test entries and dated duplicates", async () => {
+  const { chatModels } = await import("../../src/server/providers");
+  const ids = [
+    "qwen3.7-max",
+    "qwen3.7-max-2026-05-17",
+    "qwen-plus-2025-01-25",
+    "qwen3-coder-flash",
+    "deepseek-v4-pro-0813",
+    "deepseek-v4-pro",
+    "glm-5.3",
+    "pre-mock_ptu_auth_v2_base",
+    "qwen-image-3.0",
+    "wan2.5-t2v",
+    "text-embedding-v4",
+    "qwen-mt-plus",
+    "qwen-audio-3.0-asr-flash",
+    "tongyi-tingwu-slp",
+    "kimi/kimi-k3",
+    "ZHIPU/GLM-5.3",
+  ];
+  expect(chatModels(ids.map((id) => ({ id, name: id }))).map((m) => m.id)).toEqual([
+    "qwen3.7-max",
+    "qwen-plus-2025-01-25",
+    "qwen3-coder-flash",
+    "deepseek-v4-pro",
+    "glm-5.3",
+  ]);
+});

@@ -1,6 +1,7 @@
 import type { Edge, Node, ReactFlowInstance } from "@xyflow/react";
 import type { RefObject } from "react";
 import { toast } from "sonner";
+import { openExternal } from "@/components/outbound-link";
 import { t } from "@/i18n";
 import { type Board, type BoardOp, type Card, DEFAULT_SIZE } from "../../../shared/board";
 import type { NodeState } from "../../../shared/types";
@@ -50,6 +51,8 @@ export interface ActionDeps {
   createAt: (kind: AddKind, at: Pt) => void;
   addImages: (files: File[], at: Pt) => Promise<void>;
   fit: (ids?: string[]) => void;
+  // Zoom to 100% around the middle of the part of the board the panel leaves visible.
+  zoom100: () => void;
   openTask: (id: string) => void;
   setEditingId: (id: string) => void;
   expand: (card: Card) => void;
@@ -57,6 +60,8 @@ export interface ActionDeps {
   clip: RefObject<LocalClip>;
   runId: string;
   fileKey?: string;
+  // The board's name, for exported files that are not named after a card.
+  title: string;
   // Where nodes sit right now, tasks included, and how to move them; tasks and cards store positions differently.
   items: (ids: string[]) => Item[];
   move: (moves: Move[]) => void;
@@ -125,7 +130,7 @@ export function boardActions(d: ActionDeps): BoardActions {
     },
     openTab: (id) => {
       const src = keyedSrc(pick([id])[0]?.src, d.runId, d.fileKey);
-      if (src) window.open(src, "_blank", "noopener");
+      if (src) openExternal(src);
     },
     copy,
     cut: (ids) => {
@@ -161,6 +166,15 @@ export function boardActions(d: ActionDeps): BoardActions {
       d.select(copies);
     },
     copyPng: (ids) => requestBoardExport("clipboard", ids?.length ? ids : undefined),
+    // Loaded with the menu that offers them, so the import resolves within the click and the clipboard still allows the write.
+    copyCards: (ids, format) =>
+      void import("./card-export").then((m) =>
+        m.copyCards(pick(ids), d.board.cards, format, (src) => keyedSrc(src, d.runId, d.fileKey) ?? src),
+      ),
+    exportCards: (ids, format) =>
+      void import("./card-export").then((m) =>
+        m.exportCards(pick(ids), d.board.cards, format, d.title, (src) => keyedSrc(src, d.runId, d.fileKey) ?? src),
+      ),
     copyStyle: (ids) => {
       d.clip.current.style = styleOf(pick(ids));
     },
@@ -205,7 +219,7 @@ export function boardActions(d: ActionDeps): BoardActions {
     add: (kind, at) => d.createAt(kind, at),
     selectAll: () => d.select([...d.tasks.map((n) => n.id), ...d.board.cards.map((c) => c.id)]),
     fit: () => d.fit(),
-    zoom100: () => void d.rf.zoomTo(1, { duration: 200 }),
+    zoom100: () => d.zoom100(),
     toggle: (pref) => d.toggle(pref),
     exportBoard: (format) => requestBoardExport(format),
     pasteText,

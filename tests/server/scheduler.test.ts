@@ -56,3 +56,27 @@ test("abort cancels running and waiting nodes", async () => {
   expect(outcome.get("a")).toBe("cancelled");
   expect(outcome.get("b")).toBe("cancelled");
 });
+
+test("tasks on one lane run one after the other, other lanes keep going", async () => {
+  const running = new Set<string>();
+  let together = false;
+  await schedule(
+    [
+      { id: "a", dependsOn: [], lane: "nadia" },
+      { id: "b", dependsOn: [], lane: "nadia" },
+      { id: "c", dependsOn: [], lane: "raka" },
+    ],
+    {
+      concurrency: 4,
+      signal: new AbortController().signal,
+      onSkip: () => {},
+      run: async (id) => {
+        running.add(id);
+        if (running.has("a") && running.has("b")) together = true;
+        await sleep(10);
+        running.delete(id);
+      },
+    },
+  );
+  expect(together).toBe(false);
+});

@@ -10,6 +10,7 @@ import {
   loadToken,
   readCookie,
   resetFailures,
+  rotateToken,
   signIn,
   signInCookie,
   validFileKey,
@@ -88,4 +89,28 @@ test("file keys open one board only", async () => {
   expect(validFileKey("run1", key)).toBe(true);
   expect(validFileKey("run2", key)).toBe(false);
   expect(validFileKey("run1", `${key.slice(0, -1)}x`)).toBe(false);
+});
+
+describe("changing the token", () => {
+  test("the old token stops working at once, the new one is private, and a cookie follows it", async () => {
+    config.token = null;
+    await rm(join(dir, "token"), { force: true });
+    const { token: old } = await loadToken();
+    const next = await rotateToken();
+    expect(next).not.toBe(old);
+    expect(signIn(old)).toBe("wrong");
+    resetFailures();
+    expect(signIn(next ?? "")).toBe("ok");
+    expect((await readFile(join(dir, "token"), "utf8")).trim()).toBe(next ?? "");
+    expect((await stat(join(dir, "token"))).mode & 0o777).toBe(0o600);
+    expect(signInCookie()).toContain(`${COOKIE}=${next}`);
+  });
+
+  test("a token from SATGAS_TOKEN belongs to whoever set it", async () => {
+    config.token = "from-the-environment-0123456789abcdef";
+    await loadToken();
+    expect(await rotateToken()).toBeNull();
+    expect(signIn("from-the-environment-0123456789abcdef")).toBe("ok");
+    config.token = null;
+  });
 });

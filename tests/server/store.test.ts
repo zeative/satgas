@@ -7,6 +7,7 @@ import {
   appendLog,
   createRun,
   deleteRun,
+  dropFileLists,
   flushAll,
   getLogs,
   getRun,
@@ -15,6 +16,7 @@ import {
   ownWorkspace,
   patchRun,
 } from "../../src/server/store";
+import type { Card } from "../../src/shared/board";
 import type { Run } from "../../src/shared/types";
 
 let dir = "";
@@ -46,6 +48,8 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  // Saves still waiting on their timer would otherwise land in the real data folder.
+  await flushAll();
   config.dataDir = originalDir;
   await rm(dir, { recursive: true, force: true });
 });
@@ -152,4 +156,44 @@ test("deleting a board removes its own workspace but never a folder picked elsew
       () => false,
     ),
   ).toBe(true);
+});
+
+test("keeps saving when a scheduled save is long overdue, as when timers stop firing", async () => {
+  const run = createRun("stall", "/w");
+  await flushAll();
+  patchRun(run.id, { title: "first" });
+  const realNow = Date.now;
+  Date.now = () => realNow() + 10_000;
+  try {
+    patchRun(run.id, { title: "second" });
+  } finally {
+    Date.now = realNow;
+  }
+  // Written at once, well before the half-second timer would have fired.
+  await Bun.sleep(80);
+  const saved = await Bun.file(join(dir, "runs", `${run.id}.json`)).json();
+  expect(saved.run.title).toBe("second");
+});
+
+test("a board from before file lists left the canvas loses them, and no file is forgotten", () => {
+  const list = (id: string, from: string) =>
+    ({ id, kind: "files", x: 0, y: 0, w: 300, h: 200, from, files: [{ path: "a.ts", change: "added" }], createdAt: 1 }) as Card;
+  const note = { id: "n", kind: "note", x: 0, y: 0, w: 1, h: 1, createdAt: 1 } as Card;
+  const known = [{ path: "b.ts", change: "modified" as const }];
+  const run = {
+    nodes: [{ id: "old" }, { id: "new", changes: { files: known } }],
+    board: {
+      cards: [list("l1", "old"), list("l2", "new"), note],
+      links: [
+        { id: "x", source: "l1", target: "n" },
+        { id: "y", source: "n", target: "n2" },
+      ],
+      moved: {},
+    },
+  } as unknown as Run;
+  dropFileLists(run);
+  expect(run.board?.cards.map((c) => c.id)).toEqual(["n"]);
+  expect(run.board?.links.map((l) => l.id)).toEqual(["y"]);
+  expect(run.nodes[0]?.changes?.files).toEqual([{ path: "a.ts", change: "added" }]);
+  expect(run.nodes[1]?.changes?.files).toEqual(known);
 });

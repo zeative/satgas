@@ -44,5 +44,7 @@ export async function serveWorkFile(cwd: string, relPath: string): Promise<Respo
   if (!root || !full?.startsWith(root + sep)) return notFound();
   const file = Bun.file(full);
   if (!(await file.exists())) return notFound();
+  // A sandboxed document cannot host the browser's PDF viewer; a PDF runs no page script, so it is served plain.
+  if (/\.pdf$/i.test(full)) return new Response(file, { headers: { "content-type": "application/pdf", "cache-control": "no-store" } });
   return new Response(file, { headers: SANDBOXED });
 }

@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { rm, stat } from "node:fs/promises";
 import { join } from "node:path";
-import { claudeArgs, claudeMcpConfig, runClaude } from "../../../src/server/agents/claude";
+import { claudeArgs, claudeMcpConfig, outputCap, readableError, runClaude, usageOf } from "../../../src/server/agents/claude";
 import { AgentError } from "../../../src/server/agents/process";
 import { config } from "../../../src/server/config";
 import { defaultSettings } from "../../../src/server/settings";
@@ -52,6 +52,63 @@ describe("runClaude", () => {
       { kind: "tool", text: "Bash bun test" },
     ]);
     expect(await Bun.file(stdinOut).text()).toBe("do the thing");
+  });
+
+  test("logs the agent's thinking and what a connector call was about, never a value named like a secret", async () => {
+    setFake({
+      FAKE_CLI_OUTPUT: jsonl(
+        {
+          type: "assistant",
+          message: {
+            content: [
+              { type: "thinking", thinking: "Checking the header first" },
+              { type: "thinking", thinking: "  " },
+              { type: "tool_use", name: "mcp__satgas_team__request_secret", input: { label: "Stripe key", reason: "webhook" } },
+              { type: "tool_use", name: "mcp__db__connect", input: { api_key: "sk_live_1", table: "users" } },
+              { type: "tool_use", name: "StructuredOutput", input: { title: "The plan" } },
+              { type: "tool_use", name: "Grep", input: { pattern: "amber", path: "docs" } },
+            ],
+          },
+        },
+        { type: "result", subtype: "success", is_error: false, result: "Done" },
+      ),
+    });
+    const r = req();
+    await runClaude(r);
+    expect(r.logs).toEqual([
+      { kind: "think", text: "Checking the header first" },
+      { kind: "tool", text: "mcp__satgas_team__request_secret Stripe key" },
+      { kind: "tool", text: "mcp__db__connect users" },
+      { kind: "tool", text: "Grep amber" },
+    ]);
+  });
+
+  test("keeps per-model tokens and the CLI's cost, but no cost for a gateway that bills its own way", () => {
+    const result = {
+      modelUsage: {
+        "claude-haiku-5-5": {
+          inputTokens: 1175,
+          cacheReadInputTokens: 11228,
+          cacheCreationInputTokens: 6709,
+          outputTokens: 18,
+          costUSD: 0.0016,
+          canonicalModel: "claude-haiku-5-5",
+        },
+      },
+    };
+    expect(usageOf(result, true)).toEqual({
+      input: 1175 + 11228 + 6709,
+      cached: 11228 + 6709,
+      output: 18,
+      byModel: { "claude-haiku-5-5": { input: 1175, read: 11228, write: 6709, output: 18, cost: 0.0016 } },
+    });
+    expect(usageOf(result, false)?.byModel?.["claude-haiku-5-5"]?.cost).toBeUndefined();
+    expect(usageOf({ usage: { input_tokens: 5, cache_read_input_tokens: 2, output_tokens: 1 } }, true)).toEqual({
+      input: 7,
+      cached: 2,
+      output: 1,
+    });
+    expect(usageOf({}, true)).toBeUndefined();
   });
 
   test("turns an error result into an AgentError", async () => {
@@ -152,4 +209,69 @@ test("passes enabled MCP servers in Claude's config shape and skips disabled one
       docs: { type: "http", url: "https://mcp.example.com/mcp", headers: {} },
     },
   });
+});
+
+describe("output-token caps", () => {
+  test("reads the cap from each gateway's refusal", () => {
+    expect(outputCap('API Error: 400 {"message":"InvalidParameter: Range of max_tokens should be [1, 8192]"}')).toBe(8192);
+    expect(outputCap("Invalid max_tokens value, the valid range of max_tokens is [1, 8192]")).toBe(8192);
+    expect(outputCap("max_tokens: 32000 > 16384, which is the maximum allowed")).toBe(16384);
+    expect(outputCap("max_tokens should be [1, 8]")).toBeNull();
+    expect(outputCap("rate limited")).toBeNull();
+  });
+
+  test("a refused run repeats once under the cap, and later runs start under it", async () => {
+    const g = globalThis as { __satgasSettings?: Settings };
+    const before = g.__satgasSettings;
+    const s = defaultSettings();
+    g.__satgasSettings = {
+      ...s,
+      agents: { ...s.agents, claude: { ...s.agents.claude, provider: "qwen", model: "qwen-max-captest" } },
+      providers: { qwen: { key: "k" } },
+    };
+    const capOut = join(dir, "cap.txt");
+    try {
+      setFake({
+        FAKE_CLI_CAP_OUT: capOut,
+        FAKE_CLI_EXIT: "1",
+        FAKE_CLI_OUTPUT: jsonl(
+          {
+            type: "assistant",
+            message: { content: [{ type: "text", text: 'API Error: 400 {"message":"Range of max_tokens should be [1, 8192]"}' }] },
+          },
+          {
+            type: "result",
+            subtype: "success",
+            is_error: true,
+            result: 'API Error: 400 {"message":"Range of max_tokens should be [1, 8192]"}',
+          },
+        ),
+        FAKE_CLI_OUTPUT_CAPPED: jsonl({ type: "result", subtype: "success", is_error: false, result: "Hello" }),
+      });
+      const first = req();
+      expect(await runClaude(first)).toEqual({ output: "Hello", structured: undefined });
+      expect(first.logs).toEqual([{ kind: "info", text: "The model takes at most 8192 output tokens; running again within that" }]);
+      expect(await Bun.file(capOut).text()).toBe("8192");
+
+      const second = req();
+      expect(await runClaude(second)).toEqual({ output: "Hello", structured: undefined });
+      expect(second.logs).toEqual([]);
+    } finally {
+      g.__satgasSettings = before;
+    }
+  });
+});
+
+test("gateway refusals read as their message, with a next step for a model that isn't offered", () => {
+  expect(
+    readableError(
+      'API Error: 400 event:error data:{"code":"InvalidParameter","message":"The model `kimi/kimi-k3` does not exist or you do not have access to it.","request_id":"8c30"}',
+    ),
+  ).toBe("The model `kimi/kimi-k3` does not exist or you do not have access to it. Pick another model in the composer");
+  const capped = readableError(
+    'API Error: 400 event:error data:{"code":"InvalidParameter","message":"<400> InternalError.Algo.InvalidParameter: Range of max_tokens should be [1, 8192]"}',
+  );
+  expect(capped).toBe("Range of max_tokens should be [1, 8192]");
+  expect(outputCap(capped)).toBe(8192);
+  expect(readableError("2 of 6 tests failed")).toBe("2 of 6 tests failed");
 });

@@ -112,6 +112,21 @@ describe("styles", () => {
       { op: "patch", id: "s2", patch: { color: "green", shape: "ellipse" } },
     ]);
   });
+
+  test("line looks go to lines and shapes, never to ink or notes", () => {
+    const line = card("l", { kind: "drawing", line: "line" });
+    const ink = card("i", { kind: "drawing" });
+    const shape = card("s", { kind: "shape", dash: "dotted" });
+    const note = card("n");
+    expect(styleOps([line, ink, shape, note], { dash: "dashed", stroke: 4, line: "arrow" })).toEqual([
+      { op: "patch", id: "l", patch: { dash: "dashed", stroke: 4, line: "arrow" } },
+      { op: "patch", id: "s", patch: { dash: "dashed", stroke: 4 } },
+    ]);
+    expect(styleOps([shape], { dash: "solid", fill: "none", opacity: 1 })).toEqual([
+      { op: "patch", id: "s", patch: { dash: undefined, fill: "none" } },
+    ]);
+    expect(styleOf([card("x", { kind: "shape", fill: "solid", stroke: 2 })])).toEqual({ fill: "solid", stroke: 2 });
+  });
 });
 
 test("frameAround leaves room around the cards and for the frame name", () => {

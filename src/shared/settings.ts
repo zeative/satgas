@@ -1,4 +1,6 @@
 // Integrations: how each agent runs and which MCP servers every agent gets. Shared by server and client.
+
+import { type CommitStyle, DEFAULT_COMMIT_STYLE, sanitizeCommitStyle } from "./commits";
 import {
   CLAUDE_EFFORTS,
   DEFAULT_PROVIDER,
@@ -8,6 +10,7 @@ import {
   providerDef,
   type Runtime,
 } from "./providers";
+import { sanitizeTools, type ToolSetting } from "./tools";
 
 export type PermissionMode = "acceptEdits" | "bypassPermissions";
 export type CodexSandbox = "read-only" | "workspace-write" | "danger-full-access";
@@ -25,6 +28,10 @@ export interface McpServer {
   env?: Record<string, string>;
   url?: string;
   headers?: Record<string, string>;
+  // Set only on Satgas's own built-in connector, never saved: how long one tool call may take, for Codex.
+  toolTimeoutSec?: number;
+  // Codex cancels a tool that asks for approval when nobody can answer; only Satgas's own connector skips the ask.
+  toolsApproved?: boolean;
 }
 
 export interface Settings {
@@ -43,11 +50,34 @@ export interface Settings {
   // Keys and endpoints per provider; an entry exists once someone connects it.
   providers: Partial<Record<ProviderKind, ProviderConfig>>;
   mcpServers: McpServer[];
+  // Integrations → Tools: what runs around every agent's work.
+  tools: ToolSetting[];
+  // How long one task may work before it is asked to wrap up, in minutes.
+  taskMinutes: number;
+  // How many tasks one board runs side by side.
+  concurrency: number;
+  // Teammates working the same round can post notes and ask each other; off by default, since two benchmarks showed no
+  // gain for the extra tokens.
+  teamTalk: boolean;
+  // Writing tasks that run side by side in a git repository each work on their own branch in a worktree, merged back
+  // when they finish; each borrows the folder's node_modules.
+  worktrees: boolean;
+  // How agents and Satgas write commit messages.
+  commitStyle: CommitStyle;
+  // Pull requests agents open are watched: failed checks, new review feedback and conflicts start a round to fix them.
+  watchPulls: boolean;
+  // Set once the old forced planner default has been moved to "same as tasks".
+  plannerMigrated?: boolean;
+  // Default tools already offered once; a default added later joins existing setups once, and a removal sticks.
+  toolsOffered?: string[];
 }
 
 export const PERMISSION_MODES: PermissionMode[] = ["acceptEdits", "bypassPermissions"];
 export const CODEX_SANDBOXES: CodexSandbox[] = ["read-only", "workspace-write", "danger-full-access"];
 export const MCP_NAME = /^[A-Za-z0-9_-]{1,40}$/;
+// The choices offered for a task's time limit; 0 means no limit.
+export const TASK_MINUTES = [5, 10, 20, 30, 60, 0];
+export const CONCURRENCY = [1, 2, 3, 4, 6, 8];
 const MAX_SERVERS = 40;
 
 const str = (v: unknown, max = 500) => (typeof v === "string" && v.length <= max ? v.trim() : null);
@@ -87,6 +117,9 @@ function record(v: unknown, maxKeys = 40): Record<string, string> | null {
   return out;
 }
 
+export const GITHUB_MCP_DEFAULT = "https://api.githubcopilot.com/mcp/";
+export const GITHUB_MCP_ALL = "https://api.githubcopilot.com/mcp/x/all";
+
 function server(v: unknown): McpServer | string {
   const s = v as Record<string, unknown>;
   if (!s || typeof s !== "object") return "A server entry is malformed.";
@@ -101,7 +134,9 @@ function server(v: unknown): McpServer | string {
     if (!url || !/^https?:\/\//i.test(url)) return `"${name}" needs an http(s) URL.`;
     const headers = record(s.headers);
     if (!headers) return `"${name}" has invalid headers.`;
-    return { ...base, transport: "http", url, headers };
+    // GitHub's default endpoint leaves out notifications and Actions; connectors added from the catalog move to the full one.
+    const full = catalogId === "github" && url === GITHUB_MCP_DEFAULT ? GITHUB_MCP_ALL : url;
+    return { ...base, transport: "http", url: full, headers };
   }
   const command = str(s.command, 500);
   if (!command) return `"${name}" needs a command.`;
@@ -131,7 +166,8 @@ export function sanitizeSettings(input: unknown, defaults: Settings): Settings |
             ? (claude.effort as Effort | "")
             : defaults.agents.claude.effort,
         model: str(claude.model, 100) ?? defaults.agents.claude.model,
-        plannerModel: str(claude.plannerModel, 100) || defaults.agents.claude.plannerModel,
+        // "" is a choice too: the lead uses the same model as the tasks.
+        plannerModel: str(claude.plannerModel, 100) ?? defaults.agents.claude.plannerModel,
         permissionMode: PERMISSION_MODES.includes(claude.permissionMode as PermissionMode)
           ? (claude.permissionMode as PermissionMode)
           : defaults.agents.claude.permissionMode,
@@ -147,7 +183,32 @@ export function sanitizeSettings(input: unknown, defaults: Settings): Settings |
     },
     providers: prov,
     mcpServers: [],
+    tools: [],
+    taskMinutes: TASK_MINUTES.includes((raw as { taskMinutes?: number }).taskMinutes as number)
+      ? ((raw as { taskMinutes?: number }).taskMinutes as number)
+      : (defaults.taskMinutes ?? 20),
+    concurrency: CONCURRENCY.includes((raw as { concurrency?: number }).concurrency as number)
+      ? ((raw as { concurrency?: number }).concurrency as number)
+      : (defaults.concurrency ?? 3),
+    teamTalk:
+      typeof (raw as { teamTalk?: unknown }).teamTalk === "boolean"
+        ? (raw as { teamTalk: boolean }).teamTalk
+        : (defaults.teamTalk ?? false),
+    worktrees:
+      typeof (raw as { worktrees?: unknown }).worktrees === "boolean"
+        ? (raw as { worktrees: boolean }).worktrees
+        : (defaults.worktrees ?? true),
+    watchPulls:
+      typeof (raw as { watchPulls?: unknown }).watchPulls === "boolean"
+        ? (raw as { watchPulls: boolean }).watchPulls
+        : (defaults.watchPulls ?? true),
+    commitStyle: sanitizeCommitStyle((raw as { commitStyle?: unknown }).commitStyle, defaults.commitStyle ?? DEFAULT_COMMIT_STYLE),
+    ...((raw as { plannerMigrated?: unknown }).plannerMigrated === true || defaults.plannerMigrated ? { plannerMigrated: true } : {}),
+    ...offered((raw as { toolsOffered?: unknown }).toolsOffered ?? defaults.toolsOffered),
   };
+  const tools = sanitizeTools((raw as { tools?: unknown }).tools ?? defaults.tools);
+  if (typeof tools === "string") return tools;
+  out.tools = tools;
   const servers = raw.mcpServers === undefined ? defaults.mcpServers : raw.mcpServers;
   if (!Array.isArray(servers) || servers.length > MAX_SERVERS) return `Up to ${MAX_SERVERS} MCP servers are supported.`;
   const names = new Set<string>();
@@ -160,6 +221,9 @@ export function sanitizeSettings(input: unknown, defaults: Settings): Settings |
   }
   return out;
 }
+
+const offered = (v: unknown) =>
+  Array.isArray(v) ? { toolsOffered: v.filter((x): x is string => typeof x === "string" && /^[a-z0-9-]{1,40}$/.test(x)).slice(0, 40) } : {};
 
 // Stands in for a saved key, env value or header value, so the browser never receives the secret itself.
 export const SECRET_MASK = "••••";

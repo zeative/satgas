@@ -160,3 +160,34 @@ describe("removing fields", () => {
     expect(sanitizeOps([{ op: "patch", id: "a", patch: { x: null } }])).toBeNull();
   });
 });
+
+test("lines, arrows and shape looks pass the checks, and nonsense does not", () => {
+  const card = {
+    id: "a",
+    kind: "drawing",
+    x: 0,
+    y: 0,
+    w: 10,
+    h: 10,
+    points: [0, 0, 10, 10],
+    line: "arrow",
+    dash: "dashed",
+    stroke: 2,
+    opacity: 0.5,
+  };
+  expect(sanitizeOps([{ op: "put", card }])?.[0]).toMatchObject({ card: { line: "arrow", dash: "dashed", stroke: 2, opacity: 0.5 } });
+  expect(sanitizeOps([{ op: "put", card: { ...card, pressure: [0.2, 0.8] } }])).not.toBeNull();
+  expect(sanitizeOps([{ op: "put", card: { ...card, line: "zigzag" } }])).toBeNull();
+  expect(sanitizeOps([{ op: "put", card: { ...card, fill: "glitter" } }])).toBeNull();
+  expect(sanitizeOps([{ op: "put", card: { ...card, opacity: 3 } }])).toBeNull();
+  expect(sanitizeOps([{ op: "put", card: { ...card, pressure: [2] } }])).toBeNull();
+  expect(sanitizeOps([{ op: "patch", id: "a", patch: { dash: null } }])?.[0]).toMatchObject({ patch: { dash: undefined } });
+});
+
+test("an arrow between cards keeps its head", () => {
+  expect(sanitizeOps([{ op: "link", link: { id: "l", source: "a", target: "b", arrow: true } }])?.[0]).toEqual({
+    op: "link",
+    link: { id: "l", source: "a", target: "b", arrow: true },
+  });
+  expect(sanitizeOps([{ op: "link", link: { id: "l", source: "a", target: "b", arrow: "yes" } }])).toBeNull();
+});

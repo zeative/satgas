@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
-import { Blocks, Bot, Lightbulb, Plus, Server, Settings2, TriangleAlert } from "lucide-react";
-import { useState } from "react";
+import { Blocks, Bot, Paperclip, Plus, ScrollText, Server, Settings2, TriangleAlert } from "lucide-react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { ClaudeMark, CodexMark } from "@/components/brand-marks";
 import { Button } from "@/components/ui/button";
@@ -17,10 +17,11 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { t } from "@/i18n";
 import { loadSettings, saveSettings, useSettings } from "@/stores/settings";
+import { loadSkills, useSkills } from "@/stores/skills";
 import type { Settings } from "../../../shared/settings";
 
-// The composer's + menu, shared by Home and the board: examples (Home only), agent switches and connectors.
-export function ComposerMenu({ onExample }: { onExample?: (prompt: string) => void }) {
+// The composer's + menu, shared by Home and the board: files, skills, agent switches and connectors.
+export function ComposerMenu({ onSkill, onAddFiles }: { onSkill?: (name: string) => void; onAddFiles?: () => void }) {
   const settings = useSettings((s) => s.settings);
   const loadError = useSettings((s) => s.error);
   const [retrying, setRetrying] = useState(false);
@@ -39,22 +40,13 @@ export function ComposerMenu({ onExample }: { onExample?: (prompt: string) => vo
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-60">
-        {onExample && (
-          <DropdownMenuSub>
-            <DropdownMenuSubTrigger>
-              <Lightbulb />
-              {t.examplesShort}
-            </DropdownMenuSubTrigger>
-            <DropdownMenuSubContent className="w-80">
-              {t.starters.map((s) => (
-                <DropdownMenuItem key={s.kind} onClick={() => onExample(s.prompt)} className="flex-col items-start gap-0.5">
-                  <span>{s.label}</span>
-                  <span className="line-clamp-1 text-xs text-muted-foreground">{s.prompt}</span>
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuSubContent>
-          </DropdownMenuSub>
+        {onAddFiles && (
+          <DropdownMenuItem onClick={onAddFiles}>
+            <Paperclip />
+            {t.attach.add}
+          </DropdownMenuItem>
         )}
+        {onSkill && <SkillsSub onPick={onSkill} />}
         {!settings && (
           // Agents and connectors come from the settings; while they load or after they fail, the menu says so.
           <DropdownMenuItem
@@ -165,5 +157,41 @@ function Toggle({ icon, label, on, onToggle }: { icon: React.ReactNode; label: s
       <span className="min-w-0 flex-1 truncate">{label}</span>
       <Switch checked={on} tabIndex={-1} aria-hidden="true" className="pointer-events-none" />
     </DropdownMenuItem>
+  );
+}
+
+// The skills a message can name: agent-skills and the person's own; picking one puts /name in the message.
+function SkillsSub({ onPick }: { onPick: (name: string) => void }) {
+  const skills = useSkills((s) => s.skills);
+  useEffect(() => {
+    if (!useSkills.getState().skills) void loadSkills();
+  }, []);
+  const usable = (skills ?? []).filter((s) => s.enabled && (s.source.kind !== "builtin" || s.pack));
+  return (
+    <DropdownMenuSub>
+      <DropdownMenuSubTrigger>
+        <ScrollText />
+        {t.skills.tab}
+      </DropdownMenuSubTrigger>
+      <DropdownMenuSubContent className="max-h-80 w-80 overflow-y-auto">
+        {!skills ? (
+          <DropdownMenuItem disabled>{t.composerMenuLoading}</DropdownMenuItem>
+        ) : (
+          usable.map((s) => (
+            <DropdownMenuItem key={s.name} onClick={() => onPick(s.name)} className="flex-col items-start gap-0.5">
+              <span className="font-mono text-[13px]">/{s.name}</span>
+              <span className="line-clamp-1 text-xs text-muted-foreground">{s.description}</span>
+            </DropdownMenuItem>
+          ))
+        )}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+          <Link to="/integrations" search={{ tab: "skills" }}>
+            <Settings2 />
+            {t.skills.manage}
+          </Link>
+        </DropdownMenuItem>
+      </DropdownMenuSubContent>
+    </DropdownMenuSub>
   );
 }

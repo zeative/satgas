@@ -3,6 +3,7 @@ import { useId, useState } from "react";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { LogoTile as Tile } from "@/components/logo-tile";
+import { OutboundLink } from "@/components/outbound-link";
 import { RichText } from "@/components/rich-text";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -13,8 +14,8 @@ import { newId } from "@/features/board/context";
 import { lang, t } from "@/i18n";
 import { cn } from "@/lib/utils";
 import { saveSettings } from "@/stores/settings";
+import { byId, CATALOG, type CatalogItem, type Category, catalogOf, type Text, toServer } from "../../../shared/catalog";
 import type { McpServer, Settings } from "../../../shared/settings";
-import { byId, CATALOG, type CatalogItem, type Category, catalogOf, type Text, toServer } from "./catalog";
 import { DetailPage, DetailSection, ExternalText, Fact } from "./detail";
 import { describe, ServerDialog } from "./server-dialog";
 import { update } from "./update";
@@ -31,7 +32,7 @@ function LogoTile({ item }: { item?: CatalogItem }) {
   return <Tile logo={item?.logo} fallback={<Server className="size-5 text-muted-foreground" aria-hidden="true" />} />;
 }
 
-// Under a connector only a note it cannot work without (like Figma's desktop app); keys and limits live on its page.
+// Under a connector only a note it cannot work without; keys and limits live on its page.
 function Meta({ item }: { item: CatalogItem }) {
   return item.note ? <p className="text-xs text-muted-foreground">{say(item.note)}</p> : null;
 }
@@ -91,7 +92,9 @@ export function useAddConnector(settings: Settings) {
 
 export function Discover({ settings, query, filter, onClearFilter, onCustom, onOpen }: DiscoverProps) {
   const { add, dialog } = useAddConnector(settings);
-  const installed = new Set(settings.mcpServers.map((s) => catalogOf(s)?.id));
+  // Added and on gets the check; added but switched off says so, so the catalog never makes an off connector look active.
+  const on = new Set(settings.mcpServers.filter((s) => s.enabled).map((s) => catalogOf(s)?.id));
+  const off = new Set(settings.mcpServers.filter((s) => !s.enabled).map((s) => catalogOf(s)?.id));
   const filtered = filter.category !== null || filter.setup !== "all";
   const items = applyFilter(CATALOG, filter).filter((c) => matches(query, c.name, c.by, say(c.desc)));
 
@@ -106,7 +109,8 @@ export function Discover({ settings, query, filter, onClearFilter, onCustom, onO
         {items.length ? (
           <ul className="grid gap-3 md:grid-cols-2">
             {items.map((item) => {
-              const isAdded = installed.has(item.id);
+              const isOn = on.has(item.id);
+              const isOff = !isOn && off.has(item.id);
               return (
                 <li key={item.id} className="relative flex gap-4 rounded-xl bg-muted/50 p-4 transition-colors hover:bg-muted/80">
                   <LogoTile item={item} />
@@ -123,7 +127,7 @@ export function Discover({ settings, query, filter, onClearFilter, onCustom, onO
                     <p className="text-sm text-muted-foreground">{say(item.desc)}</p>
                     <Meta item={item} />
                   </div>
-                  {isAdded ? (
+                  {isOn ? (
                     <span
                       role="img"
                       aria-label={`${item.name}: ${ti.added}`}
@@ -131,6 +135,13 @@ export function Discover({ settings, query, filter, onClearFilter, onCustom, onO
                       className="relative z-10 flex size-8 shrink-0 items-center justify-center rounded-lg bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
                     >
                       <Check className="size-4" aria-hidden="true" />
+                    </span>
+                  ) : isOff ? (
+                    <span
+                      title={ti.addedOff}
+                      className="relative z-10 flex h-8 shrink-0 items-center rounded-lg border px-2.5 text-xs text-muted-foreground"
+                    >
+                      {ti.off}
                     </span>
                   ) : (
                     <Button
@@ -345,15 +356,13 @@ function ConnectDialog({ item, onClose, onSave }: ConnectProps) {
                 <label htmlFor={`${uid}-${s.key}`} className="text-sm font-medium">
                   {say(s.label)}
                 </label>
-                <a
+                <OutboundLink
                   href={s.help}
-                  target="_blank"
-                  rel="noopener noreferrer"
                   className="inline-flex items-center gap-1 rounded text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                 >
                   {ti.getKey}
                   <ExternalLink className="size-3" aria-hidden="true" />
-                </a>
+                </OutboundLink>
               </div>
               <Input
                 id={`${uid}-${s.key}`}

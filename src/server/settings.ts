@@ -1,6 +1,8 @@
 import { mkdir, rename, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { DEFAULT_COMMIT_STYLE } from "../shared/commits";
 import { type CodexSandbox, type PermissionMode, type Settings, sanitizeSettings } from "../shared/settings";
+import { DEFAULT_TOOLS } from "../shared/tools";
 import { config } from "./config";
 
 const file = () => join(config.dataDir, "settings.json");
@@ -22,6 +24,16 @@ export function defaultSettings(): Settings {
     },
     providers: {},
     mcpServers: [],
+    tools: DEFAULT_TOOLS,
+    taskMinutes: 20,
+    concurrency: 3,
+    teamTalk: false,
+    worktrees: true,
+    commitStyle: DEFAULT_COMMIT_STYLE,
+    watchPulls: true,
+    // A fresh setup never had the old planner default to move, and already has every default tool.
+    plannerMigrated: true,
+    toolsOffered: DEFAULT_TOOLS.map((t) => t.id),
   };
 }
 
@@ -29,7 +41,28 @@ export function defaultSettings(): Settings {
 const g = globalThis as typeof globalThis & { __satgasSettings?: Settings; __satgasSettingsSaving?: Promise<unknown> };
 
 export function getSettings(): Settings {
-  return g.__satgasSettings ?? defaultSettings();
+  const s = g.__satgasSettings;
+  if (!s) return defaultSettings();
+  // Settings a hot reload kept from before Tools existed get the default tools, as a fresh load would give them.
+  s.tools ??= DEFAULT_TOOLS;
+  s.taskMinutes ??= 20;
+  s.concurrency ??= 3;
+  s.teamTalk ??= false;
+  s.worktrees ??= true;
+  s.commitStyle ??= DEFAULT_COMMIT_STYLE;
+  s.watchPulls ??= true;
+  // "sonnet" was the forced default before the lead could share the composer's model; it now follows the composer.
+  // A default tool added in a later version joins existing setups once; turning it off or removing it afterwards sticks.
+  const fresh = DEFAULT_TOOLS.filter((d) => !s.toolsOffered?.includes(d.id));
+  if (fresh.length) {
+    for (const d of fresh) if (!s.tools.some((t) => t.catalogId === d.catalogId)) s.tools = [...s.tools, d];
+    s.toolsOffered = DEFAULT_TOOLS.map((t) => t.id);
+  }
+  if (!s.plannerMigrated) {
+    if (s.agents.claude.plannerModel === "sonnet") s.agents.claude.plannerModel = "";
+    s.plannerMigrated = true;
+  }
+  return s;
 }
 
 // Read once per process; a hot reload keeps the settings already in memory.

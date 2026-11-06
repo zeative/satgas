@@ -9,7 +9,8 @@ const GAP_Y = 32;
 export const MAX_NODES = 12;
 
 export function validatePlan(plan: Plan): string | null {
-  if (!plan.nodes?.length) return "The plan contains no tasks.";
+  // No tasks is only right when the planner answered the request itself, changed the canvas, or asks about it first.
+  if (!plan.nodes?.length) return plan.reply?.trim() || plan.questions?.length || plan.board?.length ? null : "The plan contains no tasks.";
   if (plan.nodes.length > MAX_NODES) return `The plan is too large (${plan.nodes.length} tasks, max ${MAX_NODES}).`;
   const ids = new Set<string>();
   for (const n of plan.nodes) {

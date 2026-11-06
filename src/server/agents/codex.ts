@@ -2,7 +2,9 @@ import { CODEX_KEY_VAR, codexProviderArgs } from "../../shared/providers";
 import type { McpServer } from "../../shared/settings";
 import { config } from "../config";
 import { getSettings } from "../settings";
-import { AgentError, type AgentRequest, type AgentResult, clip, type EnvChange, logText, runJsonl } from "./process";
+import { teamServer } from "../team";
+import { codexHookArgs, prepareToolHooks, removeToolHooks, type ToolHooks } from "../tools";
+import { AgentError, type AgentRequest, type AgentResult, clip, describeInput, type EnvChange, logText, runJsonl } from "./process";
 
 export interface CodexMcp {
   args: string[];
@@ -17,7 +19,9 @@ export function codexMcp(servers: McpServer[], inherited: Record<string, string 
   const toml = (pairs: [string, string][]) => `{ ${pairs.map(([k, v]) => `${JSON.stringify(k)} = ${JSON.stringify(v)}`).join(", ")} }`;
   servers.forEach((s, i) => {
     if (!s.enabled) return;
-    const key = `mcp_servers.${s.name}`;
+    // Codex ships its own plugins under names like "github" and silently skips a server that takes one, so every
+    // connector gets a prefix; its tools then read mcp__satgas_github__…
+    const key = `mcp_servers.satgas_${s.name}`;
     if (s.transport === "stdio" && s.command) {
       args.push("-c", `${key}.command=${JSON.stringify(s.command)}`, "-c", `${key}.args=${JSON.stringify(s.args ?? [])}`);
       // Codex forwards a variable under its own name, so one its environment already holds with another value
@@ -32,6 +36,8 @@ export function codexMcp(servers: McpServer[], inherited: Record<string, string 
       }
       if (forwarded.length) args.push("-c", `${key}.env_vars=${JSON.stringify(forwarded)}`);
       if (inline.length) args.push("-c", `${key}.env=${toml(inline)}`);
+      if (s.toolTimeoutSec) args.push("-c", `${key}.tool_timeout_sec=${s.toolTimeoutSec}`);
+      if (s.toolsApproved) args.push("-c", `${key}.default_tools_approval_mode="approve"`);
     } else if (s.transport === "http" && s.url) {
       args.push("-c", `${key}.url=${JSON.stringify(s.url)}`);
       const headers = Object.entries(s.headers ?? {}).map(([h, v], j): [string, string] => {
@@ -45,65 +51,103 @@ export function codexMcp(servers: McpServer[], inherited: Record<string, string 
   return { args, env };
 }
 
-export function codexArgs(cwd: string, mcp = codexMcp(getSettings().mcpServers)): string[] {
+export function codexArgs(
+  cwd: string,
+  mcp = codexMcp(getSettings().mcpServers),
+  tools: ToolHooks | null = null,
+  readOnly = false,
+): string[] {
   const { agents, providers } = getSettings();
-  const cmd = [config.codexBin, "exec", "--json", "--ephemeral", "--skip-git-repo-check", "-C", cwd, "-s", agents.codex.sandbox];
+  const sandbox = readOnly ? "read-only" : agents.codex.sandbox;
+  const cmd = [config.codexBin, "exec", "--json", "--ephemeral", "--skip-git-repo-check", "-C", cwd, "-s", sandbox];
   // Lean mode skips config.toml (MCP servers, profiles); auth still comes from CODEX_HOME. Integrations servers still apply.
   if (config.leanAgents) cmd.push("--ignore-user-config");
   const model = agents.codex.model || (agents.codex.provider === "codex" ? config.codexModel : undefined);
   if (model) cmd.push("-m", model);
   if (agents.codex.effort) cmd.push("-c", `model_reasoning_effort=${JSON.stringify(agents.codex.effort)}`);
   cmd.push(...codexProviderArgs(agents.codex.provider, providers[agents.codex.provider] ?? {}));
-  cmd.push(...mcp.args, "-");
+  cmd.push(...mcp.args, ...codexHookArgs(tools), "-");
   return cmd;
 }
 
 // The provider key reaches Codex through the variable its provider entry names, never through argv; so do MCP secrets.
-export function codexSpawnEnv(mcp = codexMcp(getSettings().mcpServers)): EnvChange {
+export function codexSpawnEnv(mcp = codexMcp(getSettings().mcpServers), tools: ToolHooks | null = null): EnvChange {
   const { agents, providers } = getSettings();
   const key = providers[agents.codex.provider]?.key?.trim();
-  return { set: { ...mcp.env, ...(key ? { [CODEX_KEY_VAR]: key } : {}) }, unset: [] };
+  return { set: { ...mcp.env, ...tools?.env, ...(key ? { [CODEX_KEY_VAR]: key } : {}) }, unset: [] };
 }
+
+// Codex wraps each command in its login shell; the person reads the command itself.
+export const shellBody = (cmd: string) => /^(?:\/\S*\/)?(?:ba|z|da)?sh\s+-l?c\s+(["'])([\s\S]*)\1$/.exec(cmd.trim())?.[2] ?? cmd;
+
+const mcpLine = (item: { server?: unknown; tool?: unknown; arguments?: unknown }) =>
+  `mcp__${item.server}__${item.tool} ${describeInput(item.arguments)}`.trim();
+
+// Codex warns about the hook-trust flag on every run; Satgas wrote those hooks itself, so it is no error worth showing.
+const HOOK_TRUST_NOTICE = /dangerously-bypass-hook-trust/;
 
 export async function runCodex(req: AgentRequest): Promise<AgentResult> {
   let last = "";
   let failure: string | undefined;
-  const mcp = codexMcp(getSettings().mcpServers);
-  await runJsonl(
-    codexArgs(req.cwd, mcp),
-    req,
-    (ev) => {
-      if (ev.type === "item.started" && ev.item?.type === "command_execution") {
-        req.onLog({ kind: "tool", text: `Bash ${clip(String(ev.item.command ?? ""), 120)}` });
-      } else if (ev.type === "item.completed") {
-        const item = ev.item ?? {};
-        if (item.type === "agent_message" && item.text) {
-          last = item.text;
-          req.onLog({ kind: "text", text: logText(item.text.trim()) });
-        } else if (item.type === "file_change") {
-          for (const c of item.changes ?? []) {
-            req.onLog({ kind: "tool", text: `${c.kind ?? "edit"} ${c.path}` });
-            if (typeof c.path === "string") req.onFile?.(c.path, c.kind === "add" ? "added" : c.kind === "delete" ? "deleted" : "modified");
+  const usage = { input: 0, cached: 0, output: 0 };
+  const mcp = codexMcp([
+    ...getSettings().mcpServers,
+    ...(req.teamToken ? [teamServer(req.teamToken, config.port, true, !!req.teamTalk)] : []),
+  ]);
+  const tools = await prepareToolHooks("codex");
+  try {
+    await runJsonl(
+      codexArgs(req.cwd, mcp, tools, !!req.readOnly),
+      req,
+      (ev) => {
+        if (ev.type === "item.started" && ev.item?.type === "command_execution") {
+          req.onLog({ kind: "tool", text: `Bash ${clip(shellBody(String(ev.item.command ?? "")), 400)}` });
+        } else if (ev.type === "item.started" && ev.item?.type === "mcp_tool_call") {
+          req.onLog({ kind: "tool", text: mcpLine(ev.item) });
+        } else if (ev.type === "item.completed") {
+          const item = ev.item ?? {};
+          if (item.type === "reasoning" && item.text?.trim()) {
+            req.onLog({ kind: "think", text: logText(item.text.trim(), 2000) });
+          } else if (item.type === "web_search" && item.query) {
+            req.onLog({ kind: "tool", text: `WebSearch ${clip(String(item.query), 400)}` });
+          } else if (item.type === "agent_message" && item.text) {
+            last = item.text;
+            req.onLog({ kind: "text", text: logText(item.text.trim()) });
+          } else if (item.type === "file_change") {
+            for (const c of item.changes ?? []) {
+              req.onLog({ kind: "tool", text: `${c.kind ?? "edit"} ${c.path}` });
+              if (typeof c.path === "string")
+                req.onFile?.(c.path, c.kind === "add" ? "added" : c.kind === "delete" ? "deleted" : "modified");
+            }
+          } else if (item.type === "command_execution" && item.exit_code && item.exit_code !== 0) {
+            req.onLog({ kind: "error", text: `Command failed (exit ${item.exit_code})` });
+          } else if (item.type === "error" && item.message && !HOOK_TRUST_NOTICE.test(item.message)) {
+            req.onLog({ kind: "error", text: clip(item.message, 300) });
           }
-        } else if (item.type === "command_execution" && item.exit_code && item.exit_code !== 0) {
-          req.onLog({ kind: "error", text: `Command failed (exit ${item.exit_code})` });
-        } else if (item.type === "error" && item.message) {
-          req.onLog({ kind: "error", text: clip(item.message, 300) });
+        } else if (ev.type === "turn.completed") {
+          usage.input += ev.usage?.input_tokens ?? 0;
+          usage.cached += ev.usage?.cached_input_tokens ?? 0;
+          usage.output += ev.usage?.output_tokens ?? 0;
+          // Errors before this were retries the turn recovered from ("Reconnecting... 1/5").
+          failure = undefined;
+        } else if (ev.type === "turn.failed") {
+          failure = ev.error?.message ?? "Codex failed.";
+        } else if (ev.type === "error" && ev.message) {
+          req.onLog({ kind: "error", text: clip(ev.message, 300) });
+          failure = ev.message;
         }
-      } else if (ev.type === "turn.completed") {
-        // Errors before this were retries the turn recovered from ("Reconnecting... 1/5").
-        failure = undefined;
-      } else if (ev.type === "turn.failed") {
-        failure = ev.error?.message ?? "Codex failed.";
-      } else if (ev.type === "error" && ev.message) {
-        req.onLog({ kind: "error", text: clip(ev.message, 300) });
-        failure = ev.message;
-      }
-    },
-    () => (failure ? clip(failure, 400) : undefined),
-    codexSpawnEnv(mcp),
-  );
+      },
+      () => (failure ? clip(failure, 400) : undefined),
+      codexSpawnEnv(mcp, tools),
+    );
+  } finally {
+    await removeToolHooks(tools);
+  }
 
   if (failure) throw new AgentError(clip(failure, 400));
-  return { output: last };
+  if (!usage.output) return { output: last };
+  // Codex reports no price, so what it spent stays unpriced.
+  const model = getSettings().agents.codex.model || config.codexModel || "codex";
+  const byModel = { [model]: { input: Math.max(0, usage.input - usage.cached), read: usage.cached, write: 0, output: usage.output } };
+  return { output: last, usage: { ...usage, byModel } };
 }

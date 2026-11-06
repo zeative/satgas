@@ -1,4 +1,6 @@
 import {
+  ArrowUpRight,
+  Blocks,
   Code2,
   Eraser,
   FileText,
@@ -6,6 +8,9 @@ import {
   Hand,
   Highlighter,
   ImagePlus,
+  Lock,
+  LockOpen,
+  Minus,
   MousePointer2,
   PenLine,
   Plus,
@@ -18,15 +23,26 @@ import {
 } from "lucide-react";
 import { memo } from "react";
 import { Button } from "@/components/ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { isMac, t } from "@/i18n";
 import { cn } from "@/lib/utils";
 import { type ColorName, SHAPES, type ShapeKind } from "../../../shared/board";
+import type { WidgetKind } from "../../../shared/widgets";
 import { HIGHLIGHT_COLORS, INK_COLORS, NOTE_COLORS, PALETTE } from "./palette";
+import { WidgetMenuItems } from "./widget-menu";
 
-export type Tool = "select" | "hand" | "note" | "text" | "shape" | "frame" | "pen" | "highlighter" | "eraser";
-export type Insert = "doc" | "table" | "code";
+export type Tool = "select" | "hand" | "note" | "text" | "shape" | "frame" | "arrow" | "line" | "pen" | "highlighter" | "eraser";
+export type Insert = "doc" | "table" | "code" | `widget:${WidgetKind}`;
 
 export const TOOL_KEYS: Record<string, Tool> = {
   v: "select",
@@ -35,9 +51,16 @@ export const TOOL_KEYS: Record<string, Tool> = {
   t: "text",
   s: "shape",
   f: "frame",
+  a: "arrow",
+  l: "line",
   p: "pen",
+  x: "pen",
   e: "eraser",
 };
+// Excalidraw's shape keys: each picks the shape tool with that shape ready.
+export const SHAPE_KEYS: Record<string, ShapeKind> = { r: "rect", d: "diamond", o: "ellipse" };
+// Pen widths on offer; the highlighter keeps its one broad nib.
+export const PEN_SIZES = [2, 3, 6] as const;
 
 // What each creating tool will make next; kept by the canvas so it survives switching tools.
 export interface ToolStyle {
@@ -46,9 +69,11 @@ export interface ToolStyle {
   shapeColor: ColorName;
   ink: ColorName;
   highlight: ColorName;
+  inkSize: number;
 }
 
 const DRAW: Tool[] = ["pen", "highlighter", "eraser"];
+const LINES: Tool[] = ["arrow", "line"];
 
 interface Props {
   tool: Tool;
@@ -61,6 +86,9 @@ interface Props {
   canRedo: boolean;
   onUndo: () => void;
   onRedo: () => void;
+  // Q: the tool stays picked after each thing it makes, instead of going back to Select.
+  locked: boolean;
+  onLock: () => void;
 }
 
 // Miro-style tool column; the tool in use opens a second column with its options (colors, shapes, pen kinds).
@@ -76,9 +104,12 @@ export const BoardToolbar = memo(function BoardToolbar({
   canRedo,
   onUndo,
   onRedo,
+  locked,
+  onLock,
 }: Props) {
   const mod = isMac ? "⌘" : "Ctrl+";
   const drawing = DRAW.includes(tool);
+  const lining = LINES.includes(tool);
   return (
     // Marks the toolbar as part of the board, so board shortcuts still work with focus on a tool button.
     <div data-board-chrome className="pointer-events-none absolute top-1/2 left-3 z-10 flex -translate-y-1/2 items-start gap-2">
@@ -105,11 +136,17 @@ export const BoardToolbar = memo(function BoardToolbar({
           <ToolButton label={t.board.shapeTool} hint="S" active={tool === "shape"} onClick={() => onTool("shape")}>
             <Shapes />
           </ToolButton>
+          <ToolButton label={t.board.arrowTool} hint="A" active={lining} onClick={() => onTool(lining ? tool : "arrow")}>
+            {tool === "line" ? <Minus className="-rotate-45" /> : <ArrowUpRight />}
+          </ToolButton>
           <ToolButton label={t.board.pen} hint="P" active={drawing} onClick={() => onTool(drawing ? tool : "pen")}>
             {tool === "highlighter" ? <Highlighter /> : tool === "eraser" ? <Eraser /> : <PenLine />}
           </ToolButton>
           <ToolButton label={t.board.frameTool} hint="F" active={tool === "frame"} onClick={() => onTool("frame")}>
             <Frame />
+          </ToolButton>
+          <ToolButton label={t.board.keepTool} hint="Q" active={locked} onClick={onLock}>
+            {locked ? <Lock /> : <LockOpen />}
           </ToolButton>
           <Divider />
           <DropdownMenu modal={false}>
@@ -146,6 +183,16 @@ export const BoardToolbar = memo(function BoardToolbar({
                 {t.board.insertImage}
                 <span className="ms-auto font-mono text-xs text-muted-foreground">I</span>
               </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger>
+                  <Blocks />
+                  {t.widget.menu}
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent className="w-48">
+                  <WidgetMenuItems onPick={(w) => onInsert(`widget:${w}`)} />
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -164,7 +211,7 @@ export const BoardToolbar = memo(function BoardToolbar({
         </div>
       </div>
 
-      {(tool === "note" || tool === "shape" || drawing) && (
+      {(tool === "note" || tool === "shape" || drawing || lining) && (
         <div
           role="toolbar"
           aria-label={t.board.tools}
@@ -183,6 +230,34 @@ export const BoardToolbar = memo(function BoardToolbar({
                 <Eraser />
               </ToolButton>
               {tool !== "eraser" && <Divider />}
+              {tool === "pen" && (
+                <>
+                  {PEN_SIZES.map((size) => (
+                    <ToolButton
+                      key={size}
+                      label={t.board.width[size] ?? String(size)}
+                      hint=""
+                      active={style.inkSize === size}
+                      onClick={() => onStyle({ ...style, inkSize: size })}
+                    >
+                      <span aria-hidden="true" className="rounded-full bg-current" style={{ width: size + 3, height: size + 3 }} />
+                    </ToolButton>
+                  ))}
+                  <Divider />
+                </>
+              )}
+            </>
+          )}
+          {lining && (
+            <>
+              <ToolButton label={t.board.arrowTool} hint="A" active={tool === "arrow"} onClick={() => onTool("arrow")}>
+                <ArrowUpRight />
+              </ToolButton>
+              <ToolButton label={t.board.lineTool} hint="L" active={tool === "line"} onClick={() => onTool("line")}>
+                <Minus className="-rotate-45" />
+              </ToolButton>
+              <Divider />
+              <Swatches colors={INK_COLORS} value={style.ink} onPick={(ink) => onStyle({ ...style, ink })} />
             </>
           )}
           {tool === "shape" && (
@@ -191,7 +266,11 @@ export const BoardToolbar = memo(function BoardToolbar({
                 <ToolButton
                   key={s}
                   label={t.board.shapeName[s] ?? s}
-                  hint=""
+                  hint={
+                    Object.keys(SHAPE_KEYS)
+                      .find((k) => SHAPE_KEYS[k] === s)
+                      ?.toUpperCase() ?? ""
+                  }
                   active={style.shape === s}
                   onClick={() => onStyle({ ...style, shape: s })}
                 >

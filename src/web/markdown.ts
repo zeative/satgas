@@ -18,10 +18,14 @@ export function parseBlocks(source: string): Block[] {
   let para: string[] = [];
   let list: { type: "ul" | "ol"; items: string[] } | null = null;
   let code: string[] | null = null;
+  let fence = "";
   let table: string[][] | null = null;
 
   const flush = () => {
-    if (para.length) blocks.push({ type: "p", text: para.join(" ") });
+    if (para.length) {
+      const text = para.join(" ");
+      blocks.push(asHeading(text) ? { type: "h", text } : { type: "p", text });
+    }
     if (list) blocks.push(list);
     if (table) blocks.push({ type: "table", rows: table });
     para = [];
@@ -31,21 +35,25 @@ export function parseBlocks(source: string): Block[] {
 
   for (const line of lines) {
     if (code) {
-      if (line.trimStart().startsWith("```")) {
+      // Only a bare fence of the same kind and at least the same length closes, so ```` can hold ``` examples.
+      const close = /^\s*(`{3,}|~{3,})\s*$/.exec(line)?.[1];
+      if (close && close[0] === fence[0] && close.length >= fence.length) {
         blocks.push({ type: "code", text: code.join("\n") });
         code = null;
       } else code.push(line);
       continue;
     }
-    if (line.trimStart().startsWith("```")) {
+    const open = /^\s*(`{3,}|~{3,})/.exec(line)?.[1];
+    if (open) {
       flush();
+      fence = open;
       code = [];
       continue;
     }
     if (/^\s*\|.*\|\s*$/.test(line)) {
       const cells = splitRow(line);
       // The |---|:---:| row only marks the header; it carries no content.
-      if (cells.every((c) => /^:?-{3,}:?$/.test(c))) continue;
+      if (cells.every((c) => /^:?-+:?$/.test(c))) continue;
       if (!table) flush();
       table ??= [];
       table.push(cells);
@@ -75,6 +83,11 @@ export function parseBlocks(source: string): Block[] {
   return blocks;
 }
 
+// A short line that is only bold, maybe with a parenthesis after it ("**Summary** (link)"), is a heading in disguise.
+function asHeading(text: string): boolean {
+  return text.length <= 90 && /^\*\*[^*]+\*\*(\s*\([^)]*\))?:?$/.test(text);
+}
+
 function splitRow(line: string): string[] {
   return line
     .trim()
@@ -83,18 +96,49 @@ function splitRow(line: string): string[] {
     .map((c) => c.trim().replace(/\\\|/g, "|"));
 }
 
-// Bold is matched first so it can wrap inline code, e.g. **`file.ts`**.
+// Bold is matched first so it can wrap inline code, e.g. **`file.ts`**. A code span closes on a backtick run
+// as long as its opener, so `` ` ```` ` `` can show backticks.
+const INLINE = /\*\*[^*]+\*\*|(?<!`)(`+)(?!`)(.+?)(?<!`)\1(?!`)|\[[^\]]+\]\([^)\s]+\)|https?:\/\/[^\s<>()]*[^\s<>().,;:!?'"]/g;
+
 export function parseInline(text: string): Inline[] {
-  return text
-    .split(/(\*\*[^*]+\*\*|`[^`]+`|\[[^\]]+\]\([^)\s]+\))/g)
-    .filter(Boolean)
-    .map((part): Inline => {
-      if (part.length > 4 && part.startsWith("**") && part.endsWith("**"))
-        return { type: "strong", children: parseInline(part.slice(2, -2)) };
-      if (part.length > 2 && part.startsWith("`") && part.endsWith("`")) return { type: "code", text: part.slice(1, -1) };
-      const link = /^\[([^\]]+)\]\(([^)\s]+)\)$/.exec(part);
-      // Only http(s) becomes a real link; anything else (local paths, javascript:) stays inert text.
-      if (link) return { type: "link", text: link[1] ?? "", href: link[2] ?? "", external: /^https?:\/\//i.test(link[2] ?? "") };
-      return { type: "text", text: part };
-    });
+  const out: Inline[] = [];
+  let last = 0;
+  for (const m of text.matchAll(INLINE)) {
+    if (m.index > last) out.push({ type: "text", text: text.slice(last, m.index) });
+    out.push(inlinePart(m[0], m[2]));
+    last = m.index + m[0].length;
+  }
+  if (last < text.length) out.push({ type: "text", text: text.slice(last) });
+  return out;
+}
+
+function inlinePart(part: string, code: string | undefined): Inline {
+  // One space is trimmed from each side, so a span can start or end with a backtick.
+  if (code !== undefined) return { type: "code", text: /^ .*[^ ].* $/.test(code) ? code.slice(1, -1) : code };
+  if (part.startsWith("**")) return { type: "strong", children: parseInline(part.slice(2, -2)) };
+  // A bare URL reads as its host and path, without the scheme.
+  if (/^https?:\/\//.test(part)) return { type: "link", text: shortUrl(part), href: part, external: true };
+  const link = /^\[([^\]]+)\]\(([^)\s]+)\)$/.exec(part);
+  // Only http(s) becomes a real link; anything else (local paths, javascript:) stays inert text.
+  if (link) return { type: "link", text: link[1] ?? "", href: link[2] ?? "", external: /^https?:\/\//i.test(link[2] ?? "") };
+  return { type: "text", text: part };
+}
+
+function shortUrl(url: string): string {
+  const bare = url.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "");
+  return bare.length > 48 ? `${bare.slice(0, 47)}…` : bare;
+}
+
+const flat = (p: Inline): string => (p.type === "strong" ? p.children.map(flat).join("") : p.text);
+
+// A cell as the reader sees it: markup gone, link text kept.
+export const plainCell = (text: string) => parseInline(text).map(flat).join("").trim();
+
+const csvCell = (v: string) => (/[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
+
+// Tab-separated pastes into Sheets, Excel or Numbers as cells; CSV is the file for anything else.
+export function tableText(rows: string[][], format: "tsv" | "csv"): string {
+  const cells = rows.map((r) => r.map(plainCell));
+  if (format === "csv") return cells.map((r) => r.map(csvCell).join(",")).join("\n");
+  return cells.map((r) => r.map((c) => c.replace(/[\t\n]+/g, " ")).join("\t")).join("\n");
 }

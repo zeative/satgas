@@ -94,6 +94,11 @@ export function ModelPicker() {
   const leadName = lead.model
     ? (statusOf(lead.provider)?.models.find((m) => m.id === lead.model)?.name ?? lead.model)
     : t.picker.defaultOf(leadDef?.name ?? t.agent.claude);
+  // A saved model the provider no longer lists would only fail at the next mission, so the pill says so now.
+  const leadStatus = statusOf(lead.provider);
+  const missing =
+    !!lead.model && leadStatus?.state === "ok" && leadStatus.models.length > 0 && !leadStatus.models.some((m) => m.id === lead.model);
+  const missingNote = missing ? t.picker.unavailable(lead.model, leadDef?.name ?? lead.provider) : undefined;
 
   return (
     <Popover
@@ -109,11 +114,16 @@ export function ModelPicker() {
       <PopoverTrigger asChild>
         <button
           type="button"
-          aria-label={t.picker.label}
+          aria-label={missingNote ? `${t.picker.label}: ${missingNote}` : t.picker.label}
+          title={missingNote}
           className="flex h-8 max-w-[24rem] min-w-0 items-center gap-1.5 rounded-lg px-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none data-[state=open]:bg-muted data-[state=open]:text-foreground"
         >
-          {leadDef && <ProviderLogo def={leadDef} className="size-4 shrink-0" />}
-          <span className="truncate text-foreground">{leadName}</span>
+          {missing ? (
+            <TriangleAlert className="size-4 shrink-0 text-destructive" aria-hidden="true" />
+          ) : (
+            leadDef && <ProviderLogo def={leadDef} className="size-4 shrink-0" />
+          )}
+          <span className={cn("truncate", missing ? "text-muted-foreground line-through" : "text-foreground")}>{leadName}</span>
           {lead.effort && <span className="shrink-0">{ti.effort[lead.effort]}</span>}
           <ChevronDown className="size-3.5 shrink-0 opacity-70" aria-hidden="true" />
         </button>

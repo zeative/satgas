@@ -2,6 +2,7 @@ import { Check, ExternalLink, Plus, RotateCw, TriangleAlert } from "lucide-react
 import { useEffect, useId, useState } from "react";
 import { toast } from "sonner";
 import { LogoTile } from "@/components/logo-tile";
+import { OutboundLink } from "@/components/outbound-link";
 import { plain, RichText } from "@/components/rich-text";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -226,15 +227,13 @@ function ProviderDialog({ def, settings, onClose }: { def: ProviderDef; settings
                   <RichText text={def.keyLabel ? say(def.keyLabel) : ti.keyLabel} />
                 </label>
                 {def.keyHelp && (
-                  <a
+                  <OutboundLink
                     href={def.keyHelp}
-                    target="_blank"
-                    rel="noopener noreferrer"
                     className="inline-flex items-center gap-1 rounded text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                   >
                     {ti.getKey}
                     <ExternalLink className="size-3" aria-hidden="true" />
-                  </a>
+                  </OutboundLink>
                 )}
               </div>
               <Input

@@ -6,7 +6,7 @@
     "useIgnoreFile": true
   },
   "files": {
-    "includes": ["**", "!dist", "!bun.lock", "!design", "!src/web/components/ui", "!src/web/components/flow", "!src/web/routeTree.gen.ts"]
+    "includes": ["**", "!dist", "!bun.lock", "!src/web/components/ui", "!src/web/routeTree.gen.ts", "!src/server/builtin-skills/**/*.md"]
   },
   "formatter": {
     "indentStyle": "space",

@@ -6,9 +6,11 @@ export type ExportFormat = "png" | "pdf" | "clipboard";
 export interface ExportRequest {
   format: ExportFormat;
   ids?: string[];
+  // The file name without extension, when it should not be the board's.
+  name?: string;
 }
-export const requestBoardExport = (format: ExportFormat, ids?: string[]) =>
-  window.dispatchEvent(new CustomEvent<ExportRequest>("satgas:export", { detail: { format, ids } }));
+export const requestBoardExport = (format: ExportFormat, ids?: string[], name?: string) =>
+  window.dispatchEvent(new CustomEvent<ExportRequest>("satgas:export", { detail: { format, ids, name } }));
 
 const slug = (s: string) =>
   s
@@ -50,13 +52,16 @@ export async function boardPng(nodes: Node[], background: string, keep?: Readonl
   });
 }
 
-export async function copyPng(dataUrl: string) {
-  const blob = await (await fetch(dataUrl)).blob();
-  await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+export const pngBlob = async (dataUrl: string) => (await fetch(dataUrl)).blob();
+
+// The clipboard only takes a write while the click that asked for it is still the current gesture, and rendering the
+// board takes longer than that. So the write starts at once with the picture still on its way, which browsers allow.
+export function copyPngLater(render: Promise<string>): Promise<void> {
+  return navigator.clipboard.write([new ClipboardItem({ "image/png": render.then(pngBlob) })]);
 }
 
-export function savePng(dataUrl: string, run: Run) {
-  download(dataUrl, `${slug(run.title ?? run.prompt)}.png`);
+export function savePng(dataUrl: string, run: Run, name?: string) {
+  download(dataUrl, `${name ?? slug(run.title ?? run.prompt)}.png`);
 }
 
 // Printing a page that holds only the board image lets the browser's own dialog save it as a PDF, no popup needed.
@@ -101,3 +106,22 @@ export function exportBackup(run: Run) {
   download(url, `${slug(run.title ?? run.prompt)}-backup.json`);
   URL.revokeObjectURL(url);
 }
+
+// A picture of a few cards for the chat to attach (the ink a person drew, with what it marks); null when the board
+// cannot draw it. The open canvas answers through the resolve it is handed.
+export interface SnapshotRequest {
+  ids: string[];
+  resolve: (dataUrl: string | null) => void;
+}
+export const requestSnapshot = (ids: string[]) =>
+  new Promise<string | null>((resolve) => {
+    let answered = false;
+    const done = (v: string | null) => {
+      if (answered) return;
+      answered = true;
+      resolve(v);
+    };
+    window.dispatchEvent(new CustomEvent<SnapshotRequest>("satgas:snapshot", { detail: { ids, resolve: done } }));
+    // No canvas on screen to answer: send without the picture rather than wait.
+    setTimeout(() => done(null), 4000);
+  });

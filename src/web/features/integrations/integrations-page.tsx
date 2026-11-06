@@ -18,19 +18,27 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { t } from "@/i18n";
 import { cn } from "@/lib/utils";
 import { loadSettings, saveSettings, useSettings } from "@/stores/settings";
+import { CATALOG, CATEGORIES } from "../../../shared/catalog";
 import type { Runtime } from "../../../shared/providers";
 import type { McpServer } from "../../../shared/settings";
+import type { PackId } from "../../../shared/skills";
+import type { ToolSetting } from "../../../shared/tools";
 import { AgentDetail, AgentsTab } from "./agents";
-import { CATALOG, CATEGORIES } from "./catalog";
+import { ChannelsTab } from "./channels";
 import { ConnectorDetail, Discover, type Filter, NO_FILTER, SETUP_TEST, ServerDialog, type Setup, Yours } from "./connectors";
+import { AddSkillMenu, AddSkillsDialog, PackDetail, SkillDetail, type SkillDialog, SkillEditor, SkillsTab } from "./skills";
+import { ToolDetail, ToolDialog, ToolsTab, toolSaved } from "./tools";
 
 const ti = t.integrations;
 
 export interface IntegrationsSearch {
-  tab?: "agents";
+  tab?: "agents" | "skills" | "tools" | "channels";
   view?: "yours";
   connector?: string;
   agent?: Runtime;
+  skill?: string;
+  pack?: PackId;
+  tool?: string;
 }
 
 declare module "@tanstack/react-router" {
@@ -50,10 +58,12 @@ export function IntegrationsPage() {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>(NO_FILTER);
   const [editing, setEditing] = useState<McpServer | "new" | null>(null);
+  const [skillDialog, setSkillDialog] = useState<SkillDialog | null>(null);
+  const [editingTool, setEditingTool] = useState<ToolSetting | "new" | null>(null);
   const current = search.tab ?? "connectors";
   const view = search.view ?? "discover";
   const go = (next: IntegrationsSearch) => {
-    const detail = !!(next.connector || next.agent);
+    const detail = !!(next.connector || next.agent || next.skill || next.pack || next.tool);
     void navigate({ search: next, replace: !detail, state: detail ? { fromList: true } : undefined });
   };
   // A deep-linked detail has no list behind it, so the list takes its place instead.
@@ -69,6 +79,12 @@ export function IntegrationsPage() {
       <ConnectorDetail settings={settings} id={search.connector} onBack={back} />
     ) : settings && search.agent ? (
       <AgentDetail settings={settings} runtime={search.agent} onBack={back} />
+    ) : search.skill ? (
+      <SkillDetail name={search.skill} onBack={back} onOpen={setSkillDialog} />
+    ) : settings && search.tool ? (
+      <ToolDetail settings={settings} id={search.tool} onBack={back} />
+    ) : search.pack ? (
+      <PackDetail id={search.pack} onBack={back} onShow={(skill) => go({ tab: "skills", pack: search.pack, skill })} />
     ) : null;
 
   return (
@@ -76,14 +92,49 @@ export function IntegrationsPage() {
       <PageHeader />
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-6 pt-12 pb-16">
         {detail ?? (
-          <Tabs value={current} onValueChange={(v) => go({ tab: v === "agents" ? "agents" : undefined })} className="gap-8">
+          <Tabs
+            value={current}
+            onValueChange={(v) => {
+              setQuery("");
+              go({ tab: v === "agents" || v === "skills" || v === "tools" || v === "channels" ? v : undefined });
+            }}
+            className="gap-8"
+          >
             <header className="flex flex-col gap-6">
               <h1 className="brand-title text-[1.75rem] leading-tight">{ti.title}</h1>
               <div className="flex flex-wrap items-center gap-2">
                 <TabsList>
                   <TabsTrigger value="connectors">{ti.connectors}</TabsTrigger>
                   <TabsTrigger value="agents">{ti.agents}</TabsTrigger>
+                  <TabsTrigger value="skills">{t.skills.tab}</TabsTrigger>
+                  <TabsTrigger value="tools">{t.tools.tab}</TabsTrigger>
+                  <TabsTrigger value="channels">{t.channels.tab}</TabsTrigger>
                 </TabsList>
+                {current === "tools" && (
+                  <Button size="sm" className="ms-auto" onClick={() => setEditingTool("new")}>
+                    <Plus />
+                    {t.tools.add}
+                  </Button>
+                )}
+                {current === "skills" && (
+                  <div className="ms-auto flex items-center gap-2">
+                    <div className="relative">
+                      <Search
+                        className="pointer-events-none absolute start-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+                        aria-hidden="true"
+                      />
+                      <Input
+                        type="search"
+                        value={query}
+                        onChange={(e) => setQuery(e.target.value)}
+                        placeholder={t.skills.search}
+                        aria-label={t.skills.search}
+                        className="h-7 w-60 ps-8"
+                      />
+                    </div>
+                    <AddSkillMenu onPick={setSkillDialog} />
+                  </div>
+                )}
                 {current === "connectors" && (
                   <>
                     <span aria-hidden="true" className="mx-1 h-4 w-px bg-border" />
@@ -184,8 +235,22 @@ export function IntegrationsPage() {
                     />
                   )}
                 </TabsContent>
+                <TabsContent value="channels">
+                  <ChannelsTab />
+                </TabsContent>
                 <TabsContent value="agents">
                   <AgentsTab settings={settings} onOpen={(agent) => go({ tab: "agents", agent })} />
+                </TabsContent>
+                <TabsContent value="tools">
+                  <ToolsTab settings={settings} onOpen={(tool) => go({ tab: "tools", tool })} onEdit={setEditingTool} />
+                </TabsContent>
+                <TabsContent value="skills">
+                  <SkillsTab
+                    query={query}
+                    onOpen={setSkillDialog}
+                    onShow={(skill) => go({ tab: "skills", skill })}
+                    onShowPack={(pack) => go({ tab: "skills", pack })}
+                  />
                 </TabsContent>
               </>
             )}
@@ -193,6 +258,25 @@ export function IntegrationsPage() {
         )}
       </div>
 
+      {skillDialog === "write" && <SkillEditor onClose={() => setSkillDialog(null)} />}
+      {typeof skillDialog === "object" && skillDialog && <SkillEditor name={skillDialog.edit} onClose={() => setSkillDialog(null)} />}
+      {(skillDialog === "github" || skillDialog === "zip" || skillDialog === "local") && (
+        <AddSkillsDialog from={skillDialog} onClose={() => setSkillDialog(null)} />
+      )}
+      {editingTool && settings && (
+        <ToolDialog
+          tool={editingTool === "new" ? null : editingTool}
+          onClose={() => setEditingTool(null)}
+          onSave={async (tool) => {
+            const tools = settings.tools.some((x) => x.id === tool.id)
+              ? settings.tools.map((x) => (x.id === tool.id ? tool : x))
+              : [...settings.tools, tool];
+            const problem = await saveSettings({ ...settings, tools });
+            if (!problem) toolSaved();
+            return problem;
+          }}
+        />
+      )}
       {editing && settings && (
         <ServerDialog
           server={editing === "new" ? null : editing}

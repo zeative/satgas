@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { parseBlocks, parseInline } from "../../src/web/markdown";
+import { parseBlocks, parseInline, tableText } from "../../src/web/markdown";
 
 test("parses headings, paragraphs, lists and code fences", () => {
   const blocks = parseBlocks(
@@ -16,6 +16,15 @@ test("parses headings, paragraphs, lists and code fences", () => {
 
 test("keeps the content of an unclosed code fence", () => {
   expect(parseBlocks("```\nrm -rf build")).toEqual([{ type: "code", text: "rm -rf build" }]);
+});
+
+test("a longer fence holds shorter fences as plain code", () => {
+  const example = ["```satgas:note", "Prices exclude VAT.", "```"].join("\n");
+  expect(parseBlocks(["````text", example, "````", "After"].join("\n"))).toEqual([
+    { type: "code", text: example },
+    { type: "p", text: "After" },
+  ]);
+  expect(parseBlocks(["~~~", "```", "~~~"].join("\n"))).toEqual([{ type: "code", text: "```" }]);
 });
 
 test("treats markup as text, never as HTML", () => {
@@ -41,6 +50,17 @@ test("only http(s) links become external links", () => {
   ]);
 });
 
+test("a code span with a longer delimiter can hold backticks", () => {
+  expect(parseInline("Use ` ````satgas:doc ` or ``a`b`` here")).toEqual([
+    { type: "text", text: "Use " },
+    { type: "code", text: "````satgas:doc" },
+    { type: "text", text: " or " },
+    { type: "code", text: "a`b" },
+    { type: "text", text: " here" },
+  ]);
+  expect(parseInline("a `` b")).toEqual([{ type: "text", text: "a `` b" }]);
+});
+
 test("bold can wrap inline code", () => {
   expect(parseInline("**`index.html`**: page")).toEqual([
     { type: "strong", children: [{ type: "code", text: "index.html" }] },
@@ -61,4 +81,32 @@ test("parses tables, skipping the alignment row and keeping escaped pipes", () =
     },
     { type: "p", text: "After" },
   ]);
+});
+
+test("a short bold-only line is a heading; a bold lead-in to a sentence is not", () => {
+  expect(parseBlocks("**Ringkasan** (https://github.com/zeative/claude-code)")[0]?.type).toBe("h");
+  expect(parseBlocks("**Note:** the build is slow on CI because caching is off.")[0]?.type).toBe("p");
+});
+
+test("bare URLs become links that read as host and path", () => {
+  expect(parseInline("See (https://github.com/zeative/claude-code).")).toEqual([
+    { type: "text", text: "See (" },
+    { type: "link", text: "github.com/zeative/claude-code", href: "https://github.com/zeative/claude-code", external: true },
+    { type: "text", text: ")." },
+  ]);
+});
+
+test("numbered lists and sentence-like labels stay lists", () => {
+  expect(parseBlocks("1. **Fix CI:** a\n2. **Close alerts:** b\n3. **Triage:** c")[0]?.type).toBe("ol");
+  expect(parseBlocks("- **Legal risk (most serious).** a\n- **Stale.** b\n- **Noise.** c")[0]?.type).toBe("ul");
+});
+
+test("a table copies as spreadsheet cells and exports as CSV, markup gone", () => {
+  const rows = [
+    ["Aplikasi", "Inti"],
+    ["**Monveo**", "Input suara, scan struk"],
+    ["[Moni](https://moni.app)", 'Paling "mirip"'],
+  ];
+  expect(tableText(rows, "tsv")).toBe('Aplikasi\tInti\nMonveo\tInput suara, scan struk\nMoni\tPaling "mirip"');
+  expect(tableText(rows, "csv")).toBe('Aplikasi,Inti\nMonveo,"Input suara, scan struk"\nMoni,"Paling ""mirip"""');
 });

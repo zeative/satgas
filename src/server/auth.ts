@@ -37,6 +37,16 @@ export async function loadToken(): Promise<{ token: string; fromEnv: boolean }> 
   return { token, fromEnv: false };
 }
 
+// Every other browser and script has to sign in again. A SATGAS_TOKEN belongs to whoever set it, so it stays.
+export async function rotateToken(): Promise<string | null> {
+  if (config.token) return null;
+  const next = Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString("base64url");
+  await writeFile(file(), next, { mode: 0o600 });
+  token = next;
+  failures = [];
+  return next;
+}
+
 const same = (a: string, b: string) => a.length === b.length && timingSafeEqual(Buffer.from(a), Buffer.from(b));
 
 export function readCookie(req: Request, name: string): string | null {

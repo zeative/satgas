@@ -1,4 +1,15 @@
-import { type Board, type BoardOp, type Card, type ColorName, type Connector, type ShapeKind, sanitizeOps } from "../../../shared/board";
+import {
+  type Board,
+  type BoardOp,
+  type Card,
+  type ColorName,
+  type Connector,
+  type Dash,
+  type Fill,
+  type LineKind,
+  type ShapeKind,
+  sanitizeOps,
+} from "../../../shared/board";
 
 // Pure board edits behind the context menu and its shortcuts; each returns ops, so undo and sync come for free.
 
@@ -21,7 +32,24 @@ export interface CardStyle {
   shape?: ShapeKind;
   size?: number;
   highlight?: boolean;
+  fill?: Fill;
+  dash?: Dash;
+  stroke?: number;
+  opacity?: number;
+  line?: LineKind;
+  rough?: number;
 }
+
+// Which look each kind can wear, so the style panel and paste-style offer and apply only what fits.
+export const wears = (c: Card) => ({
+  color: COLORED.has(c.kind),
+  fill: c.kind === "shape",
+  stroke: c.kind === "shape" || (c.kind === "drawing" && !!c.line),
+  dash: c.kind === "shape" || (c.kind === "drawing" && !!c.line),
+  opacity: c.kind === "shape" || c.kind === "drawing",
+  arrow: c.kind === "drawing" && !!c.line,
+  rough: c.kind === "shape" || (c.kind === "drawing" && !!c.line),
+});
 
 const CLIP_TYPE = "satgas/cards";
 const COLORED = new Set<Card["kind"]>(["note", "shape", "drawing"]);
@@ -135,6 +163,8 @@ export function styleOf(cards: Card[]): CardStyle | null {
   if (c.shape) style.shape = c.shape;
   if (c.size) style.size = c.size;
   if (c.highlight !== undefined) style.highlight = c.highlight;
+  for (const k of ["fill", "dash", "stroke", "opacity", "line", "rough"] as const)
+    if (c[k] !== undefined) (style as Record<string, unknown>)[k] = c[k];
   return style;
 }
 
@@ -147,8 +177,16 @@ export function styleOps(cards: Card[], style: CardStyle): BoardOp[] {
     if (style.color && style.color !== c.color) patch.color = style.color;
     if (c.kind === "shape" && style.shape && style.shape !== c.shape) patch.shape = style.shape;
     if (c.kind === "drawing" && style.size !== undefined && style.size !== c.size) patch.size = style.size;
-    if (c.kind === "drawing" && style.highlight !== undefined && style.highlight !== (c.highlight ?? false))
+    if (c.kind === "drawing" && !c.line && style.highlight !== undefined && style.highlight !== (c.highlight ?? false))
       patch.highlight = style.highlight;
+    const can = wears(c);
+    if (can.fill && style.fill && style.fill !== c.fill) patch.fill = style.fill;
+    if (can.dash && style.dash && style.dash !== (c.dash ?? "solid")) patch.dash = style.dash === "solid" ? undefined : style.dash;
+    if (can.stroke && style.stroke !== undefined && style.stroke !== c.stroke) patch.stroke = style.stroke;
+    if (can.opacity && style.opacity !== undefined && style.opacity !== (c.opacity ?? 1))
+      patch.opacity = style.opacity === 1 ? undefined : style.opacity;
+    if (can.arrow && style.line && style.line !== c.line) patch.line = style.line;
+    if (can.rough && style.rough !== undefined && style.rough !== (c.rough ?? 0)) patch.rough = style.rough || undefined;
     if (Object.keys(patch).length) ops.push({ op: "patch", id: c.id, patch });
   }
   return ops;

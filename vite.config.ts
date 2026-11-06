@@ -21,6 +21,8 @@ export default defineConfig({
   ],
   resolve: { alias: { "@": web } },
   build: { outDir: path.resolve(import.meta.dirname, "dist/web"), emptyOutDir: true },
+  // The diff highlighter's worker loads each language's grammar on demand, which needs a module worker.
+  worker: { format: "es" },
   server: {
     // Off Vite's default 5173 so Satgas can run next to other Vite projects.
     port: Number(process.env.SATGAS_WEB_PORT ?? 5317),

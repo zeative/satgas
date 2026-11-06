@@ -1,4 +1,13 @@
-import { CircleAlert, CircleCheck, CircleDashed, CircleSlash, CircleStop, LoaderCircle, type LucideIcon } from "lucide-react";
+import {
+  CircleAlert,
+  CircleCheck,
+  CircleDashed,
+  CircleSlash,
+  CircleStop,
+  LoaderCircle,
+  type LucideIcon,
+  MessageCircleQuestionMark,
+} from "lucide-react";
 import { t } from "@/i18n";
 import { cn } from "@/lib/utils";
 import type { NodeStatus, RunStatus } from "../../shared/types";
@@ -10,6 +19,8 @@ const look: Record<Status, { icon: LucideIcon; className: string }> = {
   pending: { icon: CircleDashed, className: "text-muted-foreground" },
   planning: { icon: LoaderCircle, className: "animate-spin text-signal-ink motion-reduce:animate-none" },
   running: { icon: LoaderCircle, className: "animate-spin text-signal-ink motion-reduce:animate-none" },
+  // Waiting on the person, not working, so it holds still.
+  asking: { icon: MessageCircleQuestionMark, className: "text-signal-ink" },
   done: { icon: CircleCheck, className: "text-emerald-600 dark:text-emerald-500" },
   failed: { icon: CircleAlert, className: "text-destructive" },
   skipped: { icon: CircleSlash, className: "text-muted-foreground" },

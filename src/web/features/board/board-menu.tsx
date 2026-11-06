@@ -7,6 +7,7 @@ import {
   AlignStartHorizontal,
   AlignStartVertical,
   AlignVerticalSpaceAround,
+  Blocks,
   ChevronDown,
   ChevronsDown,
   ChevronsUp,
@@ -66,11 +67,13 @@ import { isMac, t } from "@/i18n";
 import { cn } from "@/lib/utils";
 import { type Board, type Card, COLORS, type ColorName } from "../../../shared/board";
 import type { NodeState } from "../../../shared/types";
+import { type CardFormat, type CopyFormat, codeFileName, copyFormats, exportFormats } from "./card-export";
 import { EXPANDABLE, editableCard } from "./cards";
 import { type Align, type Arrange, canColor, styleOf } from "./edit";
 import { PALETTE } from "./palette";
 import type { BoardPrefs } from "./prefs";
 import type { Insert, Tool } from "./toolbar";
+import { WidgetMenuItems } from "./widget-menu";
 
 type Pt = { x: number; y: number };
 export type MenuTarget = { kind: "pane" } | { kind: "nodes"; ids: string[] } | { kind: "link"; id: string };
@@ -93,6 +96,8 @@ export interface MenuActions {
   paste: (at?: Pt) => void;
   duplicate: (ids: string[]) => void;
   copyPng: (ids?: string[]) => void;
+  exportCards: (ids: string[], format: CardFormat) => void;
+  copyCards: (ids: string[], format: CopyFormat) => void;
   copyStyle: (ids: string[]) => void;
   pasteStyle: (ids: string[]) => void;
   color: (ids: string[], color: ColorName) => void;
@@ -162,7 +167,9 @@ export function BoardMenu({ menu, onClose, board, tasks, hasStyle, prefs, action
           <NodeItems
             at={menu.flow}
             cards={board.cards.filter((c) => (menu.target as { ids: string[] }).ids.includes(c.id))}
+            allCards={board.cards}
             tasks={tasks.filter((n) => (menu.target as { ids: string[] }).ids.includes(n.id))}
+            picked={(menu.target as { ids: string[] }).ids}
             hasStyle={hasStyle}
             actions={actions}
           />
@@ -234,6 +241,16 @@ function PaneItems({ at, prefs, actions }: { at: Pt; prefs: BoardPrefs; actions:
               <Row icon={Table2} label={t.board.insertTable} onSelect={add("table")} />
               <Row icon={Code2} label={t.board.insertCode} onSelect={add("code")} />
               <Row icon={ImagePlus} label={t.boardMenu.imageFile} keys="I" onSelect={add("image")} />
+              <DropdownMenuSeparator />
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger>
+                  <Blocks />
+                  {t.widget.menu}
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent className="w-48">
+                  <WidgetMenuItems onPick={(w) => actions.add(`widget:${w}`, at)} />
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
             </DropdownMenuSubContent>
           </DropdownMenuSub>
           <Row icon={SquareDashedMousePointer} label={t.boardMenu.selectAll} keys={keys("mod", "A")} onSelect={actions.selectAll} />
@@ -271,14 +288,18 @@ function PaneItems({ at, prefs, actions }: { at: Pt; prefs: BoardPrefs; actions:
 }
 
 interface NodeItemsProps {
+  // Every card on the board, so a frame's export covers what it holds.
+  allCards: Card[];
   at: Pt;
   cards: Card[];
   tasks: NodeState[];
+  // Everything selected, the lead included, which is neither a card nor a task.
+  picked: string[];
   hasStyle: boolean;
   actions: MenuActions;
 }
 
-function NodeItems({ at, cards, tasks, hasStyle, actions }: NodeItemsProps) {
+function NodeItems({ at, cards, allCards, tasks, picked, hasStyle, actions }: NodeItemsProps) {
   const ids = [...cards.map((c) => c.id), ...tasks.map((n) => n.id)];
   const cardIds = cards.map((c) => c.id);
   const zoom = (
@@ -334,7 +355,47 @@ function NodeItems({ at, cards, tasks, hasStyle, actions }: NodeItemsProps) {
           <Row icon={CopyPlus} label={t.boardMenu.duplicate} keys={keys("mod", "D")} onSelect={() => actions.duplicate(cardIds)} />
         </Fragment>,
         <Fragment key="style">
-          <Row icon={Image} label={t.boardMenu.copyPng} keys={keys("alt", "shift", "C")} onSelect={() => actions.copyPng(ids)} />
+          {tasks.length || !cards.length ? (
+            <Row icon={Image} label={t.boardMenu.copyPng} keys={keys("alt", "shift", "C")} onSelect={() => actions.copyPng(picked)} />
+          ) : (
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>
+                <Copy />
+                {t.boardMenu.copyAs}
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent className="w-56">
+                {copyFormats(cards, allCards).map((f) =>
+                  f === "png" ? (
+                    <DropdownMenuItem key={f} onSelect={() => actions.copyPng(picked)}>
+                      <span className="flex-1">{t.boardMenu.copyFormats.png}</span>
+                      <DropdownMenuShortcut>{keys("alt", "shift", "C")}</DropdownMenuShortcut>
+                    </DropdownMenuItem>
+                  ) : (
+                    <DropdownMenuItem key={f} onSelect={() => actions.copyCards(cardIds, f)}>
+                      <span className="flex-1">{t.boardMenu.copyFormats[f]}</span>
+                    </DropdownMenuItem>
+                  ),
+                )}
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+          )}
+          {!tasks.length && cards.length > 0 && (
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>
+                <Download />
+                {t.boardMenu.export}
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent className="w-52">
+                {exportFormats(cards, allCards).map((f) => (
+                  <DropdownMenuItem key={f} onSelect={() => actions.exportCards(cardIds, f)}>
+                    <span className="flex-1">
+                      {f === "file" ? t.boardMenu.formats.file(one ? codeFileName(one) : "") : t.boardMenu.formats[f]}
+                    </span>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+          )}
           {styleOf(cards) && (
             <Row icon={Pipette} label={t.boardMenu.copyStyle} keys={keys("alt", "mod", "C")} onSelect={() => actions.copyStyle(cardIds)} />
           )}

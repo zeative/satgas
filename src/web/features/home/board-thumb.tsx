@@ -43,15 +43,18 @@ export function BoardThumb({ preview, className }: { preview?: BoardPreview; cla
         const a = preview.tasks[from];
         const b = preview.tasks[to];
         if (!a || !b) return null;
-        const x1 = a.x + NODE_W;
-        const y1 = a.y + NODE_H / 2;
-        const x2 = b.x;
-        const y2 = b.y + NODE_H / 2;
-        const mid = (x1 + x2) / 2;
+        // The lead sits above the team, so its lines drop down; older boards run left to right.
+        const below = b.y >= a.y + NODE_H;
+        const x1 = below ? a.x + NODE_W / 2 : a.x + NODE_W;
+        const y1 = below ? a.y + NODE_H : a.y + NODE_H / 2;
+        const x2 = below ? b.x + NODE_W / 2 : b.x;
+        const y2 = below ? b.y : b.y + NODE_H / 2;
+        const midX = (x1 + x2) / 2;
+        const midY = (y1 + y2) / 2;
         return (
           <path
             key={`${from}-${to}`}
-            d={`M${x1} ${y1}C${mid} ${y1} ${mid} ${y2} ${x2} ${y2}`}
+            d={below ? `M${x1} ${y1}V${midY}H${x2}V${y2}` : `M${x1} ${y1}C${midX} ${y1} ${midX} ${y2} ${x2} ${y2}`}
             className="fill-none stroke-foreground/25"
             strokeWidth="1.25"
             vectorEffect="non-scaling-stroke"

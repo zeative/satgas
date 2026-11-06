@@ -33,6 +33,13 @@ const withModel = (model: string): Settings => ({
   },
   providers: {},
   mcpServers: [],
+  tools: [],
+  taskMinutes: 20,
+  concurrency: 3,
+  teamTalk: false,
+  worktrees: true,
+  commitStyle: { mode: "repo", instructions: "" },
+  watchPulls: true,
 });
 const model = () => useSettings.getState().settings?.agents.claude.model;
 

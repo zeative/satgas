@@ -12,7 +12,16 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AppRouteRouteImport } from './routes/_app/route'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as AppIntegrationsRouteImport } from './routes/_app/integrations'
+import { Route as AppMemoryRouteImport } from './routes/_app/memory'
+import { Route as AppPipelineRouteImport } from './routes/_app/pipeline'
+import { Route as AppSchedulesRouteImport } from './routes/_app/schedules'
 import { Route as BoardsBoardIdRouteImport } from './routes/boards/$boardId'
+import { Route as AppConfigIndexRouteImport } from './routes/_app/config/index'
+import { Route as AppConfigAboutRouteImport } from './routes/_app/config/about'
+import { Route as AppConfigSecurityRouteImport } from './routes/_app/config/security'
+import { Route as AppConfigSettingsRouteImport } from './routes/_app/config/settings'
+import { Route as AppConfigStorageRouteImport } from './routes/_app/config/storage'
+import { Route as AppConfigUsageRouteImport } from './routes/_app/config/usage'
 
 const AppRouteRoute = AppRouteRouteImport.update({
   id: '/_app',
@@ -28,36 +37,145 @@ const AppIntegrationsRoute = AppIntegrationsRouteImport.update({
   path: '/integrations',
   getParentRoute: () => AppRouteRoute,
 } as any)
+const AppMemoryRoute = AppMemoryRouteImport.update({
+  id: '/memory',
+  path: '/memory',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppPipelineRoute = AppPipelineRouteImport.update({
+  id: '/pipeline',
+  path: '/pipeline',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppSchedulesRoute = AppSchedulesRouteImport.update({
+  id: '/schedules',
+  path: '/schedules',
+  getParentRoute: () => AppRouteRoute,
+} as any)
 const BoardsBoardIdRoute = BoardsBoardIdRouteImport.update({
   id: '/boards/$boardId',
   path: '/boards/$boardId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppConfigIndexRoute = AppConfigIndexRouteImport.update({
+  id: '/config/',
+  path: '/config/',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppConfigAboutRoute = AppConfigAboutRouteImport.update({
+  id: '/config/about',
+  path: '/config/about',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppConfigSecurityRoute = AppConfigSecurityRouteImport.update({
+  id: '/config/security',
+  path: '/config/security',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppConfigSettingsRoute = AppConfigSettingsRouteImport.update({
+  id: '/config/settings',
+  path: '/config/settings',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppConfigStorageRoute = AppConfigStorageRouteImport.update({
+  id: '/config/storage',
+  path: '/config/storage',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppConfigUsageRoute = AppConfigUsageRouteImport.update({
+  id: '/config/usage',
+  path: '/config/usage',
+  getParentRoute: () => AppRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
   '/integrations': typeof AppIntegrationsRoute
+  '/memory': typeof AppMemoryRoute
+  '/pipeline': typeof AppPipelineRoute
+  '/schedules': typeof AppSchedulesRoute
   '/boards/$boardId': typeof BoardsBoardIdRoute
+  '/config/about': typeof AppConfigAboutRoute
+  '/config/security': typeof AppConfigSecurityRoute
+  '/config/settings': typeof AppConfigSettingsRoute
+  '/config/storage': typeof AppConfigStorageRoute
+  '/config/usage': typeof AppConfigUsageRoute
+  '/config/': typeof AppConfigIndexRoute
 }
 export interface FileRoutesByTo {
   '/integrations': typeof AppIntegrationsRoute
+  '/memory': typeof AppMemoryRoute
+  '/pipeline': typeof AppPipelineRoute
+  '/schedules': typeof AppSchedulesRoute
   '/boards/$boardId': typeof BoardsBoardIdRoute
   '/': typeof AppIndexRoute
+  '/config/about': typeof AppConfigAboutRoute
+  '/config/security': typeof AppConfigSecurityRoute
+  '/config/settings': typeof AppConfigSettingsRoute
+  '/config/storage': typeof AppConfigStorageRoute
+  '/config/usage': typeof AppConfigUsageRoute
+  '/config': typeof AppConfigIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_app': typeof AppRouteRouteWithChildren
   '/_app/integrations': typeof AppIntegrationsRoute
+  '/_app/memory': typeof AppMemoryRoute
+  '/_app/pipeline': typeof AppPipelineRoute
+  '/_app/schedules': typeof AppSchedulesRoute
   '/boards/$boardId': typeof BoardsBoardIdRoute
   '/_app/': typeof AppIndexRoute
+  '/_app/config/about': typeof AppConfigAboutRoute
+  '/_app/config/security': typeof AppConfigSecurityRoute
+  '/_app/config/settings': typeof AppConfigSettingsRoute
+  '/_app/config/storage': typeof AppConfigStorageRoute
+  '/_app/config/usage': typeof AppConfigUsageRoute
+  '/_app/config/': typeof AppConfigIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/integrations' | '/boards/$boardId'
+  fullPaths:
+    | '/'
+    | '/integrations'
+    | '/memory'
+    | '/pipeline'
+    | '/schedules'
+    | '/boards/$boardId'
+    | '/config/about'
+    | '/config/security'
+    | '/config/settings'
+    | '/config/storage'
+    | '/config/usage'
+    | '/config/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/integrations' | '/boards/$boardId' | '/'
+  to:
+    | '/integrations'
+    | '/memory'
+    | '/pipeline'
+    | '/schedules'
+    | '/boards/$boardId'
+    | '/'
+    | '/config/about'
+    | '/config/security'
+    | '/config/settings'
+    | '/config/storage'
+    | '/config/usage'
+    | '/config'
   id:
-    '__root__' | '/_app' | '/_app/integrations' | '/boards/$boardId' | '/_app/'
+    | '__root__'
+    | '/_app'
+    | '/_app/integrations'
+    | '/_app/memory'
+    | '/_app/pipeline'
+    | '/_app/schedules'
+    | '/boards/$boardId'
+    | '/_app/'
+    | '/_app/config/about'
+    | '/_app/config/security'
+    | '/_app/config/settings'
+    | '/_app/config/storage'
+    | '/_app/config/usage'
+    | '/_app/config/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -88,6 +206,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppIntegrationsRouteImport
       parentRoute: typeof AppRouteRoute
     }
+    '/_app/memory': {
+      id: '/_app/memory'
+      path: '/memory'
+      fullPath: '/memory'
+      preLoaderRoute: typeof AppMemoryRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/_app/pipeline': {
+      id: '/_app/pipeline'
+      path: '/pipeline'
+      fullPath: '/pipeline'
+      preLoaderRoute: typeof AppPipelineRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/_app/schedules': {
+      id: '/_app/schedules'
+      path: '/schedules'
+      fullPath: '/schedules'
+      preLoaderRoute: typeof AppSchedulesRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
     '/boards/$boardId': {
       id: '/boards/$boardId'
       path: '/boards/$boardId'
@@ -95,17 +234,77 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BoardsBoardIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_app/config/': {
+      id: '/_app/config/'
+      path: '/config'
+      fullPath: '/config/'
+      preLoaderRoute: typeof AppConfigIndexRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/_app/config/about': {
+      id: '/_app/config/about'
+      path: '/config/about'
+      fullPath: '/config/about'
+      preLoaderRoute: typeof AppConfigAboutRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/_app/config/security': {
+      id: '/_app/config/security'
+      path: '/config/security'
+      fullPath: '/config/security'
+      preLoaderRoute: typeof AppConfigSecurityRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/_app/config/settings': {
+      id: '/_app/config/settings'
+      path: '/config/settings'
+      fullPath: '/config/settings'
+      preLoaderRoute: typeof AppConfigSettingsRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/_app/config/storage': {
+      id: '/_app/config/storage'
+      path: '/config/storage'
+      fullPath: '/config/storage'
+      preLoaderRoute: typeof AppConfigStorageRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/_app/config/usage': {
+      id: '/_app/config/usage'
+      path: '/config/usage'
+      fullPath: '/config/usage'
+      preLoaderRoute: typeof AppConfigUsageRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
   }
 }
 
 interface AppRouteRouteChildren {
   AppIntegrationsRoute: typeof AppIntegrationsRoute
+  AppMemoryRoute: typeof AppMemoryRoute
+  AppPipelineRoute: typeof AppPipelineRoute
+  AppSchedulesRoute: typeof AppSchedulesRoute
   AppIndexRoute: typeof AppIndexRoute
+  AppConfigAboutRoute: typeof AppConfigAboutRoute
+  AppConfigSecurityRoute: typeof AppConfigSecurityRoute
+  AppConfigSettingsRoute: typeof AppConfigSettingsRoute
+  AppConfigStorageRoute: typeof AppConfigStorageRoute
+  AppConfigUsageRoute: typeof AppConfigUsageRoute
+  AppConfigIndexRoute: typeof AppConfigIndexRoute
 }
 
 const AppRouteRouteChildren: AppRouteRouteChildren = {
   AppIntegrationsRoute: AppIntegrationsRoute,
+  AppMemoryRoute: AppMemoryRoute,
+  AppPipelineRoute: AppPipelineRoute,
+  AppSchedulesRoute: AppSchedulesRoute,
   AppIndexRoute: AppIndexRoute,
+  AppConfigAboutRoute: AppConfigAboutRoute,
+  AppConfigSecurityRoute: AppConfigSecurityRoute,
+  AppConfigSettingsRoute: AppConfigSettingsRoute,
+  AppConfigStorageRoute: AppConfigStorageRoute,
+  AppConfigUsageRoute: AppConfigUsageRoute,
+  AppConfigIndexRoute: AppConfigIndexRoute,
 }
 
 const AppRouteRouteWithChildren = AppRouteRoute._addFileChildren(

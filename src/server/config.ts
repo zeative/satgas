@@ -15,15 +15,21 @@ export const config = {
   token: env.SATGAS_TOKEN?.trim() || null,
   // Vite's dev server, which serves the UI in development and proxies the API.
   webPort: Number(env.SATGAS_WEB_PORT ?? 5317),
+  // Telegram lets people run their own Bot API server.
+  telegramApi: env.SATGAS_TELEGRAM_API ?? "https://api.telegram.org",
   dataDir: env.SATGAS_DATA_DIR ?? join(homedir(), ".satgas"),
   defaultCwd: env.SATGAS_DEFAULT_CWD ?? process.cwd(),
   // Kept low on purpose: every agent is a full CLI process.
-  concurrency: Math.max(1, Number(env.SATGAS_CONCURRENCY ?? 3)),
+  // Set here it wins over Configurations → Settings.
+  concurrency: env.SATGAS_CONCURRENCY ? Math.max(1, Number(env.SATGAS_CONCURRENCY)) : null,
   // Lean agents skip user settings, hooks and MCP servers; set SATGAS_LEAN_AGENTS=0 if your CLI needs them (custom providers, proxies).
   leanAgents: env.SATGAS_LEAN_AGENTS !== "0",
+  // Forces team talk on (1) or off (0) whatever Configurations says, for comparing runs; unset follows the setting.
+  teamTalk: env.SATGAS_TEAM_TALK === undefined ? null : env.SATGAS_TEAM_TALK !== "0",
   claudeBin: env.SATGAS_CLAUDE_BIN ?? "claude",
   codexBin: env.SATGAS_CODEX_BIN ?? "codex",
-  plannerModel: env.SATGAS_PLANNER_MODEL ?? "sonnet",
+  // Empty: the lead answers on the same model the tasks use, the one shown in the composer.
+  plannerModel: env.SATGAS_PLANNER_MODEL ?? "",
   claudeModel: env.SATGAS_CLAUDE_MODEL,
   claudePermissionMode: env.SATGAS_CLAUDE_PERMISSION_MODE ?? "acceptEdits",
   claudeAllowedTools: env.SATGAS_CLAUDE_ALLOWED_TOOLS ?? "Read Write Edit Glob Grep Bash WebFetch WebSearch",

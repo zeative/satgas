@@ -73,6 +73,9 @@ async function checkAll(providers: Settings["providers"], key: string): Promise<
 
 class CheckError extends Error {}
 
+const REJECTED = "The key was rejected.";
+const QWEN_HOSTS = ["https://dashscope-intl.aliyuncs.com", "https://dashscope.aliyuncs.com", "https://dashscope-us.aliyuncs.com"];
+
 async function check(kind: ProviderKind, cfg: ProviderConfig): Promise<ModelInfo[]> {
   const key = cfg.key?.trim() ?? "";
   const base = (cfg.baseUrl?.trim() || providerDef.get(kind)?.baseUrl || "").replace(/\/+$/, "");
@@ -104,9 +107,27 @@ async function check(kind: ProviderKind, cfg: ProviderConfig): Promise<ModelInfo
     }
     case "deepseek":
       return openaiModels(await json("https://api.deepseek.com/models", bearer(key)));
-    case "qwen":
+    case "qwen": {
       // Model Studio serves its OpenAI-compatible model list on the same host as the Anthropic endpoint.
-      return openaiModels(await json(`${new URL(base).origin}/compatible-mode/v1/models`, bearer(key)));
+      const models = (host: string) => json(`${host}/compatible-mode/v1/models`, bearer(key));
+      const origin = new URL(base).origin;
+      try {
+        return chatModels(openaiModels(await models(origin)));
+      } catch (e) {
+        if (!(e instanceof CheckError) || e.message !== REJECTED) throw e;
+        // Model Studio keys only work in the region they were made in, so name the endpoint that takes this one.
+        for (const host of QWEN_HOSTS.filter((h) => h !== origin)) {
+          if (
+            await models(host).then(
+              () => true,
+              () => false,
+            )
+          )
+            throw new CheckError(`This key is for another Model Studio region. Set the endpoint to \`${host}/apps/anthropic\``);
+        }
+        throw e;
+      }
+    }
     case "zai":
       return openaiModels(await json("https://api.z.ai/api/paas/v4/models", bearer(key)));
     case "openrouter": {
@@ -163,7 +184,7 @@ async function json(url: string, headers: Record<string, string>, unreachable?: 
   } catch {
     throw new CheckError(unreachable ?? `Could not reach ${new URL(url).host}.`);
   }
-  if (res.status === 401 || res.status === 403) throw new CheckError("The key was rejected.");
+  if (res.status === 401 || res.status === 403) throw new CheckError(REJECTED);
   if (!res.ok) throw new CheckError(`${new URL(url).host} answered ${res.status}.`);
   return res.json().catch(() => {
     throw new CheckError(`${new URL(url).host} sent something unexpected.`);
@@ -174,6 +195,17 @@ const list = (data: unknown): Record<string, unknown>[] => {
   const d = (data as { data?: unknown })?.data;
   return Array.isArray(d) ? (d as Record<string, unknown>[]) : [];
 };
+
+// Model Studio lists every model it hosts, including image, video, speech, translation, embedding and internal test
+// entries; agents can only use chat models, and a dated snapshot is noise next to its own alias.
+const NOT_CHAT =
+  /mock|^pre-|image|audio|asr|tts|realtime|omni|embedding|rerank|^wan|^text-|-mt-|^qwen-mt|ocr|character|-vl|vl-|livetranslate|speech|tingwu|intent|ccai/i;
+const SNAPSHOT = /-(\d{4}-\d{2}-\d{2}|\d{4})$/;
+export function chatModels(models: ModelInfo[]): ModelInfo[] {
+  const ids = new Set(models.map((m) => m.id));
+  // Namespaced ids (`kimi/kimi-k3`) are listed but not served on the Anthropic endpoint agents use; the plain id is.
+  return models.filter((m) => !m.id.includes("/") && !NOT_CHAT.test(m.id) && !(SNAPSHOT.test(m.id) && ids.has(m.id.replace(SNAPSHOT, ""))));
+}
 
 const openaiModels = (data: unknown): ModelInfo[] =>
   list(data)

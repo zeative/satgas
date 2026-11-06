@@ -1,5 +1,5 @@
 import { useNavigate } from "@tanstack/react-router";
-import { Copy, Laptop, LogOut, Moon, Plus, RotateCcw, Square, Sun } from "lucide-react";
+import { Check, Copy, Languages, Laptop, LogOut, Moon, Plus, RotateCcw, SlidersHorizontal, Square, Sun } from "lucide-react";
 import { useCallback } from "react";
 import { StatusIcon } from "@/components/status";
 import {
@@ -14,8 +14,8 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useSearch } from "@/context/search-provider";
 import { useTheme } from "@/context/theme-provider";
-import { t } from "@/i18n";
-import { cancelMission, copyReport, finalReport, isLiveRun, openMission, runAgain } from "@/lib/actions";
+import { LANGS, lang, setLang, t } from "@/i18n";
+import { cancelMission, canStop, copyReport, finalReport, openMission, runAgain } from "@/lib/actions";
 import { signOut } from "@/stores/auth";
 import { useRuns } from "@/stores/runs";
 
@@ -48,11 +48,40 @@ export function CommandMenu() {
               <Plus />
               {t.newMission}
             </CommandItem>
+            <CommandItem
+              value={`${t.config.title} ${t.config.settings}`}
+              onSelect={() => runCommand(() => navigate({ to: "/config/settings" }))}
+            >
+              <SlidersHorizontal />
+              {t.config.settings}
+            </CommandItem>
+            <CommandItem
+              value={`${t.config.title} ${t.config.security}`}
+              onSelect={() => runCommand(() => navigate({ to: "/config/settings", search: { tab: "security" } }))}
+            >
+              <SlidersHorizontal />
+              {t.config.security}
+            </CommandItem>
+            <CommandItem value={`${t.config.title} ${t.config.usage}`} onSelect={() => runCommand(() => navigate({ to: "/config/usage" }))}>
+              <SlidersHorizontal />
+              {t.config.usage}
+            </CommandItem>
+            <CommandItem
+              value={`${t.config.title} ${t.config.storage}`}
+              onSelect={() => runCommand(() => navigate({ to: "/config/usage", search: { view: "storage" } }))}
+            >
+              <SlidersHorizontal />
+              {t.config.storage}
+            </CommandItem>
+            <CommandItem value={`${t.config.title} ${t.config.about}`} onSelect={() => runCommand(() => navigate({ to: "/config/about" }))}>
+              <SlidersHorizontal />
+              {t.config.about}
+            </CommandItem>
           </CommandGroup>
 
           {run && (
             <CommandGroup heading={run.title ?? t.mission}>
-              {isLiveRun(run) ? (
+              {canStop(run) ? (
                 <CommandItem onSelect={() => runCommand(() => cancelMission(run))}>
                   <Square />
                   {t.cancelMission}
@@ -97,6 +126,16 @@ export function CommandMenu() {
               <Laptop />
               <span>{t.system}</span>
             </CommandItem>
+          </CommandGroup>
+          <CommandSeparator />
+          <CommandGroup heading={t.language}>
+            {LANGS.map(([value, label]) => (
+              <CommandItem key={value} value={`${t.language} ${label}`} onSelect={() => runCommand(() => setLang(value))}>
+                <Languages />
+                <span lang={value}>{label}</span>
+                {lang === value && <Check className="ms-auto" />}
+              </CommandItem>
+            ))}
           </CommandGroup>
           <CommandSeparator />
           <CommandGroup>

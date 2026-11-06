@@ -1,8 +1,9 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import { rm } from "node:fs/promises";
-import { codexArgs, codexMcp, codexSpawnEnv, runCodex } from "../../../src/server/agents/codex";
+import { codexArgs, codexMcp, codexSpawnEnv, runCodex, shellBody } from "../../../src/server/agents/codex";
 import { AgentError } from "../../../src/server/agents/process";
 import { config } from "../../../src/server/config";
+import { teamServer } from "../../../src/server/team";
 import { collector, jsonl, makeFakeCli, setFake } from "../../helpers/fake-cli";
 
 let dir = "";
@@ -43,6 +44,31 @@ test("returns the last agent message and logs commands and file changes", async 
   ]);
 });
 
+test("connector calls, web searches and thoughts reach the log, and the login shell does not", async () => {
+  setFake({
+    FAKE_CLI_OUTPUT: jsonl(
+      { type: "item.completed", item: { type: "reasoning", text: "**Checking** the file" } },
+      { type: "item.started", item: { type: "command_execution", command: '/bin/zsh -lc "cat a.ts"' } },
+      {
+        type: "item.started",
+        item: { type: "mcp_tool_call", server: "satgas_team", tool: "request_secret", arguments: { label: "Token" } },
+      },
+      { type: "item.completed", item: { type: "web_search", query: "bun fetch timeout" } },
+      { type: "item.completed", item: { type: "agent_message", text: "Done" } },
+      { type: "turn.completed" },
+    ),
+  });
+  const r = req();
+  await runCodex(r);
+  expect(r.logs).toEqual([
+    { kind: "think", text: "**Checking** the file" },
+    { kind: "tool", text: "Bash cat a.ts" },
+    { kind: "tool", text: "mcp__satgas_team__request_secret Token" },
+    { kind: "tool", text: "WebSearch bun fetch timeout" },
+    { kind: "text", text: "Done" },
+  ]);
+});
+
 test("a failed turn becomes an error even when the process exits cleanly", async () => {
   setFake({ FAKE_CLI_OUTPUT: jsonl({ type: "turn.failed", error: { message: "rate limited" } }) });
   await expect(runCodex(req())).rejects.toThrow("rate limited");
@@ -78,6 +104,21 @@ test("lean mode ignores config.toml but always runs ephemeral and sandboxed", ()
   expect(codexArgs("/w")).not.toContain("--ignore-user-config");
 });
 
+test("the person reads the command, not Codex's login shell around it", () => {
+  expect(shellBody(`/bin/zsh -lc "wc -c < '/tmp/a'"`)).toBe("wc -c < '/tmp/a'");
+  expect(shellBody("bash -c 'ls -la'")).toBe("ls -la");
+  expect(shellBody("git status")).toBe("git status");
+});
+
+test("only Satgas's own connector skips Codex's approval, which nobody could answer in an unattended run", () => {
+  const { args } = codexMcp([
+    teamServer("token", 4317, true, false),
+    { id: "mine", name: "mine", enabled: true, transport: "stdio", command: "npx" },
+  ]);
+  expect(args).toContain('mcp_servers.satgas_team.default_tools_approval_mode="approve"');
+  expect(args.join(" ")).not.toContain("satgas_mine.default_tools_approval_mode");
+});
+
 test("hands MCP servers to Codex as TOML overrides whose secrets travel in the environment", () => {
   const { args, env } = codexMcp(
     [
@@ -104,15 +145,15 @@ test("hands MCP servers to Codex as TOML overrides whose secrets travel in the e
   );
   expect(args).toEqual([
     "-c",
-    'mcp_servers.pw.command="npx"',
+    'mcp_servers.satgas_pw.command="npx"',
     "-c",
-    'mcp_servers.pw.args=["-y","@playwright/mcp"]',
+    'mcp_servers.satgas_pw.args=["-y","@playwright/mcp"]',
     "-c",
-    'mcp_servers.pw.env_vars=["GH_TOKEN"]',
+    'mcp_servers.satgas_pw.env_vars=["GH_TOKEN"]',
     "-c",
-    'mcp_servers.docs.url="https://mcp.example.com/mcp"',
+    'mcp_servers.satgas_docs.url="https://mcp.example.com/mcp"',
     "-c",
-    'mcp_servers.docs.env_http_headers={ "Authorization" = "SATGAS_MCP_1_HEADER_0" }',
+    'mcp_servers.satgas_docs.env_http_headers={ "Authorization" = "SATGAS_MCP_1_HEADER_0" }',
   ]);
   expect(args.join(" ")).not.toMatch(/s3cret|t0ken/);
   expect(env).toEqual({ GH_TOKEN: "s3cret", SATGAS_MCP_1_HEADER_0: "Bearer t0ken" });
@@ -127,10 +168,10 @@ test("a variable Codex already has with another value stays inline instead of ch
     { PATH: "/usr/bin", HOME: "/home/me" },
   );
   expect(env).toEqual({ KEY: "one" });
-  expect(args).toContain('mcp_servers.a.env_vars=["KEY"]');
-  expect(args).toContain('mcp_servers.a.env={ "PATH" = "/opt/bin" }');
-  expect(args).toContain('mcp_servers.b.env_vars=["HOME"]');
-  expect(args).toContain('mcp_servers.b.env={ "KEY" = "two" }');
+  expect(args).toContain('mcp_servers.satgas_a.env_vars=["KEY"]');
+  expect(args).toContain('mcp_servers.satgas_a.env={ "PATH" = "/opt/bin" }');
+  expect(args).toContain('mcp_servers.satgas_b.env_vars=["HOME"]');
+  expect(args).toContain('mcp_servers.satgas_b.env={ "KEY" = "two" }');
 });
 
 test("the spawn environment carries the MCP secrets the arguments name", () => {

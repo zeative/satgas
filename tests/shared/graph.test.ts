@@ -55,3 +55,8 @@ test("task codes follow reading order, column first", () => {
 test("sinks are nodes nobody depends on", () => {
   expect(sinks([node("a"), node("b", ["a"]), node("c", ["a"])]).map((n) => n.id)).toEqual(["b", "c"]);
 });
+
+test("a plan with no tasks is only valid when the planner answered the request itself", () => {
+  expect(validatePlan({ title: "Hi", summary: "", nodes: [], reply: "Halo! Ada yang bisa dibantu?" })).toBeNull();
+  expect(validatePlan({ title: "Hi", summary: "", nodes: [], reply: "  " })).toBe("The plan contains no tasks.");
+});

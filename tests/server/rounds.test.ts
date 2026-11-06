@@ -39,12 +39,15 @@ describe("placeRound", () => {
   });
 });
 
-test("shelves each round's cards under its own graph", async () => {
+test("shelves cards under the team, wherever the tasks were laid out", async () => {
   const { placeOnShelf } = await import("../../src/server/artifacts");
+  const { crew, teamBounds } = await import("../../src/shared/team");
   const nodes = [done("a", 0, 0), done("r2-a", 2000, 0, { round: 1 })];
   const run = { id: "r", prompt: "p", cwd: "/w", status: "running" as const, createdAt: 1, nodes };
-  const [first] = placeOnShelf(run, [{ id: "c1", kind: "note", from: "r2-a", w: 200, h: 100, createdAt: 1 }], 1);
-  expect(first?.x).toBe(2000);
+  const team = teamBounds(crew(run));
+  const [first] = placeOnShelf(run, [{ id: "c1", kind: "note", from: "r2-a", w: 200, h: 100, createdAt: 1 }]);
+  expect(first?.x).toBe(team.left);
+  expect(first?.y).toBeGreaterThan(team.bottom);
 });
 
 test("gives the planner the last round's outcome, report and people's notes", () => {
@@ -62,4 +65,56 @@ test("gives the planner the last round's outcome, report and people's notes", ()
   expect(context).toContain("Task b (Engineer): failed — tests failed");
   expect(context).toContain("- Use the brand amber");
   expect(context).not.toContain("agent note");
+});
+
+test("a follow-up to a direct answer gives the planner that answer, even with no tasks on the board", () => {
+  const context = roundContext("halo", ["bikinin tabel sungai terpanjang"], [], [], 6000, { 0: "Halo! Ada yang bisa dibantu?" });
+  expect(context).toContain("Your last reply:\nHalo! Ada yang bisa dibantu?");
+  expect(context).not.toContain("Tasks in the last round");
+});
+
+const asked = {
+  questions: [
+    {
+      header: "Platform",
+      question: "Which platform first?",
+      multiSelect: false,
+      options: [
+        { label: "TikTok", description: "" },
+        { label: "YouTube", description: "" },
+      ],
+    },
+  ],
+};
+
+test("a follow-up gives the planner what it asked last round and what the user answered", () => {
+  const answered = roundContext(
+    "Start a channel",
+    ["Now the logo"],
+    [],
+    [],
+    6000,
+    {},
+    { 0: { ...asked, answers: [{ picked: ["TikTok"] }] } },
+  );
+  expect(answered).toContain("What the user answered when you asked before the last round:\n- Which platform first?\n  TikTok");
+  const setAside = roundContext("Start a channel", ["Never mind, just a logo"], [], [], 6000, {}, { 0: asked });
+  expect(setAside).toContain("Questions you asked last round, which the user set aside:\n- Which platform first?");
+});
+
+test("the plan doc a round put on the board reaches the lead in full when the person approves it", () => {
+  const plan: Card = {
+    id: "c1",
+    kind: "doc",
+    title: "CRM plan",
+    text: "## Milestones\n1. Data and auth\n2. Contacts screen",
+    from: "p",
+    x: 0,
+    y: 0,
+    w: 380,
+    h: 300,
+    createdAt: 1,
+  };
+  const ctx = roundContext("buatkan saya web crm", ["lanjut"], [done("p", 0, 0, { round: 0 })], [plan]);
+  expect(ctx).toContain("Documents the last round put on the board:\n### CRM plan\n## Milestones\n1. Data and auth");
 });
