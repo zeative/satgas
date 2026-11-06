@@ -2,8 +2,8 @@ import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { basename, join } from "node:path";
 import {
-  CODEX_KEY_VAR,
   claudeEnv,
+  codexKeyVar,
   codexProviderArgs,
   nativeClaude,
   type ProviderConfig,
@@ -272,7 +272,7 @@ async function readImage(reader: Reader, image: string, cwd: string, signal: Abo
         else if (ev.type === "turn.failed") failure = ev.error?.message ?? "Codex failed.";
       },
       reason,
-      { set: key ? { [CODEX_KEY_VAR]: key } : {}, unset: [] },
+      { set: key ? { [codexKeyVar(reader.kind, cfg)]: key } : {}, unset: [] },
     );
   }
   if (failure) throw new AgentError(clip(failure, 300));

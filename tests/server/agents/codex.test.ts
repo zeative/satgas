@@ -193,3 +193,34 @@ test("a provider's refusal reads as its message, while a server error keeps the 
   );
   expect(readableCodexError("Reconnecting... 1/5")).toBe("Reconnecting... 1/5");
 });
+
+test("a command the sandbox refused fails the task, even when the model finishes its turn", async () => {
+  setFake({
+    FAKE_CLI_OUTPUT: jsonl(
+      {
+        type: "item.completed",
+        item: {
+          type: "command_execution",
+          exit_code: 1,
+          aggregated_output: "bwrap: No permissions to create a new namespace, likely because",
+        },
+      },
+      { type: "item.completed", item: { type: "agent_message", text: "I could not run it." } },
+      { type: "turn.completed", usage: { input_tokens: 1, cached_input_tokens: 0, output_tokens: 1 } },
+    ),
+  });
+  await expect(runCodex({ prompt: "x", cwd: dir, signal: new AbortController().signal, ...collector() })).rejects.toThrow("sandbox");
+});
+
+test("inside a container Codex skips its sandbox, except for the lead", () => {
+  const before = config.container;
+  config.container = true;
+  try {
+    const sandbox = (args: string[]) => args[args.indexOf("-s") + 1];
+    expect(sandbox(codexArgs(dir))).toBe("danger-full-access");
+    expect(sandbox(codexArgs(dir, undefined, null, true))).toBe("danger-full-access");
+    expect(sandbox(codexArgs(dir, undefined, null, true, true))).toBe("read-only");
+  } finally {
+    config.container = before;
+  }
+});

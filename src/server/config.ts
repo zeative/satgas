@@ -15,6 +15,7 @@ export const config = {
   token: env.SATGAS_TOKEN?.trim() || null,
   // Vite's dev server, which serves the UI in development and proxies the API.
   webPort: Number(env.SATGAS_WEB_PORT ?? 5317),
+  container: env.SATGAS_CONTAINER === "1",
   // Chat channels have not met a real Telegram or WhatsApp account yet, so they stay off unless asked for.
   channels: env.SATGAS_CHANNELS === "1",
   // Telegram lets people run their own Bot API server.

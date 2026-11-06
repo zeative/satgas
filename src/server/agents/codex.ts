@@ -1,4 +1,4 @@
-import { CODEX_KEY_VAR, codexProviderArgs } from "../../shared/providers";
+import { codexKeyVar, codexProviderArgs } from "../../shared/providers";
 import type { McpServer } from "../../shared/settings";
 import { config } from "../config";
 import { getSettings } from "../settings";
@@ -56,9 +56,12 @@ export function codexArgs(
   mcp = codexMcp(getSettings().mcpServers),
   tools: ToolHooks | null = null,
   readOnly = false,
+  lead = false,
 ): string[] {
   const { agents, providers } = getSettings();
-  const sandbox = readOnly ? "read-only" : agents.codex.sandbox;
+  // Containers refuse the namespaces Codex's sandbox needs, so every command would fail there; the container is the boundary.
+  // The lead runs no commands, so its read-only sandbox never comes into play.
+  const sandbox = lead ? "read-only" : config.container ? "danger-full-access" : readOnly ? "read-only" : agents.codex.sandbox;
   const cmd = [config.codexBin, "exec", "--json", "--ephemeral", "--skip-git-repo-check", "-C", cwd, "-s", sandbox];
   // Lean mode skips config.toml (MCP servers, profiles); auth still comes from CODEX_HOME. Integrations servers still apply.
   if (config.leanAgents) cmd.push("--ignore-user-config");
@@ -73,8 +76,9 @@ export function codexArgs(
 // The provider key reaches Codex through the variable its provider entry names, never through argv; so do MCP secrets.
 export function codexSpawnEnv(mcp = codexMcp(getSettings().mcpServers), tools: ToolHooks | null = null): EnvChange {
   const { agents, providers } = getSettings();
-  const key = providers[agents.codex.provider]?.key?.trim();
-  return { set: { ...mcp.env, ...tools?.env, ...(key ? { [CODEX_KEY_VAR]: key } : {}) }, unset: [] };
+  const provider = providers[agents.codex.provider] ?? {};
+  const key = provider.key?.trim();
+  return { set: { ...mcp.env, ...tools?.env, ...(key ? { [codexKeyVar(agents.codex.provider, provider)]: key } : {}) }, unset: [] };
 }
 
 // Codex wraps each command in its login shell; the person reads the command itself.
@@ -86,6 +90,7 @@ const mcpLine = (item: { server?: unknown; tool?: unknown; arguments?: unknown }
 // Codex warns about the hook-trust flag on every run (Satgas wrote those hooks itself) and about models it has no notes on;
 // neither stops the work, so neither is an error worth showing.
 const NOTICE = /dangerously-bypass-hook-trust|Model metadata for .* not found/;
+const SANDBOX_REFUSED = /bwrap: No permissions to create a new namespace/;
 
 // Codex passes on a provider's refusal with the status and request details around it. Server errors keep their status, which
 // is how a retry recognises them.
@@ -101,6 +106,7 @@ export function readableCodexError(text: string): string {
 export async function runCodex(req: AgentRequest, { bare = false } = {}): Promise<AgentResult> {
   let last = "";
   let failure: string | undefined;
+  let sandboxRefused = false;
   const usage = { input: 0, cached: 0, output: 0 };
   const mcp = codexMcp(
     bare ? [] : [...getSettings().mcpServers, ...(req.teamToken ? [teamServer(req.teamToken, config.port, true, !!req.teamTalk)] : [])],
@@ -108,7 +114,7 @@ export async function runCodex(req: AgentRequest, { bare = false } = {}): Promis
   const tools = bare ? null : await prepareToolHooks("codex");
   try {
     await runJsonl(
-      codexArgs(req.cwd, mcp, tools, !!req.readOnly),
+      codexArgs(req.cwd, mcp, tools, !!req.readOnly, bare),
       req,
       (ev) => {
         if (ev.type === "item.started" && ev.item?.type === "command_execution") {
@@ -130,6 +136,9 @@ export async function runCodex(req: AgentRequest, { bare = false } = {}): Promis
               if (typeof c.path === "string")
                 req.onFile?.(c.path, c.kind === "add" ? "added" : c.kind === "delete" ? "deleted" : "modified");
             }
+          } else if (item.type === "command_execution" && SANDBOX_REFUSED.test(String(item.aggregated_output ?? ""))) {
+            sandboxRefused = true;
+            req.onLog({ kind: "error", text: "The sandbox refused this command" });
           } else if (item.type === "command_execution" && item.exit_code && item.exit_code !== 0) {
             req.onLog({ kind: "error", text: `Command failed (exit ${item.exit_code})` });
           } else if (item.type === "error" && item.message && !NOTICE.test(item.message)) {
@@ -156,6 +165,9 @@ export async function runCodex(req: AgentRequest, { bare = false } = {}): Promis
   }
 
   if (failure) throw new AgentError(clip(failure, 400));
+  // The model only reports this in words, which would otherwise pass as a finished task.
+  if (sandboxRefused)
+    throw new AgentError("Codex's sandbox cannot run commands on this machine. Set its sandbox to Full access under Integrations");
   if (!usage.output) return { output: last };
   // Codex reports no price, so what it spent stays unpriced.
   const model = getSettings().agents.codex.model || config.codexModel || "codex";

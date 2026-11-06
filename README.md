@@ -163,7 +163,7 @@ SATGAS_DATA_DIR=/var/lib/satgas \
 
 ### With Docker
 
-The image includes Satgas, Claude Code, Codex, git, ripgrep, Chromium with agent-browser, and tools for making documents. Everything runs as an unprivileged user.
+The image includes Satgas, Claude Code, Codex, git, ripgrep, Chromium with agent-browser, and tools for making documents. Everything runs as an unprivileged user. The container is the boundary here: Docker refuses what Codex's own sandbox needs, so the sandbox setting has no effect and a look-only Codex task is asked, not forced, to change nothing.
 
 ```sh
 cp .env.example .env        # on a server, set SATGAS_PUBLIC_URL and SATGAS_TOKEN

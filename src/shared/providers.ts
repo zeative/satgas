@@ -256,8 +256,15 @@ export function claudeEnv(kind: ProviderKind, cfg: ProviderConfig, model: string
 export const CODEX_KEY_VAR = "SATGAS_PROVIDER_KEY";
 
 // `-c` overrides that point one Codex spawn at a provider; the key travels in CODEX_KEY_VAR, never on the command line.
+// OpenAI's own endpoint stays on Codex's built-in provider and its key variable: on a provider of ours, models never see
+// the connectors' tools.
+const builtInOpenAI = (kind: ProviderKind, cfg: ProviderConfig) =>
+  kind === "openai" && (cfg.baseUrl?.trim() || providerDef.get(kind)?.baseUrl || "").replace(/\/+$/, "") === providerDef.get(kind)?.baseUrl;
+
+export const codexKeyVar = (kind: ProviderKind, cfg: ProviderConfig) => (builtInOpenAI(kind, cfg) ? "CODEX_API_KEY" : CODEX_KEY_VAR);
+
 export function codexProviderArgs(kind: ProviderKind, cfg: ProviderConfig): string[] {
-  if (kind === "codex") return [];
+  if (kind === "codex" || builtInOpenAI(kind, cfg)) return [];
   const def = providerDef.get(kind);
   const base = (cfg.baseUrl?.trim() || def?.baseUrl || "").replace(/\/+$/, "");
   const id = "satgas";

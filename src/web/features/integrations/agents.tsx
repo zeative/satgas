@@ -4,19 +4,11 @@ import { type Logo, LogoTile } from "@/components/logo-tile";
 import { RichText } from "@/components/rich-text";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import { t } from "@/i18n";
 import { cn } from "@/lib/utils";
 import { useRuns } from "@/stores/runs";
 import { nativeClaude, PROVIDERS, providerDef, type Runtime } from "../../../shared/providers";
-import {
-  CODEX_SANDBOXES,
-  type CodexSandbox,
-  PERMISSION_MODES,
-  type PermissionMode,
-  type Settings,
-  withAgent,
-} from "../../../shared/settings";
+import { CODEX_SANDBOXES, type CodexSandbox, PERMISSION_MODES, type PermissionMode, type Settings } from "../../../shared/settings";
 import { DetailPage, DetailSection, ExternalText, Fact } from "./detail";
 import { ModelSelect } from "./model-select";
 import { ProviderLogo, ProvidersSection, StatusText, useProviderStatus } from "./providers";
@@ -124,14 +116,7 @@ export function AgentsTab({ settings, onOpen }: { settings: Settings; onOpen: (r
                     <VersionText version={version} checking={checking} />
                   </p>
                 </div>
-                {/* Above the card's stretched link, so toggling never opens the detail page. */}
-                <Switch
-                  className="relative z-10 shrink-0"
-                  checked={conf.tasks}
-                  onCheckedChange={(tasks) => void update({ ...settings, agents: withAgent(settings.agents, a.runtime, tasks) })}
-                  aria-label={`${ti.useForTasks}: ${a.name}`}
-                  title={ti.useForTasks}
-                />
+                {conf.tasks && <span className="shrink-0 text-xs text-muted-foreground">{ti.inUse}</span>}
               </li>
             );
           })}
@@ -162,16 +147,7 @@ export function AgentDetail({ settings, runtime, onBack }: { settings: Settings;
       logo={<LogoTile logo={a.logo} size="lg" />}
       title={a.name}
       desc={runtime === "claude" ? ti.agentDesc.claude : ti.agentDesc.codex}
-      action={
-        <label htmlFor={`${runtime}-tasks`} className="flex items-center gap-2.5 text-sm text-muted-foreground">
-          {ti.useForTasks}
-          <Switch
-            id={`${runtime}-tasks`}
-            checked={conf.tasks}
-            onCheckedChange={(tasks) => void update({ ...settings, agents: withAgent(settings.agents, runtime, tasks) })}
-          />
-        </label>
-      }
+      action={conf.tasks ? <span className="text-sm text-muted-foreground">{ti.inUse}</span> : undefined}
       aside={
         <>
           <Fact label={ti.madeBy}>
@@ -183,7 +159,7 @@ export function AgentDetail({ settings, runtime, onBack }: { settings: Settings;
           <Fact label={ti.version}>
             <VersionText version={version} checking={checking} />
           </Fact>
-          <Fact label={ti.role}>{conf.tasks ? ti.plans : ti.noTasks}</Fact>
+          <Fact label={ti.role}>{conf.tasks ? ti.plans : ti.standby}</Fact>
           <Fact label={ti.connectorsReach}>{runtime === "claude" ? ti.reachAll : ti.reachLocal}</Fact>
           <Fact label={ti.moreInfo}>
             <ExternalText href={a.docs}>{ti.documentation}</ExternalText>

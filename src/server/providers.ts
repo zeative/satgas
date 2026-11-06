@@ -2,8 +2,8 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import {
   CLAUDE_EFFORTS,
-  CODEX_KEY_VAR,
   claudeEnv,
+  codexKeyVar,
   codexProviderArgs,
   nativeClaude,
   PROVIDERS,
@@ -376,7 +376,7 @@ async function ping(kind: ProviderKind, cfg: ProviderConfig, model: string) {
         else if (ev.type === "turn.failed") failure = ev.error?.message ?? "The model did not answer.";
       },
       reason,
-      { set: key ? { [CODEX_KEY_VAR]: key } : {}, unset: [] },
+      { set: key ? { [codexKeyVar(kind, cfg)]: key } : {}, unset: [] },
     );
   }
   if (failure) throw new CheckError(clip(failure, 300));

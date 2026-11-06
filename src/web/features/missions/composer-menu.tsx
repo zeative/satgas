@@ -1,8 +1,7 @@
 import { Link } from "@tanstack/react-router";
-import { Blocks, Bot, Paperclip, Plus, ScrollText, Server, Settings2, TriangleAlert } from "lucide-react";
+import { Blocks, Paperclip, Plus, ScrollText, Server, Settings2, TriangleAlert } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { ClaudeMark, CodexMark } from "@/components/brand-marks";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -18,7 +17,7 @@ import { Switch } from "@/components/ui/switch";
 import { t } from "@/i18n";
 import { loadSettings, saveSettings, useSettings } from "@/stores/settings";
 import { loadSkills, useSkills } from "@/stores/skills";
-import { type Settings, withAgent } from "../../../shared/settings";
+import type { Settings } from "../../../shared/settings";
 
 // The composer's + menu, shared by Home and the board: files, skills, agent switches and connectors.
 export function ComposerMenu({ onSkill, onAddFiles }: { onSkill?: (name: string) => void; onAddFiles?: () => void }) {
@@ -66,30 +65,6 @@ export function ComposerMenu({ onSkill, onAddFiles }: { onSkill?: (name: string)
           <>
             <DropdownMenuSub>
               <DropdownMenuSubTrigger>
-                <Bot />
-                {t.integrations.agents}
-              </DropdownMenuSubTrigger>
-              <DropdownMenuSubContent className="w-64">
-                {AGENTS.map(({ kind, Mark }) => (
-                  <Toggle
-                    key={kind}
-                    icon={<Mark className="size-4" />}
-                    label={t.agent[kind]}
-                    on={settings.agents[kind].tasks}
-                    onToggle={(tasks) => void persist({ ...settings, agents: withAgent(settings.agents, kind, tasks) })}
-                  />
-                ))}
-                <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <Link to="/integrations" search={{ tab: "agents" }}>
-                    <Settings2 />
-                    {t.manageAgents}
-                  </Link>
-                </DropdownMenuItem>
-              </DropdownMenuSubContent>
-            </DropdownMenuSub>
-            <DropdownMenuSub>
-              <DropdownMenuSubTrigger>
                 <Blocks />
                 {t.integrations.servers}
               </DropdownMenuSubTrigger>
@@ -129,11 +104,6 @@ export function ComposerMenu({ onSkill, onAddFiles }: { onSkill?: (name: string)
     </DropdownMenu>
   );
 }
-
-const AGENTS = [
-  { kind: "claude", Mark: ClaudeMark },
-  { kind: "codex", Mark: CodexMark },
-] as const;
 
 async function persist(next: Settings) {
   const problem = await saveSettings(next);

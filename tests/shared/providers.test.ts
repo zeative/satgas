@@ -1,5 +1,13 @@
 import { describe, expect, test } from "bun:test";
-import { CODEX_KEY_VAR, claudeEnv, codexProviderArgs, LEAD_PROVIDERS, leadBlocked, PROVIDERS } from "../../src/shared/providers";
+import {
+  CODEX_KEY_VAR,
+  claudeEnv,
+  codexKeyVar,
+  codexProviderArgs,
+  LEAD_PROVIDERS,
+  leadBlocked,
+  PROVIDERS,
+} from "../../src/shared/providers";
 
 describe("claudeEnv", () => {
   test("leaves the CLI's own sign-in alone", () => {
@@ -50,6 +58,15 @@ describe("codexProviderArgs", () => {
     expect(args).toContain('model_providers.satgas.wire_api="responses"');
     expect(args).toContain('model_providers.satgas.base_url="https://api.groq.com/openai/v1"');
     expect(args.at(-1)).toBe('model_provider="satgas"');
+  });
+
+  test("OpenAI's own endpoint stays on Codex's built-in provider, so connectors stay visible to the model", () => {
+    expect(codexProviderArgs("openai", { key: "secret" })).toEqual([]);
+    expect(codexKeyVar("openai", { key: "secret" })).toBe("CODEX_API_KEY");
+    const gateway = { key: "secret", baseUrl: "https://gateway.example/v1" };
+    expect(codexProviderArgs("openai", gateway)).toContain('model_provider="satgas"');
+    expect(codexKeyVar("openai", gateway)).toBe(CODEX_KEY_VAR);
+    expect(codexKeyVar("groq", { key: "secret" })).toBe(CODEX_KEY_VAR);
   });
 
   test("a local server has no key to ask for", () => {
