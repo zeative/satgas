@@ -80,7 +80,7 @@ flowchart LR
 
 **Set up your way**
 
-- **Model providers.** Claude Code runs on your Claude sign-in or subscription token, the Anthropic API, DeepSeek, Qwen, Z.ai, OpenRouter or Ollama. Codex runs on your Codex sign-in, the OpenAI API, Groq or LM Studio.
+- **Model providers.** Pick one model in the composer, and the lead and every task run on it. Claude Code serves your Claude sign-in or subscription token, the Anthropic API, DeepSeek, Qwen, Z.ai, OpenRouter and Ollama. Codex serves your Codex sign-in, the OpenAI API, Groq and LM Studio, though connectors may not reach models on Groq and LM Studio.
 - **Connectors.** One-click GitHub, Context7, Zapi, Playwright and Chrome DevTools, or any MCP server of your own.
 - **Skills.** Add them from a GitHub repository, a `.zip` or your own `SKILL.md`. Built-ins cover engineering practice, security audits and interface design.
 - **Tools.** Programs around each agent's work, such as a command guard, auto-format, gitleaks, RTK and agent-browser.
@@ -171,7 +171,7 @@ docker compose up -d
 docker compose logs satgas  # shows the sign-in link when SATGAS_TOKEN is not set
 ```
 
-Boards, settings and workspaces live in the `satgas-data` volume, and the agents' sign-ins in `satgas-home`. Sign agents in from **Integrations**, or once inside the container with `docker compose exec -it satgas claude`.
+Boards, settings and workspaces live in the `satgas-data` volume, and the agents' sign-ins in `satgas-home`. Connect providers under **Integrations → Providers**, or sign a CLI in once inside the container with `docker compose exec -it satgas claude`.
 
 Compose publishes the port on `127.0.0.1` for a proxy on the host. Behind Traefik or Dokploy, drop `ports` and route to the service on port `4317`.
 
@@ -206,7 +206,7 @@ Most settings live in the app under **Configurations** and **Integrations**. Env
 | `SATGAS_CODEX_MODEL`                     | CLI default                                         | Model for Codex tasks                                                      |
 | `SATGAS_CLAUDE_PERMISSION_MODE`          | `acceptEdits`                                       | Claude Code permission mode for tasks                                      |
 | `SATGAS_CLAUDE_ALLOWED_TOOLS`            | `Read Write Edit Glob Grep Bash WebFetch WebSearch` | Tools Claude Code tasks may use                                            |
-| `SATGAS_CODEX_SANDBOX`                   | `workspace-write`                                   | Codex sandbox policy                                                       |
+| `SATGAS_CODEX_SANDBOX`                   | `workspace-write`                                   | Codex sandbox policy, unused in Docker                                     |
 | `SATGAS_LEAN_AGENTS`                     | `1`                                                 | Set to `0` to let agents load your own CLI settings, hooks and MCP servers |
 | `SATGAS_TEAM_TALK`                       | follows the setting                                 | Force team talk on (`1`) or off (`0`)                                      |
 | `SATGAS_CLAUDE_BIN` / `SATGAS_CODEX_BIN` | `claude` / `codex`                                  | Paths to the CLIs                                                          |
@@ -227,7 +227,7 @@ Satgas runs agents that **read, write and execute commands**. Treat a request li
 - **Origins.** Requests must name this machine or `SATGAS_PUBLIC_URL`, and writes from any other origin are refused, so a web page you visit cannot start work. Other sites cannot frame the UI.
 - **Previews.** Agent pages load through a per-board key that opens that board's files and nothing else.
 - **Secrets.** Provider keys and connector secrets stay on the server, and the browser only sees `••••`. Agents ask for missing secrets through a private field, never the chat.
-- **Agents.** Claude Code tasks run with `acceptEdits` and a tool allow-list, and Codex tasks in its `workspace-write` sandbox. Steps that are hard to undo can be held for your approval.
+- **Agents.** Claude Code tasks run with `acceptEdits` and a tool allow-list, and Codex tasks in its `workspace-write` sandbox, or with the container as the boundary in Docker. Change both under **Settings → Security**. Steps that are hard to undo can be held for your approval.
 - **Rendering.** Agent text never reaches the page as raw HTML, and only `http(s)` links become links.
 
 **What leaves your machine:** what the agent CLIs send to your model providers, what agents send through connectors you install, and your channel messages. Satgas itself only calls GitHub for the star count on the home page, the update check and skills you install. Links opening outside Satgas carry `ref=satgas.id`.
