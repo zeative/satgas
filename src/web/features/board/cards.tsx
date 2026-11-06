@@ -135,7 +135,7 @@ export const CardNode = memo(function CardNode({ data, selected, width, height }
         {hasQuick && card.kind !== "preview" && !far && (
           <span
             className={cn(
-              "nodrag absolute top-1.5 right-1.5 z-10 flex items-center rounded-md border bg-card/95 p-0.5 opacity-0 shadow-xs transition-opacity group-hover/card:opacity-100",
+              "nodrag absolute top-1.5 right-1.5 z-10 flex items-center rounded-md border bg-card/95 p-0.5 opacity-0 shadow-xs transition-opacity group-hover/card:opacity-100 [@media(hover:none)]:opacity-100",
               quick && "opacity-100",
             )}
           >

@@ -246,7 +246,7 @@ function FileTabs({ tabs, active, changes }: { tabs: string[]; active: string; c
               onClick={() => closeTab(p)}
               className={cn(
                 "me-1.5 flex size-5 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:opacity-100 focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none",
-                !on && "opacity-0 group-hover/tab:opacity-100",
+                !on && "opacity-0 group-hover/tab:opacity-100 [@media(hover:none)]:opacity-100",
               )}
             >
               <X className="size-3.5" aria-hidden="true" />

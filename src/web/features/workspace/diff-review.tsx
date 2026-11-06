@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useTheme } from "@/context/theme-provider";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { t } from "@/i18n";
 import { isLiveRun } from "@/lib/actions";
 import { cn } from "@/lib/utils";
@@ -51,6 +52,7 @@ export default function DiffReview({ run }: { run: Run }) {
   const { resolvedTheme } = useTheme();
   const [data, setData] = useState<{ patch?: ReviewPatch; error?: string; at?: number }>({});
   const [split, setSplit] = useState(false);
+  const phone = useIsMobile();
   const [wrap, setWrap] = useState(false);
   const [items, setItems] = useState<CodeViewItem<undefined>[]>([]);
   const viewer = useRef<CodeViewHandle<undefined, undefined>>(null);
@@ -129,7 +131,8 @@ export default function DiffReview({ run }: { run: Run }) {
     () => ({
       ...HIGHLIGHT,
       themeType: resolvedTheme,
-      diffStyle: split ? ("split" as const) : ("unified" as const),
+      // Two columns of code cannot fit a phone, whatever was chosen on a wider screen.
+      diffStyle: split && !phone ? ("split" as const) : ("unified" as const),
       overflow: wrap ? ("wrap" as const) : ("scroll" as const),
       stickyHeaders: true,
       lineDiffType: "word" as const,
@@ -143,7 +146,7 @@ export default function DiffReview({ run }: { run: Run }) {
         return { oldFile: { name: fd.prevName ?? fd.name, contents: before }, newFile: { name: fd.name, contents: after } };
       },
     }),
-    [resolvedTheme, split, wrap, data.patch, run.id],
+    [resolvedTheme, split, phone, wrap, data.patch, run.id],
   );
 
   if (!scope) return null;
@@ -162,14 +165,14 @@ export default function DiffReview({ run }: { run: Run }) {
           className="h-8 gap-1.5 px-2 text-xs text-muted-foreground hover:text-foreground"
         >
           <ArrowLeft />
-          {tr.close}
+          <span className="max-sm:sr-only">{tr.close}</span>
         </Button>
         <span aria-hidden="true" className="h-4 w-px bg-border" />
         <Select value={key} onValueChange={(v) => openReview(keyScope(v))}>
           <SelectTrigger
             aria-label={tr.scope}
             size="sm"
-            className="h-8 max-w-72 border-none bg-transparent text-xs font-medium shadow-none"
+            className="h-8 max-w-72 min-w-0 border-none bg-transparent text-xs font-medium shadow-none"
           >
             <SelectValue />
           </SelectTrigger>
@@ -188,13 +191,13 @@ export default function DiffReview({ run }: { run: Run }) {
           </SelectContent>
         </Select>
         {files.length > 0 && (
-          <span className="font-mono text-xs tabular-nums">
+          <span className="font-mono text-xs tabular-nums max-sm:hidden">
             <span className="text-emerald-700 dark:text-emerald-400">+{totals.add.toLocaleString()}</span>{" "}
             <span className="text-red-700 dark:text-red-400">−{totals.del.toLocaleString()}</span>
           </span>
         )}
         <div className="ms-auto flex items-center gap-0.5">
-          <fieldset className="flex items-center rounded-lg border p-0.5">
+          <fieldset className="flex items-center rounded-lg border p-0.5 max-md:hidden">
             <legend className="sr-only">{`${tr.unified} / ${tr.split}`}</legend>
             <Button
               variant="ghost"

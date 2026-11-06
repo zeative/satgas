@@ -107,7 +107,7 @@ export function Discover({ settings, query, filter, onClearFilter, onCustom, onO
         </h2>
 
         {items.length ? (
-          <ul className="grid gap-3 md:grid-cols-2">
+          <ul className="grid grid-cols-1 gap-3 md:grid-cols-2">
             {items.map((item) => {
               const isOn = on.has(item.id);
               const isOff = !isOn && off.has(item.id);
@@ -228,7 +228,7 @@ export function Yours({ settings, query, onDiscover, onCustom, onEdit, onOpen }:
         <span className="font-mono text-xs font-normal text-muted-foreground tabular-nums">{shown.length}</span>
       </h2>
       {shown.length ? (
-        <ul className="grid gap-3 md:grid-cols-2">
+        <ul className="grid grid-cols-1 gap-3 md:grid-cols-2">
           {shown.map((s) => {
             const item = catalogOf(s);
             return (

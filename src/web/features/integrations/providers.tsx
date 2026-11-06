@@ -107,7 +107,7 @@ export function ProvidersSection({ settings }: { settings: Settings }) {
               <Mark className="size-3.5" />
               {t.agent[runtime]}
             </h3>
-            <ul className="grid gap-3 md:grid-cols-2">
+            <ul className="grid grid-cols-1 gap-3 md:grid-cols-2">
               {PROVIDERS.filter((def) => def.runtime === runtime).map((def) => {
                 const status = statusOf(def.kind);
                 const on = status?.state === "ok";

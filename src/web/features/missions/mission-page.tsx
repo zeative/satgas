@@ -74,7 +74,7 @@ const DiffReview = lazy(() => import("../workspace/diff-review"));
 const FileView = lazy(() => import("../workspace/file-view"));
 
 // Floating panels get their own GPU layer, so a composited card underneath can never paint through them.
-const PANEL = "absolute inset-y-3 right-3 z-20 w-[min(var(--panel-w),calc(100%-1.5rem))] transform-gpu";
+const PANEL = "absolute inset-y-3 right-3 z-20 w-[min(var(--panel-w),calc(100%-1.5rem))] transform-gpu max-md:inset-0 max-md:w-full";
 
 export function MissionPage({ missionId, focusTask }: { missionId: string; focusTask?: string }) {
   const run = useRuns((s) => (s.run?.id === missionId ? s.run : null));
@@ -383,7 +383,7 @@ function BoardTitle({ run, docked, panelOpen, onTogglePanel }: TitleProps) {
       className={
         docked
           ? "flex h-9 shrink-0 items-center border-b px-2"
-          : "pointer-events-none absolute top-3 left-3 z-20 flex max-w-[calc(100%-1.5rem)] lg:max-w-md"
+          : "pointer-events-none absolute top-3 left-3 z-20 flex max-w-[calc(100%-9.75rem)] md:max-w-[calc(100%-1.5rem)] lg:max-w-md"
       }
     >
       <div
@@ -420,7 +420,7 @@ function BoardTitle({ run, docked, panelOpen, onTogglePanel }: TitleProps) {
             <span aria-hidden="true" className="mx-0.5 h-4 w-px bg-border" />
             <StatusIcon status={run.status} className="ms-1" />
             {/* A phone's title bar keeps its width for the board and session names. */}
-            <span className={cn("contents", docked && "max-md:hidden")}>
+            <span className="contents max-md:hidden">
               <BoardIcon run={run} />
             </span>
             <BoardName run={run} editing={renaming} onEditingChange={setRenaming} className="pe-1.5 text-sm font-medium" />
@@ -462,6 +462,12 @@ function BoardTitle({ run, docked, panelOpen, onTogglePanel }: TitleProps) {
                   setRenaming(true);
                 }}
               >
+                {!workspaceOpen && (
+                  <DropdownMenuItem className="md:hidden" onClick={() => toggleWorkspace(true)}>
+                    <PanelLeftOpen />
+                    {t.workspace.open}
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem onClick={() => (renameNext.current = true)}>
                   <Pencil />
                   {t.rename}

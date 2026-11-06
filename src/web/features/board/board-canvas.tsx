@@ -22,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useTheme } from "@/context/theme-provider";
 import { useEvent } from "@/hooks/use-event";
+import { useCoarsePointer } from "@/hooks/use-mobile";
 import { isMac, t } from "@/i18n";
 import { isLiveRun } from "@/lib/actions";
 import { cn } from "@/lib/utils";
@@ -64,6 +65,7 @@ import { type Inset, unionRect, viewportFor, zoomAround } from "./frame";
 import { type Box, boundsOf, dragBox, type Guide, lockAngle, snapBox } from "./geometry";
 import { INBOX_ID, INBOX_W, InboxNode, type InboxNodeType, waiting } from "./inbox-node";
 import { modHeld } from "./keys";
+import { watchLongPress } from "./long-press";
 import { PALETTE } from "./palette";
 import { useBoardPrefs } from "./prefs";
 import { SelectionToolbar } from "./selection-toolbar";
@@ -513,6 +515,36 @@ function Canvas({ run, selectedTaskId, onSelectTask, panelOpen }: Props) {
     edgeCache.current = next;
     return all;
   }, [run.nodes, asks, people, taskById, nodeOfTask, board, selectedLinks, selected, selectedTaskId]);
+
+  useEffect(() => {
+    const el = surface.current;
+    return el ? watchLongPress(el) : undefined;
+  }, []);
+
+  // Safari's trackpad pinch arrives as gesture events and the page lock stops its own zoom, so the board applies it. Touch
+  // screens fire them too, but there React Flow already reads the fingers.
+  useEffect(() => {
+    const el = surface.current;
+    if (!el || navigator.maxTouchPoints > 0) return;
+    let from = 1;
+    const begin = () => {
+      from = rf.getZoom();
+    };
+    const change = (e: Event) => {
+      const { scale, clientX, clientY } = e as Event & { scale: number; clientX: number; clientY: number };
+      const box = el.getBoundingClientRect();
+      const view = rf.getViewport();
+      const zoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, from * scale));
+      const [x, y] = [clientX - box.left, clientY - box.top];
+      void rf.setViewport({ x: x - (x - view.x) * (zoom / view.zoom), y: y - (y - view.y) * (zoom / view.zoom), zoom });
+    };
+    el.addEventListener("gesturestart", begin);
+    el.addEventListener("gesturechange", change);
+    return () => {
+      el.removeEventListener("gesturestart", begin);
+      el.removeEventListener("gesturechange", change);
+    };
+  }, [rf]);
 
   // Frames the whole board, or just `ids` when zooming to a selection.
   const fit = useCallback(
@@ -1337,6 +1369,7 @@ function Canvas({ run, selectedTaskId, onSelectTask, panelOpen }: Props) {
   );
   const closeExpanded = useEvent(() => setExpandedId(null));
   const hand = tool === "hand";
+  const coarse = useCoarsePointer();
 
   // Where cards sit as drawn, drafts included, so threads fade behind a card even while it is being dragged.
   // Only threads fade behind cards. Most of the time none is showing, so this costs nothing while dragging.
@@ -1404,8 +1437,9 @@ function Canvas({ run, selectedTaskId, onSelectTask, panelOpen }: Props) {
             onNodeDoubleClick={handleNodeDoubleClick}
             onPaneClick={handlePaneClick}
             deleteKeyCode={DELETE_KEYS}
-            selectionOnDrag={!hand}
-            panOnDrag={hand ? true : PAN_BUTTONS}
+            // One finger moves the board, as on any phone; a box selection would take that drag from it.
+            selectionOnDrag={!hand && !coarse}
+            panOnDrag={hand || coarse ? true : PAN_BUTTONS}
             panOnScroll
             panActivationKeyCode="Space"
             elementsSelectable={!hand}

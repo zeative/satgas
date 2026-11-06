@@ -56,14 +56,14 @@ export function HomePage() {
       <div aria-hidden="true" className="satgas-hero-grid pointer-events-none absolute inset-x-0 top-0 h-[36rem]" />
       <PageHeader actions={<HomeActions />} />
 
-      <div className="relative mx-auto flex w-full max-w-5xl flex-col gap-20 px-6 pt-[22vh] pb-20">
+      <div className="relative mx-auto flex w-full max-w-5xl flex-col gap-12 px-4 pt-[16vh] pb-20 sm:px-6 md:gap-20 md:pt-[22vh]">
         <section aria-labelledby="start-new" className="mx-auto flex w-full max-w-[44rem] flex-col items-center gap-10 text-center">
           <div className="flex flex-col gap-3">
             <h1
               id="start-new"
-              className="flex items-center justify-center gap-3 brand-title text-[1.75rem] leading-tight text-balance md:text-[2rem]"
+              className="flex items-center justify-center gap-2 brand-title text-[clamp(1.25rem,6vw,1.75rem)] leading-tight whitespace-nowrap md:gap-3 md:text-[2rem]"
             >
-              <LogoMark className="size-7 md:size-8" />
+              <LogoMark className="size-6 md:size-8" />
               {t.composeTitle}
             </h1>
           </div>
@@ -100,7 +100,7 @@ function HomeActions() {
       {agents && (
         <div
           role="status"
-          className="flex h-8 items-center gap-2 rounded-full border bg-card ps-1.5 pe-3 text-xs text-muted-foreground shadow-xs"
+          className="flex h-8 items-center gap-2 rounded-full border bg-card ps-1.5 pe-1.5 text-xs text-muted-foreground shadow-xs sm:pe-3"
         >
           <span className="flex -space-x-1">
             {AGENT_MARKS.map(({ kind, Mark }) => {
@@ -125,7 +125,7 @@ function HomeActions() {
               );
             })}
           </span>
-          {summary}
+          <span className="max-sm:sr-only">{summary}</span>
         </div>
       )}
       {repo &&
@@ -217,7 +217,7 @@ function RecentBoards() {
             {heading}
           </h2>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 max-sm:w-full">
           {view === "active" && !searching && (
             <>
               {groups.snoozed.length > 0 && (
@@ -237,7 +237,7 @@ function RecentBoards() {
               )}
             </>
           )}
-          <div className="relative">
+          <div className="relative max-sm:min-w-40 max-sm:flex-1">
             <Search
               aria-hidden="true"
               className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground"
@@ -251,7 +251,7 @@ function RecentBoards() {
               }}
               placeholder={t.organize.search}
               aria-label={t.organize.search}
-              className="h-8 w-48 rounded-lg border bg-card ps-8 pe-2.5 text-xs shadow-xs outline-none transition-[border-color,box-shadow] placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 [&::-webkit-search-cancel-button]:hidden"
+              className="h-8 w-full rounded-lg border bg-card ps-8 sm:w-48 pe-2.5 text-xs shadow-xs outline-none transition-[border-color,box-shadow] placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 [&::-webkit-search-cancel-button]:hidden"
             />
           </div>
         </div>
@@ -278,7 +278,7 @@ function RecentBoards() {
                 <Pin className="size-3" aria-hidden="true" />
                 {t.organize.pinned}
               </h3>
-              <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {groups.pinned.map((r) => (
                   <BoardCard key={r.id} run={r} now={now} />
                 ))}
@@ -286,14 +286,14 @@ function RecentBoards() {
             </div>
           )}
           {limited && limited.length > 0 && (
-            <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {limited.map((r) => (
                 <BoardCard key={r.id} run={r} now={now} />
               ))}
             </ul>
           )}
           {!limited && (
-            <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {SKELETONS.map((k) => (
                 <li key={k} className="flex flex-col gap-3">
                   <Skeleton className="aspect-[16/10] w-full rounded-xl" />
@@ -440,7 +440,7 @@ function BoardCard({ run, now }: { run: RunSummary; now: number }) {
             size="icon"
             aria-label={t.organize.menu}
             title={t.organize.menu}
-            className="absolute top-2 right-2 size-7 rounded-lg border bg-card/90 text-muted-foreground opacity-0 shadow-xs transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 hover:text-foreground data-[state=open]:opacity-100 [@media(hover:none)]:opacity-100"
+            className="absolute top-2 right-2 size-7 rounded-lg border bg-card/90 text-muted-foreground opacity-0 shadow-xs transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 [@media(hover:none)]:opacity-100 hover:text-foreground data-[state=open]:opacity-100 [@media(hover:none)]:opacity-100"
           >
             <MoreHorizontal />
           </Button>

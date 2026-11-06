@@ -40,7 +40,7 @@ function ProviderChoices() {
   if (!settings) return null;
   return (
     <>
-      <ul className="grid gap-1 sm:grid-cols-2">
+      <ul className="grid grid-cols-1 gap-1 sm:grid-cols-2">
         {LEAD_PROVIDERS.map((def) => {
           const status = statuses?.find((s) => s.kind === def.kind);
           const ok = status?.state === "ok";

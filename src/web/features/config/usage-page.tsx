@@ -59,7 +59,7 @@ export function UsagePage() {
     else void (view === "limits" ? limits.load() : usage.load());
   };
   const actions = (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex max-w-full flex-wrap items-center gap-2">
       {(view === "cost" || view === "tokens") && (
         <Tabs value={range} onValueChange={(v) => setRange(v as UsageRange)}>
           <TabsList>
@@ -115,7 +115,7 @@ function Report({ data, view }: { data: UsageReport; view: View }) {
   const cost = view === "cost";
   return (
     <>
-      <div className="grid gap-8 md:grid-cols-[minmax(0,18rem)_minmax(0,1fr)]">
+      <div className="grid grid-cols-1 gap-8 md:grid-cols-[minmax(0,18rem)_minmax(0,1fr)]">
         <div className="flex flex-col gap-5">
           <div className="flex flex-col gap-1">
             <p className="text-4xl font-medium tracking-tight tabular-nums">

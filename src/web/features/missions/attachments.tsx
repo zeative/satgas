@@ -105,7 +105,7 @@ function Tile({ file, onRemove, compact }: { file: DraftFile; onRemove: () => vo
         type="button"
         onClick={onRemove}
         aria-label={t.attach.remove(file.name)}
-        className="absolute top-1.5 right-1.5 flex size-5 items-center justify-center rounded-full border bg-background/90 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 hover:text-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none [@media(hover:none)]:opacity-100"
+        className="absolute top-1.5 right-1.5 flex size-5 items-center justify-center rounded-full border bg-background/90 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 [@media(hover:none)]:opacity-100 hover:text-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none [@media(hover:none)]:opacity-100"
       >
         <X className="size-3" />
       </button>

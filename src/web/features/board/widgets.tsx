@@ -459,7 +459,7 @@ function ChecklistWidget({ card }: { card: Card }) {
               aria-label={tw.checklist.remove}
               title={tw.checklist.remove}
               onClick={() => set(items.filter((_, j) => j !== i))}
-              className="nodrag flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground opacity-0 hover:bg-muted hover:text-foreground focus-visible:opacity-100 group-hover/item:opacity-100"
+              className="nodrag flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground opacity-0 hover:bg-muted hover:text-foreground focus-visible:opacity-100 [@media(hover:none)]:opacity-100 group-hover/item:opacity-100"
             >
               <X className="size-3.5" />
             </button>
@@ -531,7 +531,7 @@ function VariablesWidget({ card }: { card: Card }) {
               aria-label={tw.variables.remove}
               title={tw.variables.remove}
               onClick={() => save(draft.filter((_, j) => j !== i))}
-              className="nodrag flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground opacity-0 hover:bg-muted hover:text-foreground focus-visible:opacity-100 group-hover/var:opacity-100"
+              className="nodrag flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground opacity-0 hover:bg-muted hover:text-foreground focus-visible:opacity-100 [@media(hover:none)]:opacity-100 group-hover/var:opacity-100"
             >
               <X className="size-3.5" />
             </button>

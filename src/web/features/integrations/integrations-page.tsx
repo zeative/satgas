@@ -89,7 +89,7 @@ export function IntegrationsPage() {
   return (
     <main id="content" className="relative flex-1">
       <PageHeader />
-      <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-6 pt-12 pb-16">
+      <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-4 pt-12 pb-16 sm:px-6">
         {detail ?? (
           <Tabs
             value={current}
@@ -116,8 +116,8 @@ export function IntegrationsPage() {
                   </Button>
                 )}
                 {current === "skills" && (
-                  <div className="ms-auto flex items-center gap-2">
-                    <div className="relative">
+                  <div className="ms-auto flex items-center gap-2 max-sm:ms-0 max-sm:w-full">
+                    <div className="relative max-sm:flex-1">
                       <Search
                         className="pointer-events-none absolute start-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
                         aria-hidden="true"
@@ -128,7 +128,7 @@ export function IntegrationsPage() {
                         onChange={(e) => setQuery(e.target.value)}
                         placeholder={t.skills.search}
                         aria-label={t.skills.search}
-                        className="h-7 w-60 ps-8"
+                        className="h-7 w-full ps-8 sm:w-60"
                       />
                     </div>
                     <AddSkillMenu onPick={setSkillDialog} />
@@ -136,7 +136,7 @@ export function IntegrationsPage() {
                 )}
                 {current === "connectors" && (
                   <>
-                    <span aria-hidden="true" className="mx-1 h-4 w-px bg-border" />
+                    <span aria-hidden="true" className="mx-1 h-4 w-px bg-border max-sm:hidden" />
                     <fieldset className="flex h-7 items-center rounded-lg bg-muted/50">
                       <legend className="sr-only">{ti.connectors}</legend>
                       {(["yours", "discover"] as const).map((v) => (
@@ -157,8 +157,8 @@ export function IntegrationsPage() {
                         </button>
                       ))}
                     </fieldset>
-                    <div className="ms-auto flex items-center gap-2">
-                      <div className="relative">
+                    <div className="ms-auto flex items-center gap-2 max-sm:ms-0 max-sm:w-full">
+                      <div className="relative max-sm:flex-1">
                         <Search
                           className="pointer-events-none absolute start-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
                           aria-hidden="true"
@@ -169,7 +169,7 @@ export function IntegrationsPage() {
                           onChange={(e) => setQuery(e.target.value)}
                           placeholder={ti.search}
                           aria-label={ti.search}
-                          className="h-7 w-60 ps-8"
+                          className="h-7 w-full ps-8 sm:w-60"
                         />
                       </div>
                       {view === "discover" && <FilterMenu filter={filter} onChange={setFilter} />}
@@ -199,7 +199,7 @@ export function IntegrationsPage() {
                 </Button>
               </div>
             ) : !settings ? (
-              <div className="grid gap-3 md:grid-cols-2" aria-busy="true">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2" aria-busy="true">
                 {SKELETONS.map((k) => (
                   <div key={k} className="flex gap-4 rounded-xl bg-muted/50 p-4">
                     <Skeleton className="size-12 rounded-xl" />

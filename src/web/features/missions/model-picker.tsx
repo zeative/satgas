@@ -144,8 +144,11 @@ export function ModelPicker() {
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-[3rem_minmax(0,1fr)_11rem]">
-              <ul className="flex flex-col items-center gap-1 border-e py-2" aria-label={ti.providers}>
+            <div className="grid grid-cols-[3rem_minmax(0,1fr)] sm:grid-cols-[3rem_minmax(0,1fr)_11rem]">
+              <ul
+                className="flex flex-col items-center gap-1 border-e py-2 max-sm:max-h-[17.25rem] max-sm:overflow-y-auto"
+                aria-label={ti.providers}
+              >
                 {shown.map((p, i) => {
                   const failed = statusOf(p.kind)?.state === "failed";
                   const prev = shown[i - 1];
@@ -173,7 +176,7 @@ export function ModelPicker() {
                 })}
               </ul>
 
-              <div className="flex min-w-0 flex-col border-e">
+              <div className="flex min-w-0 flex-col sm:border-e">
                 {status?.state === "failed" ? (
                   <div className="flex flex-col gap-2 p-4 text-sm">
                     <p className="flex items-center gap-1.5 font-medium">
@@ -187,7 +190,7 @@ export function ModelPicker() {
                 ) : (
                   <Command className="rounded-none bg-transparent" loop>
                     <CommandInput placeholder={t.picker.search} className="h-9 py-0" />
-                    <CommandList className="max-h-72 p-1">
+                    <CommandList className="max-h-60 p-1 sm:max-h-72">
                       <CommandEmpty className="px-2 py-6 text-center text-sm text-muted-foreground">
                         {models.length ? t.picker.noModels : t.picker.noList}
                       </CommandEmpty>
@@ -213,19 +216,19 @@ export function ModelPicker() {
                 )}
               </div>
 
-              <div className="flex flex-col">
+              <div className="flex flex-col max-sm:col-span-2 max-sm:border-t">
                 <div className="flex h-9 items-center justify-between gap-2 border-b px-3 text-xs text-muted-foreground">
                   <span>{ti.reasoning}</span>
                   {chosen && <span className="truncate">{chosen.id ? chosen.name : def?.name}</span>}
                 </div>
-                <ul className="flex flex-col p-1">
+                <ul className="flex flex-col p-1 max-sm:flex-row max-sm:flex-wrap">
                   {active && efforts.length > 0 ? (
                     ["", ...efforts].map((e) => (
                       <li key={e || "default"}>
                         <button
                           type="button"
                           onClick={() => setEffort(e)}
-                          className="flex min-h-7 w-full items-center gap-2 rounded-md px-2 py-1 text-start text-sm transition-colors hover:bg-accent focus-visible:bg-accent focus-visible:outline-none"
+                          className="flex min-h-7 w-full items-center gap-2 rounded-md px-2 py-1 text-start text-sm transition-colors hover:bg-accent focus-visible:bg-accent focus-visible:outline-none max-sm:min-h-9 max-sm:w-auto"
                         >
                           <span className={cn(TOP_EFFORTS.has(e) && "satgas-gold")}>{ti.effort[e] ?? e}</span>
                           {e && chosen?.defaultEffort === e && <span className="text-xs text-muted-foreground">{ti.effort[""]}</span>}

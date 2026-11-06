@@ -10,7 +10,7 @@ export function ConfigPage({ title, actions, children }: { title: string; action
   return (
     <main id="content" className="relative flex-1">
       <PageHeader />
-      <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-6 pt-12 pb-16">
+      <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-4 pt-12 pb-16 sm:px-6">
         <header className="flex min-h-8 flex-wrap items-center justify-between gap-3">
           <h1 className="brand-title text-[1.75rem] leading-tight">{title}</h1>
           {actions}

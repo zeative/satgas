@@ -9,7 +9,7 @@ function Tabs({
   return (
     <TabsPrimitive.Root
       data-slot='tabs'
-      className={cn('flex flex-col gap-2', className)}
+      className={cn('flex max-w-full min-w-0 flex-col gap-2', className)}
       {...props}
     />
   )
@@ -40,6 +40,9 @@ function useTabMark() {
       dot.style.height = `${active.offsetHeight}px`
       dot.style.opacity = '1'
       shown = true
+      // A row too long for a phone scrolls, and the chosen tab stays in sight.
+      if (el.scrollWidth > el.clientWidth)
+        el.scrollTo({ left: active.offsetLeft - (el.clientWidth - active.offsetWidth) / 2, behavior: slide ? 'smooth' : 'auto' })
     }
     place(false)
     const chosen = new MutationObserver(() => place(true))
@@ -67,7 +70,7 @@ function TabsList({
       ref={list}
       data-slot='tabs-list'
       className={cn(
-        'relative isolate inline-flex h-7 w-fit items-center gap-1 text-muted-foreground',
+        'no-scrollbar relative isolate inline-flex h-7 w-fit max-w-full items-center gap-1 overflow-x-auto text-muted-foreground',
         className
       )}
       {...props}

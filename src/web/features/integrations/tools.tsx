@@ -143,7 +143,7 @@ export function ToolsTab({ settings, onOpen, onEdit }: TabProps) {
               {tt.when[when]}
               <span className="font-mono text-xs font-normal text-muted-foreground tabular-nums">{defs.length + mine.length}</span>
             </h2>
-            <ul className="grid gap-3 md:grid-cols-2">
+            <ul className="grid grid-cols-1 gap-3 md:grid-cols-2">
               {defs.map((def) => (
                 <li key={def.id} className="relative flex items-start gap-4 rounded-xl bg-muted/50 p-4 transition-colors hover:bg-muted/80">
                   <ToolLogo def={def} />

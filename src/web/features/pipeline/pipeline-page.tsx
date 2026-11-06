@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useNow } from "@/hooks/use-now";
 import { fmtAgo, t } from "@/i18n";
 import { avatarTint, avatarUri } from "@/lib/avatar";
@@ -39,6 +40,7 @@ export function PipelinePage() {
   // The "today" boundary moves at midnight; a minute is fine-grained enough.
   const now = useNow(true, 60_000);
   const from = since(range, now);
+  const phone = useIsMobile();
 
   const sorted = useMemo(() => Object.values(lanes ?? {}).sort((a, b) => activityAt(b) - activityAt(a)), [lanes]);
   const active = sorted.filter((l) => isActive(l, from) && (!board || l.id === board));
@@ -55,6 +57,15 @@ export function PipelinePage() {
   }, [active, from]);
   const grid = useRef<HTMLDivElement>(null);
   useFlip(grid);
+
+  // A phone has room for little, so it skips columns with nothing in them.
+  const filled = COLUMNS.filter(
+    (c) =>
+      counts[c] > 0 ||
+      (c === "work" && active.some((l) => l.status === "planning")) ||
+      (c === "need" && active.some((l) => l.status === "asking")),
+  );
+  const columns = phone && filled.length ? filled : COLUMNS;
 
   return (
     <>
@@ -100,24 +111,37 @@ export function PipelinePage() {
         ) : !lanes ? (
           <Loading />
         ) : (
-          <div ref={grid} className="grid grid-cols-5 gap-x-2 max-md:min-w-[900px]">
-            {COLUMNS.map((c) => (
-              <div key={c} className="sticky top-12 z-10 flex h-9 items-center gap-2 border-b bg-background px-2 text-xs font-medium">
-                <span aria-hidden="true" className={cn("size-[7px] shrink-0 rounded-full", MARK[c])} />
-                {t.pipeline.columns[c]}
-                <span className="ms-auto font-normal text-muted-foreground tabular-nums">{counts[c]}</span>
-              </div>
-            ))}
-            {active.length === 0 && (
-              <div className="col-span-5 flex flex-col items-center gap-2 py-20 text-center">
-                <Columns3 className="size-5 text-muted-foreground" aria-hidden="true" />
-                <p className="text-sm font-medium">{t.pipeline.empty}</p>
-                <p className="max-w-sm text-xs text-muted-foreground">{t.pipeline.emptyHint}</p>
-              </div>
-            )}
-            {active.map((lane) => (
-              <LaneRow key={lane.id} lane={lane} from={from} now={now} />
-            ))}
+          // The page itself never scrolls sideways, so on a phone this strip does, one wide column at a time.
+          <div className="no-scrollbar max-md:-mx-4 max-md:overflow-x-auto max-md:px-4">
+            <div
+              ref={grid}
+              className="grid gap-x-2"
+              style={{
+                gridTemplateColumns: `repeat(${columns.length}, minmax(0, 1fr))`,
+                minWidth: phone && columns.length > 1 ? `${columns.length * 80}vw` : undefined,
+              }}
+            >
+              {columns.map((c) => (
+                <div
+                  key={c}
+                  className="sticky top-12 z-10 flex h-9 items-center gap-2 border-b bg-background px-2 text-xs font-medium max-md:static"
+                >
+                  <span aria-hidden="true" className={cn("size-[7px] shrink-0 rounded-full", MARK[c])} />
+                  {t.pipeline.columns[c]}
+                  <span className="ms-auto font-normal text-muted-foreground tabular-nums">{counts[c]}</span>
+                </div>
+              ))}
+              {active.length === 0 && (
+                <div className="col-span-full flex flex-col items-center gap-2 py-20 text-center">
+                  <Columns3 className="size-5 text-muted-foreground" aria-hidden="true" />
+                  <p className="text-sm font-medium">{t.pipeline.empty}</p>
+                  <p className="max-w-sm text-xs text-muted-foreground">{t.pipeline.emptyHint}</p>
+                </div>
+              )}
+              {active.map((lane) => (
+                <LaneRow key={lane.id} lane={lane} from={from} now={now} columns={columns} />
+              ))}
+            </div>
           </div>
         )}
       </div>
@@ -126,7 +150,7 @@ export function PipelinePage() {
 }
 
 // One board: a thin label row, then its own five trays, so a card only ever slides sideways within its board.
-const LaneRow = memo(function LaneRow({ lane, from, now }: { lane: Lane; from: number; now: number }) {
+const LaneRow = memo(function LaneRow({ lane, from, now, columns }: { lane: Lane; from: number; now: number; columns: readonly Column[] }) {
   const [open, setOpen] = useState(true);
   const [allDone, setAllDone] = useState(false);
   const names = useMemo(() => new Map(lane.team.map((m) => [m.id, m.name])), [lane.team]);
@@ -169,7 +193,7 @@ const LaneRow = memo(function LaneRow({ lane, from, now }: { lane: Lane; from: n
 
   return (
     <>
-      <div className="col-span-5 mt-2 flex h-9 min-w-0 items-center gap-2 px-1 text-xs text-muted-foreground">
+      <div className="col-span-full mt-2 flex h-9 min-w-0 items-center gap-2 px-1 text-xs text-muted-foreground max-md:sticky max-md:left-0 max-md:w-[calc(100vw-2rem)]">
         <button
           type="button"
           aria-expanded={open}
@@ -210,7 +234,7 @@ const LaneRow = memo(function LaneRow({ lane, from, now }: { lane: Lane; from: n
         </Link>
       </div>
       {open &&
-        COLUMNS.map((c) => {
+        columns.map((c) => {
           const list = cells[c];
           const shown = c === "done" && !allDone ? list.slice(0, DONE_SHOWN) : list;
           return (
@@ -266,7 +290,7 @@ function BoardFilter({ lanes, value, onChange }: { lanes: Lane[]; value: string 
 
 function Loading() {
   return (
-    <div className="grid grid-cols-5 gap-2 pt-11" aria-busy="true">
+    <div className="grid grid-cols-2 gap-2 pt-11 md:grid-cols-5" aria-busy="true">
       {[0, 1].map((row) => COLUMNS.map((c) => <Skeleton key={`${row}-${c}`} className={cn("h-24 rounded-[14px]", row === 0 && "mt-9")} />))}
     </div>
   );

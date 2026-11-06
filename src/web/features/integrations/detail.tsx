@@ -45,7 +45,7 @@ export function DetailPage({
         <div className="flex shrink-0 items-center gap-2">{action}</div>
       </header>
       <hr className="border-border" />
-      <div className="grid gap-10 md:grid-cols-[minmax(0,1fr)_15rem]">
+      <div className="grid grid-cols-1 gap-10 md:grid-cols-[minmax(0,1fr)_15rem]">
         <div className="flex min-w-0 flex-col gap-8">{children}</div>
         <aside>
           <dl className="flex flex-col gap-5">{aside}</dl>

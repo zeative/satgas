@@ -60,7 +60,7 @@ export function MemoryPage() {
   return (
     <main id="content" className="relative flex-1">
       <PageHeader />
-      <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-6 pt-12 pb-16">
+      <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-4 pt-12 pb-16 sm:px-6">
         <header className="flex flex-col gap-6">
           <h1 className="brand-title text-[1.75rem] leading-tight">{tm.title}</h1>
           <div className="flex items-center gap-4 rounded-xl bg-muted/50 px-4 py-3">
@@ -77,7 +77,7 @@ export function MemoryPage() {
               onCheckedChange={(auto) => void setAutoMemory(auto).catch((e: Error) => toast.error(e.message))}
             />
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Tabs value={tab} onValueChange={(v) => setTab(v as Tab)}>
               <TabsList>
                 <TabsTrigger value="memory">

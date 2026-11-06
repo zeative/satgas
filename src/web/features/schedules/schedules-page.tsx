@@ -41,7 +41,7 @@ export function SchedulesPage() {
   return (
     <main id="content" className="relative flex-1">
       <PageHeader />
-      <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-6 pt-12 pb-16">
+      <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-4 pt-12 pb-16 sm:px-6">
         <header className="flex flex-wrap items-end justify-between gap-4">
           <h1 className="brand-title text-[1.75rem] leading-tight">{ts.title}</h1>
           <Button size="sm" onClick={() => setEditing("new")}>

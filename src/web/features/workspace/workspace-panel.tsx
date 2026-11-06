@@ -35,7 +35,11 @@ export function WorkspacePanel({ run }: { run: Run }) {
   const [tab, setTab] = useState<WorkspaceTab>(() => firstTab(run));
   const changed = run.nodes.reduce((n, t) => n + (t.changes?.files.length ? 1 : 0), 0);
   return (
-    <aside aria-label={tw.label} className="relative flex h-full shrink-0 flex-col border-e bg-card max-md:hidden" style={{ width }}>
+    <aside
+      aria-label={tw.label}
+      className="relative flex h-full shrink-0 flex-col border-e bg-card max-md:absolute max-md:inset-0 max-md:z-30 max-md:w-full!"
+      style={{ width }}
+    >
       <Tabs value={tab} onValueChange={(v) => setTab(v as WorkspaceTab)} className="flex min-h-0 flex-1 flex-col gap-0">
         <header className="flex h-9 shrink-0 items-center border-b ps-1 pe-1">
           {/* Plain words with a line under the chosen one, like VS Code's panel tabs. */}

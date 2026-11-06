@@ -20,6 +20,10 @@
   }
   html {
     @apply overflow-x-hidden;
+    /* No double-tap zoom, and phones keep our text sizes. The canvas sets its own touch handling. */
+    touch-action: manipulation;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
     /* Pages that scroll and pages that don't keep one width, so a centered column never jumps. */
     scrollbar-gutter: stable;
   }
@@ -46,14 +50,38 @@
     cursor: pointer;
   }
 
-  /* Prevent focus zoom on mobile devices */
-  @media screen and (max-width: 767px) {
-    input,
-    select,
-    textarea {
+  /* Prevent focus zoom on touch devices. Fields on the canvas scale with their card instead. */
+  @media (pointer: coarse), (max-width: 767px) {
+    input:not(.react-flow *),
+    select:not(.react-flow *),
+    textarea:not(.react-flow *) {
       /* biome-ignore lint/complexity/noImportantStyles: below 16px iOS zooms into focused fields. */
       font-size: 16px !important;
     }
+  }
+
+  /* A finger needs more room than a pointer, without changing the compact desktop scale. */
+  @media (pointer: coarse) {
+    [role="menuitem"],
+    [role="menuitemradio"],
+    [role="menuitemcheckbox"],
+    [role="option"],
+    [cmdk-item],
+    [data-slot="select-trigger"],
+    [data-slot="input"] {
+      min-height: 2.25rem;
+    }
+    [data-sidebar="menu-button"] {
+      min-height: 2.5rem;
+    }
+    .react-flow {
+      -webkit-touch-callout: none;
+    }
+  }
+
+  /* Whatever a popup asks for, it stays on the screen. */
+  [data-radix-popper-content-wrapper] > * {
+    max-width: calc(100vw - 1.5rem);
   }
 }
 

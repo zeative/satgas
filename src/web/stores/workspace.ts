@@ -17,12 +17,14 @@ export function clampWorkspace(width: number, viewport = typeof window === "unde
 
 // Open by default where there is room for it beside the chat; the person's own choice wins once made.
 const roomy = () => typeof window === "undefined" || window.innerWidth >= 1280;
+const phone = () => typeof window !== "undefined" && window.innerWidth < 768;
 
 function stored(): { open: boolean; width: number } {
   try {
     const v = JSON.parse(localStorage.getItem(KEY) ?? "{}") as { open?: unknown; width?: unknown };
     return {
-      open: typeof v.open === "boolean" ? v.open : roomy(),
+      // A phone shows it over the whole board, so there it opens only when asked for.
+      open: !phone() && (typeof v.open === "boolean" ? v.open : roomy()),
       width: typeof v.width === "number" && v.width > 0 ? clampWorkspace(v.width) : WORKSPACE_DEFAULT,
     };
   } catch {

@@ -167,7 +167,7 @@ function SessionRow({ run, s, active }: { run: Run; s: ChatSession; active: bool
         )}
       </button>
       {s.id !== MAIN_SESSION && (
-        <span className="absolute inset-y-0 right-0.5 flex items-center opacity-0 group-focus-within/s:opacity-100 group-hover/s:opacity-100">
+        <span className="absolute inset-y-0 right-0.5 flex items-center opacity-0 group-focus-within/s:opacity-100 group-hover/s:opacity-100 [@media(hover:none)]:opacity-100">
           <Button
             variant="ghost"
             size="icon"

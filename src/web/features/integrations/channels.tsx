@@ -423,7 +423,7 @@ function People({ view, onChange }: { view: ChannelsView; onChange: () => void }
           </Button>
         </div>
       ) : (
-        <ul className="grid gap-3 md:grid-cols-2">
+        <ul className="grid grid-cols-1 gap-3 md:grid-cols-2">
           {view.people.map((p) => (
             <li key={`${p.kind}:${p.ids[0]}`} className="flex items-center gap-4 rounded-xl bg-muted/50 p-4">
               <LogoTile logo={brand(p.kind)} />
@@ -490,7 +490,7 @@ export function ChannelsTab() {
         {t.config.loadFailed}
       </p>
     ) : (
-      <div className="grid gap-3 md:grid-cols-2" aria-busy="true">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2" aria-busy="true">
         <Skeleton className="h-24 rounded-xl" />
         <Skeleton className="h-24 rounded-xl" />
       </div>
@@ -500,7 +500,7 @@ export function ChannelsTab() {
     <div className="flex flex-col gap-10">
       <section className="flex flex-col gap-4">
         <h2 className="text-base font-medium">{tc.apps}</h2>
-        <ul className="grid gap-3 md:grid-cols-2">
+        <ul className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <TelegramCard channel={of("telegram")} onChange={() => void load()} />
           <WhatsAppCard channel={of("whatsapp")} onChange={() => void load()} />
         </ul>

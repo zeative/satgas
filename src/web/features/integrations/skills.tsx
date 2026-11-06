@@ -188,7 +188,7 @@ export function SkillsTab({
     );
   if (!skills)
     return (
-      <div className="grid gap-3 md:grid-cols-2" aria-busy="true">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2" aria-busy="true">
         {["a", "b"].map((k) => (
           <div key={k} className="flex gap-4 rounded-xl bg-muted/50 p-4">
             <Skeleton className="size-12 rounded-xl" />
@@ -243,7 +243,7 @@ export function SkillsTab({
         <span className="font-mono text-xs font-normal text-muted-foreground tabular-nums">{count}</span>
       </h2>
       {count ? (
-        <ul className="grid gap-3 md:grid-cols-2">
+        <ul className="grid grid-cols-1 gap-3 md:grid-cols-2">
           {builtins.map(card)}
           {packs.map((p) => (
             <PackCard key={p.id} id={p.id} total={p.all.length} onOpen={() => onShowPack(p.id)} />
@@ -404,7 +404,7 @@ export function PackDetail({ id, onBack, onShow }: { id: PackId; onBack: () => v
       </div>
 
       {!skills ? (
-        <div className="grid gap-2 sm:grid-cols-2" aria-busy="true">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2" aria-busy="true">
           {["a", "b", "c", "d"].map((k) => (
             <Skeleton key={k} className="h-14 rounded-xl" />
           ))}

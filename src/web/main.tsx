@@ -6,11 +6,13 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { ThemeProvider } from "@/context/theme-provider";
 import { bindNavigate } from "@/lib/actions";
+import { lockPageZoom } from "@/lib/page-zoom";
 import { router } from "./router";
 import { watchAuth } from "./stores/auth";
 import { connect } from "./stores/runs";
 
 // Before anything fetches, so the first refused call already shows the sign-in screen.
+lockPageZoom(window);
 watchAuth();
 bindNavigate(router.navigate);
 connect();

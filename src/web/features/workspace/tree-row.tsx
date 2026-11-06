@@ -72,7 +72,7 @@ export function useTreeKeys() {
 
 // A row's actions, on top of its end on hover or keyboard focus, over the hover colour so they cover what sits there.
 export const RowActions = ({ children }: { children: ReactNode }) => (
-  <span className="absolute inset-y-0 end-0 flex items-center bg-muted pe-1 opacity-0 group-focus-within/row:opacity-100 group-hover/row:opacity-100">
+  <span className="absolute inset-y-0 end-0 flex items-center bg-muted pe-1 opacity-0 group-focus-within/row:opacity-100 group-hover/row:opacity-100 [@media(hover:none)]:opacity-100">
     {children}
   </span>
 );
