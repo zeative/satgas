@@ -1,0 +1,53 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+      - name: Tag matches package.json
+        run: test "${GITHUB_REF_NAME#v}" = "$(jq -r .version package.json)"
+      - run: bun install --frozen-lockfile
+      - run: bun scripts/build.ts linux-x64 linux-arm64
+      - uses: actions/upload-artifact@v7
+        with:
+          name: linux
+          path: dist/release/
+  # A Mac binary has to be signed or the system kills it, which only a Mac can do.
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: bun scripts/build.ts darwin-arm64 darwin-x64
+      - run: for f in dist/release/*; do codesign --force --sign - "$f"; done
+      - uses: actions/upload-artifact@v7
+        with:
+          name: macos
+          path: dist/release/
+  publish:
+    needs: [linux, macos]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          path: release
+          merge-multiple: true
+      - name: Checksums
+        working-directory: release
+        run: sha256sum satgas-* > checksums.txt
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" release/* --repo "$GITHUB_REPOSITORY" --generate-notes

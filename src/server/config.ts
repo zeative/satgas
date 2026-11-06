@@ -37,6 +37,8 @@ export const config = {
   codexSandbox: env.SATGAS_CODEX_SANDBOX ?? "workspace-write",
   // Shown on the home page; forks point it at their own repo.
   repo: env.SATGAS_REPO ?? "zeative/satgas",
+  // Where releases are read from; forks and tests point it elsewhere.
+  updateApi: (env.SATGAS_UPDATE_API ?? "https://api.github.com").replace(/\/+$/, ""),
   maxLogLines: 400,
   upstreamChars: 6000,
 };

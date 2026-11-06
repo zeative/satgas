@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { CODEX_KEY_VAR, claudeEnv, codexProviderArgs, PROVIDERS } from "../../src/shared/providers";
+import { CODEX_KEY_VAR, claudeEnv, codexProviderArgs, LEAD_PROVIDERS, leadBlocked, PROVIDERS } from "../../src/shared/providers";
 
 describe("claudeEnv", () => {
   test("leaves the CLI's own sign-in alone", () => {
@@ -63,4 +63,31 @@ test("every provider belongs to one agent and has docs", () => {
     expect(p.docs).toMatch(/^https:\/\//);
     if (p.auth === "key") expect(p.keyLabel).toBeDefined();
   }
+});
+
+describe("leadBlocked", () => {
+  test("waits for an answer instead of blocking on an unknown state", () => {
+    expect(leadBlocked("claude", null)).toBe(false);
+  });
+
+  test("blocks until the lead's own provider passes its check", () => {
+    expect(leadBlocked("claude", [{ kind: "claude", state: "ok" }])).toBe(false);
+    expect(leadBlocked("claude", [{ kind: "claude", state: "failed" }])).toBe(true);
+    expect(leadBlocked("anthropic", [{ kind: "anthropic", state: "off" }])).toBe(true);
+    expect(leadBlocked("claude", [])).toBe(true);
+  });
+
+  test("a working Codex does not unblock the lead", () => {
+    expect(
+      leadBlocked("claude", [
+        { kind: "claude", state: "failed" },
+        { kind: "codex", state: "ok" },
+      ]),
+    ).toBe(true);
+    expect(LEAD_PROVIDERS.every((p) => p.runtime === "claude")).toBe(true);
+  });
+
+  test("offers the CLI sign-in last, since it needs a terminal on the server", () => {
+    expect(LEAD_PROVIDERS.at(-1)?.auth).toBe("cli");
+  });
 });

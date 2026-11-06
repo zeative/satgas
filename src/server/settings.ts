@@ -31,6 +31,7 @@ export function defaultSettings(): Settings {
     worktrees: true,
     commitStyle: DEFAULT_COMMIT_STYLE,
     watchPulls: true,
+    checkUpdates: true,
     // A fresh setup never had the old planner default to move, and already has every default tool.
     plannerMigrated: true,
     toolsOffered: DEFAULT_TOOLS.map((t) => t.id),
@@ -51,6 +52,7 @@ export function getSettings(): Settings {
   s.worktrees ??= true;
   s.commitStyle ??= DEFAULT_COMMIT_STYLE;
   s.watchPulls ??= true;
+  s.checkUpdates ??= true;
   // "sonnet" was the forced default before the lead could share the composer's model; it now follows the composer.
   // A default tool added in a later version joins existing setups once; turning it off or removing it afterwards sticks.
   const fresh = DEFAULT_TOOLS.filter((d) => !s.toolsOffered?.includes(d.id));

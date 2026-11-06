@@ -40,6 +40,7 @@ const withModel = (model: string): Settings => ({
   worktrees: true,
   commitStyle: { mode: "repo", instructions: "" },
   watchPulls: true,
+  checkUpdates: true,
 });
 const model = () => useSettings.getState().settings?.agents.claude.model;
 

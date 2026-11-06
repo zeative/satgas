@@ -1,4 +1,4 @@
-import { Check, Clock, Copy, Cpu, Folder, Globe, Layers, Link2, type LucideIcon, Terminal } from "lucide-react";
+import { Check, Clock, Copy, Cpu, Download, Folder, Globe, Layers, Link2, type LucideIcon, Terminal } from "lucide-react";
 import { useState } from "react";
 import { ClaudeMark, CodexMark, GitHubMark } from "@/components/brand-marks";
 import { LogoMark } from "@/components/logo";
@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import type { AboutInfo } from "../../../shared/housekeeping";
 import { TOOL_CATALOG } from "../../../shared/tools";
 import { ConfigPage, LoadFailed, useJson } from "./parts";
+import { UpdateStatus } from "./update-dialog";
 
 const tc = t.config;
 type Fact = { label: string; mark: React.ReactNode; value: React.ReactNode };
@@ -81,6 +82,7 @@ export function AboutPage() {
             title="Satgas"
             rows={[
               { label: tc.version, mark: <LogoMark className="size-4 text-foreground" />, value: data.version },
+              { label: t.update.label, mark: icon(Download), value: <UpdateStatus /> },
               { label: tc.uptime, mark: icon(Clock), value: fmtElapsed(data.uptimeSec * 1000) },
               { label: tc.boards, mark: icon(Layers), value: tc.boardsLive(data.boards, data.live) },
               {

@@ -272,6 +272,20 @@
   initial-value: -30%;
 }
 
+/* The top reasoning levels read as something special: still gold leaf, no motion, since nothing is happening. */
+.satgas-gold {
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  font-weight: 500;
+  background-image: linear-gradient(100deg, #8a5a10 0%, #c08a26 42%, #7a4e0c 58%, #a8741c 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+}
+
+.dark .satgas-gold {
+  background-image: linear-gradient(100deg, #f8e3a4 0%, #dcab4c 42%, #fbeebd 58%, #d9a441 100%);
+}
+
 @keyframes satgas-shimmer {
   0% {
     --satgas-shine: -30%;

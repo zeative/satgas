@@ -15,6 +15,7 @@ const defaults: Settings = {
   worktrees: true,
   commitStyle: { mode: "repo", instructions: "" },
   watchPulls: true,
+  checkUpdates: true,
 };
 
 describe("sanitizeSettings", () => {

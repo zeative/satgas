@@ -16,6 +16,7 @@ const base: Settings = {
   worktrees: true,
   commitStyle: { mode: "repo", instructions: "" },
   watchPulls: true,
+  checkUpdates: true,
 };
 
 describe("connector catalog", () => {

@@ -92,6 +92,7 @@ import {
 } from "./store";
 import { teamCall } from "./team";
 import { toolStatus } from "./tools";
+import { startUpdate, updateInfo } from "./updates";
 import { claimUploads, pruneUploads, stageUpload } from "./uploads";
 import { visionStatus } from "./vision";
 import { decodePath, serveWeb } from "./web";
@@ -362,6 +363,19 @@ const server: Server<SocketData> = Bun.serve({
       });
     }),
     "/api/search": api((req) => Response.json(searchRuns(new URL(req.url).searchParams.get("q")?.slice(0, 200) ?? ""))),
+    "/api/update": {
+      // ?check=1 asks GitHub now (same-origin only, like /api/providers).
+      GET: api(async (req) => {
+        const site = req.headers.get("sec-fetch-site");
+        const force = new URL(req.url).searchParams.has("check") && (!site || site === "same-origin" || site === "none");
+        return Response.json(await updateInfo({ force, busy: listRunIds().some(isLive) }));
+      }),
+      POST: api((req) => {
+        if (!isTrusted(req)) return forbidden();
+        const refused = startUpdate(listRunIds().some(isLive), (code) => void stop("Update", code));
+        return refused ? error(409, refused) : new Response(null, { status: 202 });
+      }),
+    },
     "/api/repo": api(async () => Response.json({ url: `https://github.com/${config.repo}`, stars: await repoStars() })),
     "/api/runs": {
       GET: api(() => Response.json(listRuns())),
@@ -1021,15 +1035,15 @@ function send(ws: ServerWebSocket<SocketData>, event: ServerEvent) {
 }
 
 let stopping = false;
-async function stop(signal: string) {
+async function stop(signal: string, code = 0) {
   if (stopping) return;
   stopping = true;
-  console.log(`\n${signal} received, stopping agents and saving missions…`);
+  console.log(`\n${signal}: stopping agents and saving missions…`);
   await shutdown();
   await stopChannels();
   await flushAll();
   server.stop(true);
-  process.exit(0);
+  process.exit(code);
 }
 
 // `bun --hot` re-runs this file, so the signal handlers are added once and always call the latest stop().

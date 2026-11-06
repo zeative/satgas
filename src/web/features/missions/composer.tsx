@@ -11,11 +11,17 @@ import { loadSettings, useSettings } from "@/stores/settings";
 import { AttachmentTiles, attach, SightNote, useFileDrop, useSight } from "./attachments";
 import { ComposerMenu } from "./composer-menu";
 import { ModelPicker } from "./model-picker";
+import { ProviderGate, useNeedsProvider } from "./provider-gate";
 import { TokenField, useTokenCatalog } from "./token-field";
 
 // The one way a board starts: a brief with any files it needs, plus quick switches for the agents and connectors.
 // The unsent brief and its files survive a reload.
 export function Composer({ className }: { className?: string }) {
+  const needsProvider = useNeedsProvider();
+  return needsProvider ? <ProviderGate className={className} /> : <ComposerForm className={className} />;
+}
+
+function ComposerForm({ className }: { className?: string }) {
   const draft = useDraft("home");
   const value = draft.text;
   const [pending, setPending] = useState(false);

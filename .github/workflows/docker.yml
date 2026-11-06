@@ -36,6 +36,7 @@ jobs:
           test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:4317/api/runs)" = 401
           test "$(curl -s -o /dev/null -w '%{http_code}' -H 'x-satgas-token: smoke' http://localhost:4317/api/runs)" = 200
           docker exec satgas sh -c 'test -w /data && test -w /home/node'
+          docker exec satgas satgas --version
           docker exec satgas claude --version
           docker exec satgas codex --version
           docker exec satgas agent-browser --version

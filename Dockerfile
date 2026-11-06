@@ -22,6 +22,7 @@ RUN pip3 install --break-system-packages --no-cache-dir python-pptx==1.0.2
 RUN npm install -g @anthropic-ai/claude-code @openai/codex agent-browser && npm cache clean --force
 
 COPY --from=build /app/dist/satgas /usr/local/bin/satgas
+COPY --from=build --chmod=755 /app/scripts/docker-entry.sh /usr/local/bin/satgas-entry
 
 # Agents run commands as this user, never root; its home keeps the CLIs' sign-ins and settings.
 RUN mkdir -p /data && chown -R node:node /data /home/node
@@ -31,7 +32,8 @@ ENV HOME=/home/node \
   AGENT_BROWSER_EXECUTABLE_PATH=/usr/bin/chromium \
   SATGAS_HOST=0.0.0.0 \
   SATGAS_PORT=4317 \
-  SATGAS_DATA_DIR=/data
+  SATGAS_DATA_DIR=/data \
+  SATGAS_CONTAINER=1
 VOLUME ["/data", "/home/node"]
 EXPOSE 4317
 
@@ -41,4 +43,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
 
 # tini reaps the processes agents leave behind and forwards signals, so a stop still saves boards.
 ENTRYPOINT ["tini", "--"]
-CMD ["satgas"]
+CMD ["satgas-entry"]

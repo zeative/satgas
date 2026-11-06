@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/sidebar";
 import { useLayout } from "@/context/layout-provider";
 import { useSearch } from "@/context/search-provider";
+import { UpdateButton, useUpdateAvailable } from "@/features/config/update-dialog";
 import { isMac, t } from "@/i18n";
 import { cn } from "@/lib/utils";
 import { useRuns } from "@/stores/runs";
@@ -126,7 +127,8 @@ export function AppSidebar() {
       </SidebarContent>
 
       <SidebarFooter className="gap-3">
-        <StarCard />
+        <UpdateButton />
+        <Promo />
         <div className="flex items-center gap-1 group-data-[collapsible=icon]:flex-col">
           <ConnectionStatus />
         </div>
@@ -228,6 +230,10 @@ function ConfigNav({ pathname, onPick }: { pathname: string; onPick: () => void 
       )}
     </SidebarMenuItem>
   );
+}
+
+function Promo() {
+  return useUpdateAvailable() ? null : <StarCard />;
 }
 
 function ConnectionStatus() {

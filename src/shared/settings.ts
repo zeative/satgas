@@ -66,6 +66,8 @@ export interface Settings {
   commitStyle: CommitStyle;
   // Pull requests agents open are watched: failed checks, new review feedback and conflicts start a round to fix them.
   watchPulls: boolean;
+  // Ask GitHub now and then whether a newer Satgas is out.
+  checkUpdates: boolean;
   // Set once the old forced planner default has been moved to "same as tasks".
   plannerMigrated?: boolean;
   // Default tools already offered once; a default added later joins existing setups once, and a removal sticks.
@@ -202,6 +204,10 @@ export function sanitizeSettings(input: unknown, defaults: Settings): Settings |
       typeof (raw as { watchPulls?: unknown }).watchPulls === "boolean"
         ? (raw as { watchPulls: boolean }).watchPulls
         : (defaults.watchPulls ?? true),
+    checkUpdates:
+      typeof (raw as { checkUpdates?: unknown }).checkUpdates === "boolean"
+        ? (raw as { checkUpdates: boolean }).checkUpdates
+        : (defaults.checkUpdates ?? true),
     commitStyle: sanitizeCommitStyle((raw as { commitStyle?: unknown }).commitStyle, defaults.commitStyle ?? DEFAULT_COMMIT_STYLE),
     ...((raw as { plannerMigrated?: unknown }).plannerMigrated === true || defaults.plannerMigrated ? { plannerMigrated: true } : {}),
     ...offered((raw as { toolsOffered?: unknown }).toolsOffered ?? defaults.toolsOffered),

@@ -146,7 +146,17 @@ export function ProvidersSection({ settings }: { settings: Settings }) {
 }
 
 // Connect, fix or disconnect one provider; saving re-runs its check so the result is known before the dialog closes.
-function ProviderDialog({ def, settings, onClose }: { def: ProviderDef; settings: Settings; onClose: () => void }) {
+export function ProviderDialog({
+  def,
+  settings,
+  onClose,
+  onConnected,
+}: {
+  def: ProviderDef;
+  settings: Settings;
+  onClose: () => void;
+  onConnected?: () => void;
+}) {
   const cfg = settings.providers[def.kind];
   const statusOf = useProviderStatus();
   const status = statusOf(def.kind);
@@ -173,6 +183,7 @@ function ProviderDialog({ def, settings, onClose }: { def: ProviderDef; settings
     const after = useProviders.getState().statuses?.find((s) => s.kind === def.kind);
     if (after?.state === "failed") return setProblem(`${ti.savedButFailed}: ${after.error ?? ti.checkFailed}`);
     toast.success(after?.state === "ok" ? `${def.name} · ${ti.connected}` : ti.saved);
+    if (after?.state === "ok") onConnected?.();
     onClose();
   };
 

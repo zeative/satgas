@@ -16,6 +16,7 @@ import type { ModelInfo, ProviderStatus } from "../../../shared/types";
 
 const ti = t.integrations;
 const AGENT: Record<Runtime, string> = { claude: t.agent.claude, codex: t.agent.codex };
+const TOP_EFFORTS = new Set(["high", "xhigh", "max"]);
 
 async function persist(next: Settings) {
   const problem = await saveSettings(next);
@@ -124,7 +125,7 @@ export function ModelPicker() {
             leadDef && <ProviderLogo def={leadDef} className="size-4 shrink-0" />
           )}
           <span className={cn("truncate", missing ? "text-muted-foreground line-through" : "text-foreground")}>{leadName}</span>
-          {lead.effort && <span className="shrink-0">{ti.effort[lead.effort]}</span>}
+          {lead.effort && <span className={cn("shrink-0", TOP_EFFORTS.has(lead.effort) && "satgas-gold")}>{ti.effort[lead.effort]}</span>}
           <ChevronDown className="size-3.5 shrink-0 opacity-70" aria-hidden="true" />
         </button>
       </PopoverTrigger>
@@ -242,7 +243,7 @@ export function ModelPicker() {
                           onClick={() => setEffort(e)}
                           className="flex min-h-7 w-full items-center gap-2 rounded-md px-2 py-1 text-start text-sm transition-colors hover:bg-accent focus-visible:bg-accent focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50"
                         >
-                          {ti.effort[e] ?? e}
+                          <span className={cn(TOP_EFFORTS.has(e) && "satgas-gold")}>{ti.effort[e] ?? e}</span>
                           {e && chosen?.defaultEffort === e && <span className="text-xs text-muted-foreground">{ti.effort[""]}</span>}
                           {agent.effort === e && <Check className="ms-auto size-4" aria-hidden="true" />}
                         </button>

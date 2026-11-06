@@ -130,6 +130,13 @@ export function SettingsPage() {
                     onCheckedChange={(teamTalk) => void update({ ...settings, teamTalk })}
                   />
                 </Row>
+                <Row label={t.update.auto} hint={t.update.autoHint} htmlFor="check-updates">
+                  <Switch
+                    id="check-updates"
+                    checked={settings.checkUpdates}
+                    onCheckedChange={(checkUpdates) => void update({ ...settings, checkUpdates })}
+                  />
+                </Row>
               </Section>
 
               <Section title={tc.git}>

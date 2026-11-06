@@ -105,6 +105,7 @@ import { clearQuotes, QuoteChips, useBoardQuotes } from "./cite";
 import { DropHint, FilePicker } from "./composer";
 import { ComposerMenu } from "./composer-menu";
 import { ModelPicker } from "./model-picker";
+import { ProviderNotice, useNeedsProvider } from "./provider-gate";
 import { AskedNote, QuestionComposer } from "./questions";
 import { type Round, roundsOf } from "./rounds";
 import { SessionBar, SessionEmpty, sessionTitle } from "./sessions";
@@ -1712,6 +1713,7 @@ function ChatComposer({ run, live, onSent }: { run: Run; live: boolean; onSent: 
   const { over, handlers } = useFileDrop(saved);
   const sight = useSight(saved.files);
   const catalog = useTokenCatalog(run);
+  const needsProvider = useNeedsProvider();
 
   useEffect(() => {
     if (!live) setStopping(false);
@@ -1733,7 +1735,7 @@ function ChatComposer({ run, live, onSent }: { run: Run; live: boolean; onSent: 
   const quotes = useBoardQuotes(run.id);
   const send = async () => {
     const written = draft.trim();
-    if (!written || sending) return;
+    if (!written || sending || needsProvider) return;
     const prompt = withQuotes(written, quotes);
     setSending(true);
     try {
@@ -1765,6 +1767,7 @@ function ChatComposer({ run, live, onSent }: { run: Run; live: boolean; onSent: 
       )}
     >
       {over && <DropHint />}
+      {needsProvider && <ProviderNotice />}
       {context.length > 0 && <ContextChip cards={run.board?.cards ?? []} ids={context} onClear={() => setSetAside(selection.join(","))} />}
       <QuoteChips runId={run.id} />
       <AttachmentTiles files={saved.files} onRemove={saved.removeFile} compact />
@@ -1818,7 +1821,7 @@ function ChatComposer({ run, live, onSent }: { run: Run; live: boolean; onSent: 
         <Button
           type="submit"
           size="icon"
-          disabled={!draft.trim() || sending}
+          disabled={!draft.trim() || sending || needsProvider}
           aria-label={t.send}
           title={live ? `${t.send} · ${t.chat.queuedHint}` : t.send}
           className={cn(

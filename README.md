@@ -9,6 +9,7 @@
 A self-hosted workspace where AI coding agents work as a team on a shared canvas.
 
 [![CI](https://github.com/zeative/satgas/actions/workflows/ci.yml/badge.svg)](https://github.com/zeative/satgas/actions/workflows/ci.yml)
+[![Version](https://img.shields.io/github/package-json/v/zeative/satgas?label=version)](package.json)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Runs on Bun](https://img.shields.io/badge/runs%20on-Bun-black?logo=bun)](https://bun.sh)
 [![GitHub stars](https://img.shields.io/github/stars/zeative/satgas?style=flat)](https://github.com/zeative/satgas/stargazers)
@@ -175,6 +176,14 @@ Boards, settings and workspaces live in the `satgas-data` volume, and the agents
 
 Compose publishes the port on `127.0.0.1` for a proxy on the host. Behind Traefik or Dokploy, drop `ports` and route to the service on port `4317`.
 
+### Updating
+
+Satgas tells you when a new version is out, with an **Update available** button in the sidebar and the release notes. Pressing it downloads the release, checks its SHA-256 and that it runs, then restarts in a moment. Boards and settings stay, and it waits for running agents to finish. You can turn the check off in **Configurations → Settings**.
+
+- **In Docker** the new version lives in the `satgas-data` volume, so no Docker socket is needed. Agents run inside this container and must never hold one. If a new version dies right after starting, the image's own takes over. The bundled Claude Code and Codex update when you pull a newer image.
+- **The binary** replaces itself, keeping the old one beside it as `satgas.prev`.
+- **From source**, run `git pull && bun install && bun run build`.
+
 ## Configuration
 
 Most settings live in the app under **Configurations** and **Integrations**. Environment variables cover the server itself and a few defaults.
@@ -202,6 +211,7 @@ Most settings live in the app under **Configurations** and **Integrations**. Env
 | `SATGAS_CLAUDE_BIN` / `SATGAS_CODEX_BIN` | `claude` / `codex`                                  | Paths to the CLIs                                                          |
 | `SATGAS_TELEGRAM_API`                    | `https://api.telegram.org`                          | Your own Telegram Bot API server                                           |
 | `SATGAS_REPO`                            | `zeative/satgas`                                    | Repository shown on the home page, for forks                               |
+| `SATGAS_UPDATE_API`                      | `https://api.github.com`                            | Where releases are read from, for forks                                    |
 
 </details>
 
@@ -218,7 +228,7 @@ Satgas runs agents that **read, write and execute commands**. Treat a request li
 - **Agents.** Claude Code tasks run with `acceptEdits` and a tool allow-list, and Codex tasks in its `workspace-write` sandbox. Steps that are hard to undo can be held for your approval.
 - **Rendering.** Agent text never reaches the page as raw HTML, and only `http(s)` links become links.
 
-**What leaves your machine:** what the agent CLIs send to your model providers, what agents send through connectors you install, and your channel messages. Satgas itself only calls GitHub for the star count on the home page and for skills you install. Links opening outside Satgas carry `ref=satgas.id`.
+**What leaves your machine:** what the agent CLIs send to your model providers, what agents send through connectors you install, and your channel messages. Satgas itself only calls GitHub for the star count on the home page, the update check and skills you install. Links opening outside Satgas carry `ref=satgas.id`.
 
 Please report vulnerabilities through a [private security advisory](https://github.com/zeative/satgas/security/advisories/new), not a public issue.
 

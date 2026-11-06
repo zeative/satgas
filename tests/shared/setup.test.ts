@@ -16,6 +16,7 @@ const base: Settings = {
   worktrees: true,
   commitStyle: { mode: "repo", instructions: "" },
   watchPulls: true,
+  checkUpdates: true,
 };
 let n = 0;
 const id = () => `id${++n}`;
