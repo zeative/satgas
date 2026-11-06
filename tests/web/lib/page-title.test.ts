@@ -1,5 +1,7 @@
+import "../../helpers/browser";
 import { expect, test } from "bun:test";
-import { pageTitle } from "../../../src/web/lib/page-title";
+
+const { pageTitle } = await import("../../../src/web/lib/page-title");
 
 const board = { id: "abc", title: "Kopi Senja launch", prompt: "Launch it" };
 
