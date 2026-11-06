@@ -39,12 +39,15 @@ export function WorkspacePanel({ run }: { run: Run }) {
       <Tabs value={tab} onValueChange={(v) => setTab(v as WorkspaceTab)} className="flex min-h-0 flex-1 flex-col gap-0">
         <header className="flex h-9 shrink-0 items-center border-b ps-1 pe-1">
           {/* Plain words with a line under the chosen one, like VS Code's panel tabs. */}
-          <TabsList className="h-full min-w-0 flex-1 gap-0 overflow-x-auto no-scrollbar">
+          <TabsList
+            className="h-full min-w-0 flex-1 gap-0 overflow-x-auto no-scrollbar"
+            markClassName="rounded-none bg-transparent after:absolute after:inset-x-2 after:bottom-0 after:h-px after:bg-foreground"
+          >
             {TABS.map((k) => (
               <TabsTrigger
                 key={k}
                 value={k}
-                className="relative h-full gap-1.5 rounded-none px-2 text-xs after:absolute after:inset-x-2 after:bottom-0 after:h-px after:bg-foreground after:opacity-0 focus-visible:ring-1 focus-visible:ring-inset data-[state=active]:bg-transparent data-[state=active]:after:opacity-100"
+                className="h-full gap-1.5 rounded-none px-2 text-xs focus-visible:ring-1 focus-visible:ring-inset"
               >
                 {tw.tabs[k]}
                 {k === "changes" && changed > 0 && (

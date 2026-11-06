@@ -78,17 +78,11 @@ export function PipelinePage() {
           <div className="ms-auto flex items-center gap-2">
             <BoardFilter lanes={sorted} value={board} onChange={setBoard} />
             <Tabs value={range} onValueChange={(v) => setRange(v as Range)} aria-label={t.pipeline.range}>
-              <TabsList className="h-8 rounded-lg border bg-muted/40 p-0.5">
-                <TabsTrigger
-                  value="today"
-                  className="h-6 rounded-md px-2.5 text-xs data-[state=active]:bg-background data-[state=active]:shadow-xs"
-                >
+              <TabsList className="h-8 rounded-lg border bg-muted/40 p-0.5" markClassName="rounded-md bg-background shadow-xs">
+                <TabsTrigger value="today" className="h-6 rounded-md px-2.5 text-xs">
                   {t.pipeline.today}
                 </TabsTrigger>
-                <TabsTrigger
-                  value="week"
-                  className="h-6 rounded-md px-2.5 text-xs data-[state=active]:bg-background data-[state=active]:shadow-xs"
-                >
+                <TabsTrigger value="week" className="h-6 rounded-md px-2.5 text-xs">
                   {t.pipeline.week}
                 </TabsTrigger>
               </TabsList>

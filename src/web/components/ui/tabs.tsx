@@ -15,20 +15,73 @@ function Tabs({
   )
 }
 
-// Compact scale: plain-word tabs, 28px, with a soft pill under the chosen one.
+// Slides one mark to the chosen tab. A tab's size changing, like fonts loading or a panel being resized, moves it without
+// the slide, and so does the first placement, so it appears in place rather than flying in from the corner.
+function useTabMark() {
+  const list = React.useRef<HTMLDivElement>(null)
+  const mark = React.useRef<HTMLSpanElement>(null)
+  React.useLayoutEffect(() => {
+    const el = list.current
+    const dot = mark.current
+    if (!el || !dot) return
+    let shown = false
+    const place = (slide: boolean) => {
+      const active = el.querySelector<HTMLElement>(
+        '[data-slot="tabs-trigger"][data-state="active"]'
+      )
+      if (!active?.offsetWidth) {
+        dot.style.opacity = '0'
+        shown = false
+        return
+      }
+      dot.style.transition = slide && shown ? '' : 'none'
+      dot.style.transform = `translate(${active.offsetLeft}px, ${active.offsetTop}px)`
+      dot.style.width = `${active.offsetWidth}px`
+      dot.style.height = `${active.offsetHeight}px`
+      dot.style.opacity = '1'
+      shown = true
+    }
+    place(false)
+    const chosen = new MutationObserver(() => place(true))
+    chosen.observe(el, { subtree: true, attributes: true, attributeFilter: ['data-state'] })
+    const sized = new ResizeObserver(() => place(false))
+    sized.observe(el)
+    return () => {
+      chosen.disconnect()
+      sized.disconnect()
+    }
+  }, [])
+  return { list, mark }
+}
+
+// Compact scale: plain-word tabs, 28px, with a soft pill that slides to the chosen one; markClassName restyles that pill.
 function TabsList({
   className,
+  markClassName,
+  children,
   ...props
-}: React.ComponentProps<typeof TabsPrimitive.List>) {
+}: React.ComponentProps<typeof TabsPrimitive.List> & { markClassName?: string }) {
+  const { list, mark } = useTabMark()
   return (
     <TabsPrimitive.List
+      ref={list}
       data-slot='tabs-list'
       className={cn(
-        'inline-flex h-7 w-fit items-center gap-1 text-muted-foreground',
+        'relative isolate inline-flex h-7 w-fit items-center gap-1 text-muted-foreground',
         className
       )}
       {...props}
-    />
+    >
+      <span
+        ref={mark}
+        aria-hidden='true'
+        className={cn(
+          'pointer-events-none absolute top-0 left-0 -z-10 rounded-lg bg-muted opacity-0 transition-[transform,width,height,opacity] duration-200 ease-out motion-reduce:transition-none',
+          markClassName
+        )}
+      />
+      {children}
+    </TabsPrimitive.List>
   )
 }
 
@@ -40,7 +93,7 @@ function TabsTrigger({
     <TabsPrimitive.Trigger
       data-slot='tabs-trigger'
       className={cn(
-        "inline-flex h-7 items-center justify-center gap-1.5 rounded-lg px-2.5 text-sm whitespace-nowrap text-muted-foreground transition-[color,background-color,box-shadow] hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-muted data-[state=active]:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "inline-flex h-7 items-center justify-center gap-1.5 rounded-lg px-2.5 text-sm whitespace-nowrap text-muted-foreground transition-[color,background-color,box-shadow] hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         className
       )}
       {...props}
