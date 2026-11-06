@@ -20,7 +20,7 @@ A self-hosted workspace where AI coding agents work as a team on a shared canvas
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshot-dark.png">
   <source media="(prefers-color-scheme: light)" srcset="docs/screenshot-light.png">
-  <img src="docs/screenshot-light.png" alt="A Satgas board: a lead and four team members with their finished tasks, above the competitor table, launch brief and live page preview they produced, with the chat on the right">
+  <img src="docs/screenshot-light.png" alt="A Satgas board mid-run: a lead and four team members with three tasks running at once, above the competitor table, launch brief and page preview they already made, with live agent activity in the chat on the right">
 </picture>
 
 ## Why Satgas
@@ -255,7 +255,7 @@ Satgas ships these as built-in skills, each with its license beside it in `src/s
 
 To update one, clone its repository and run `bun scripts/vendor-skills.ts <path to the clone> [agent-skills | security-audit | hallmark]`.
 
-The UI starts from [Shadcn Admin](https://github.com/satnaing/shadcn-admin) by Sat Naing (MIT) and uses [shadcn/ui](https://ui.shadcn.com) and [React Flow](https://reactflow.dev). Team avatars are [DiceBear Notionists](https://www.dicebear.com/styles/notionists/) (CC0).
+Team avatars are [DiceBear Notionists](https://www.dicebear.com/styles/notionists/) (CC0).
 
 ## License
 
