@@ -15,8 +15,10 @@ FROM node:22-bookworm-slim
 # make decks, documents, spreadsheets and PDFs without installing anything.
 RUN apt-get update \
   && apt-get install -y --no-install-recommends ca-certificates git ripgrep tini chromium fonts-liberation \
-    python3 python3-pptx python3-docx python3-openpyxl python3-reportlab pandoc \
+    python3 python3-pip python3-docx python3-openpyxl python3-reportlab pandoc \
   && rm -rf /var/lib/apt/lists/*
+# Debian has no package for python-pptx. Installed as root, so it stays outside the /home/node volume too.
+RUN pip3 install --break-system-packages --no-cache-dir python-pptx==1.0.2
 RUN npm install -g @anthropic-ai/claude-code @openai/codex agent-browser && npm cache clean --force
 
 COPY --from=build /app/dist/satgas /usr/local/bin/satgas
