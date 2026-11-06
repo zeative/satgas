@@ -1,0 +1,71 @@
+name: Docker
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+    paths-ignore: ["**.md", "docs/**", "tests/**"]
+  pull_request:
+    paths: [Dockerfile, .dockerignore, package.json, bun.lock, scripts/build.ts, .github/workflows/docker.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v4
+      - name: Build
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          load: true
+          tags: satgas:smoke
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      # An image that builds can still fail to boot, so nothing is published until it answers.
+      - name: Smoke test
+        run: |
+          docker run -d --name satgas -p 4317:4317 -e SATGAS_TOKEN=smoke -v satgas-data:/data -v satgas-home:/home/node satgas:smoke
+          for _ in $(seq 1 30); do curl -fsS -o /dev/null http://localhost:4317/ && break; sleep 2; done
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:4317/)" = 200
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:4317/api/runs)" = 401
+          test "$(curl -s -o /dev/null -w '%{http_code}' -H 'x-satgas-token: smoke' http://localhost:4317/api/runs)" = 200
+          docker exec satgas sh -c 'test -w /data && test -w /home/node'
+          docker exec satgas claude --version
+          docker exec satgas codex --version
+          docker exec satgas agent-browser --version
+          docker exec satgas chromium --version
+          docker restart satgas
+          for _ in $(seq 1 30); do curl -fsS -o /dev/null http://localhost:4317/ && break; sleep 2; done
+          test "$(curl -s -o /dev/null -w '%{http_code}' -H 'x-satgas-token: smoke' http://localhost:4317/api/runs)" = 200
+      - name: Container logs
+        if: failure()
+        run: docker logs satgas 2>&1 | grep -v -i token | tail -n 80
+      - uses: docker/login-action@v4
+        if: github.event_name != 'pull_request'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+      - name: Publish
+        if: github.event_name != 'pull_request'
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha

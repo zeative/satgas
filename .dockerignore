@@ -2,6 +2,7 @@
 node_modules
 dist
 docs
+deploy
 tests
 *.log
 .DS_Store
