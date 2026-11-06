@@ -212,6 +212,21 @@ test("a command the sandbox refused fails the task, even when the model finishes
   await expect(runCodex({ prompt: "x", cwd: dir, signal: new AbortController().signal, ...collector() })).rejects.toThrow("sandbox");
 });
 
+test("the lead still answers when the sandbox refuses a command it tried, since planning needs none", async () => {
+  setFake({
+    FAKE_CLI_OUTPUT: jsonl(
+      {
+        type: "item.completed",
+        item: { type: "command_execution", exit_code: 1, aggregated_output: "bwrap: No permissions to create a new namespace" },
+      },
+      { type: "item.completed", item: { type: "agent_message", text: "The plan." } },
+      { type: "turn.completed", usage: { input_tokens: 1, cached_input_tokens: 0, output_tokens: 1 } },
+    ),
+  });
+  const result = await runCodex({ prompt: "x", cwd: dir, signal: new AbortController().signal, ...collector() }, { bare: true });
+  expect(result.output).toBe("The plan.");
+});
+
 test("inside a container Codex skips its sandbox, except for the lead", () => {
   const before = config.container;
   config.container = true;

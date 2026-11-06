@@ -116,7 +116,6 @@ export function AgentsTab({ settings, onOpen }: { settings: Settings; onOpen: (r
                     <VersionText version={version} checking={checking} />
                   </p>
                 </div>
-                {conf.tasks && <span className="shrink-0 text-xs text-muted-foreground">{ti.inUse}</span>}
               </li>
             );
           })}
@@ -147,7 +146,6 @@ export function AgentDetail({ settings, runtime, onBack }: { settings: Settings;
       logo={<LogoTile logo={a.logo} size="lg" />}
       title={a.name}
       desc={runtime === "claude" ? ti.agentDesc.claude : ti.agentDesc.codex}
-      action={conf.tasks ? <span className="text-sm text-muted-foreground">{ti.inUse}</span> : undefined}
       aside={
         <>
           <Fact label={ti.madeBy}>

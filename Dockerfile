@@ -14,7 +14,7 @@ FROM node:22-bookworm-slim
 # mounted there never hides it. Python with python-pptx, python-docx, openpyxl and reportlab, plus pandoc, let agents
 # make decks, documents, spreadsheets and PDFs without installing anything.
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends ca-certificates git ripgrep tini chromium fonts-liberation \
+  && apt-get install -y --no-install-recommends ca-certificates curl git ripgrep tini chromium fonts-liberation \
     python3 python3-pip python3-docx python3-openpyxl python3-reportlab pandoc \
   && rm -rf /var/lib/apt/lists/*
 # Debian has no package for python-pptx. Installed as root, so it stays outside the /home/node volume too.

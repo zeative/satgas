@@ -19,7 +19,7 @@ export function DetailPage({
   logo: React.ReactNode;
   title: string;
   desc: string;
-  action: React.ReactNode;
+  action?: React.ReactNode;
   aside: React.ReactNode;
   children: React.ReactNode;
 }) {
