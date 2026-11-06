@@ -269,4 +269,4 @@ Team avatars are [DiceBear Notionists](https://www.dicebear.com/styles/notionist
 
 ## License
 
-[MIT](LICENSE)
+[MIT](LICENSE). Third-party code keeps its own license, listed in [THIRD_PARTY_NOTICES](THIRD_PARTY_NOTICES).

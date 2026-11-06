@@ -1,11 +1,13 @@
-import { createRootRoute, type ErrorComponentProps, Link, Outlet, useNavigate } from "@tanstack/react-router";
+import { createRootRoute, type ErrorComponentProps, Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Toaster } from "@/components/ui/sonner";
 import { SearchProvider } from "@/context/search-provider";
 import { SignIn } from "@/features/auth/sign-in";
 import { t } from "@/i18n";
+import { pageTitle } from "@/lib/page-title";
 import { useAuth } from "@/stores/auth";
+import { useRuns } from "@/stores/runs";
 
 const isTyping = (el: EventTarget | null) =>
   el instanceof HTMLElement && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName));
@@ -13,6 +15,13 @@ const isTyping = (el: EventTarget | null) =>
 function Root() {
   const navigate = useNavigate();
   const signInNeeded = useAuth((s) => s.needed);
+  const pathname = useLocation({ select: (l) => l.pathname });
+  const board = useRuns((s) => s.run);
+  const title = signInNeeded ? `${t.auth.title} · Satgas` : pageTitle(pathname, board);
+
+  useEffect(() => {
+    document.title = title;
+  }, [title]);
 
   // "N" starts a new board from anywhere, unless the user is typing or a dialog is open.
   useEffect(() => {
