@@ -1,5 +1,6 @@
 import { toast } from "sonner";
 import { t } from "@/i18n";
+import { copyText } from "@/lib/clipboard";
 import { type Block, type Inline, parseBlocks, parseInline } from "@/markdown";
 import type { Card } from "../../../shared/board";
 import { xlsxBytes } from "../../../shared/xlsx";
@@ -394,7 +395,7 @@ async function pngOf(url: string): Promise<Blob> {
 export async function copyCards(picked: Card[], all: Card[], format: CopyFormat, resolve: (src: string) => string) {
   const cards = expand(picked, all);
   const first = picked[0];
-  const plain = (text: string) => navigator.clipboard.writeText(text);
+  const plain = copyText;
   try {
     switch (format) {
       case "png":
@@ -429,6 +430,11 @@ export async function copyCards(picked: Card[], all: Card[], format: CopyFormat,
         )
           .replace(/^[\s\S]*<body><h1>[\s\S]*?<\/h1>/, "")
           .replace(/<\/body><\/html>$/, "");
+        // Rich text needs the clipboard API, which plain http does not have; the words still get across.
+        if (!navigator.clipboard?.write) {
+          await plain(asPlain(cards));
+          break;
+        }
         await navigator.clipboard.write([
           new ClipboardItem({
             "text/html": new Blob([html], { type: "text/html" }),

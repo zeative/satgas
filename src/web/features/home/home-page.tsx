@@ -100,10 +100,7 @@ function HomeActions() {
       {agents && (
         <div
           role="status"
-          className={cn(
-            "flex h-8 items-center gap-2 rounded-full border bg-card ps-1.5 pe-3 text-xs text-muted-foreground shadow-xs",
-            !ready.length && "text-destructive",
-          )}
+          className="flex h-8 items-center gap-2 rounded-full border bg-card ps-1.5 pe-3 text-xs text-muted-foreground shadow-xs"
         >
           <span className="flex -space-x-1">
             {AGENT_MARKS.map(({ kind, Mark }) => {

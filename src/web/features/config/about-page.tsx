@@ -6,6 +6,7 @@ import { OutboundLink } from "@/components/outbound-link";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { fmtElapsed, t } from "@/i18n";
+import { copyText } from "@/lib/clipboard";
 import { cn } from "@/lib/utils";
 import type { AboutInfo } from "../../../shared/housekeeping";
 import { TOOL_CATALOG } from "../../../shared/tools";
@@ -60,7 +61,7 @@ export function AboutPage() {
   const { data, failed, load } = useJson<AboutInfo>("/api/about");
   const [copied, setCopied] = useState(false);
   const copy = () => {
-    void navigator.clipboard.writeText(JSON.stringify(data, null, 2)).then(() => setCopied(true));
+    void copyText(JSON.stringify(data, null, 2)).then(() => setCopied(true));
   };
   return (
     <ConfigPage

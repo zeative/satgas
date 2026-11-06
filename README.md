@@ -176,6 +176,8 @@ Boards, settings and workspaces live in the `satgas-data` volume, and the agents
 
 Compose publishes the port on `127.0.0.1` for a proxy on the host. Behind Traefik or Dokploy, drop `ports` and route to the service on port `4317`.
 
+On Dokploy, the template sets everything up on a generated `http` domain. Find your sign-in token as `SATGAS_TOKEN` in the service's **Environment** tab, and open the domain to sign in. Before you connect a real provider, add your own domain with HTTPS and change `SATGAS_PUBLIC_URL` to match it, so your keys and token are not sent in the clear.
+
 ### Updating
 
 Satgas tells you when a new version is out, with an **Update available** button in the sidebar and the release notes. Pressing it downloads the release, checks its SHA-256 and that it runs, then restarts in a moment. Boards and settings stay, and it waits for running agents to finish. You can turn the check off in **Configurations → Settings**.

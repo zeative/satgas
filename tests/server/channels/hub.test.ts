@@ -25,6 +25,8 @@ let hub: ChannelHub;
 const run = (id: string, extra: Partial<Run> = {}): Run =>
   ({ id, prompt: `Board ${id}`, cwd: "/w", status: "planning", createdAt: 0, seenAt: 0, nodes: [], ...extra }) as Run;
 
+let hasModel = true;
+
 const runtime: Runtime = {
   getRun: (id) => runs.get(id),
   listBoards: () => [...runs.values()].map((r) => ({ id: r.id, title: r.prompt })),
@@ -55,6 +57,7 @@ const runtime: Runtime = {
     return true;
   },
   hasAgents: () => true,
+  hasModel: async () => hasModel,
   boardUrl: (board) => `https://satgas.test/boards/${board}`,
 };
 
@@ -138,6 +141,17 @@ describe("pairing", () => {
 
 describe("talking to the team", () => {
   beforeEach(pair);
+
+  test("with no model connected it says so right away, and starts nothing", async () => {
+    hasModel = false;
+    try {
+      await hub.onText(me, "build a landing page");
+      expect(calls).toEqual([]);
+      expect(lastText()).toContain("No model is connected");
+    } finally {
+      hasModel = true;
+    }
+  });
 
   test("a first message starts a board, the next continues it, and /new starts another", async () => {
     await hub.onText(me, "build a landing page");

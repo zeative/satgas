@@ -3,6 +3,7 @@ import type { RefObject } from "react";
 import { toast } from "sonner";
 import { openExternal } from "@/components/outbound-link";
 import { t } from "@/i18n";
+import { copyText } from "@/lib/clipboard";
 import { type Board, type BoardOp, type Card, DEFAULT_SIZE } from "../../../shared/board";
 import type { NodeState } from "../../../shared/types";
 import type { AddKind, MenuActions } from "./board-menu";
@@ -94,7 +95,7 @@ export function boardActions(d: ActionDeps): BoardActions {
     const text = encodeClip(d.board, new Set(ids));
     if (!text) return;
     d.clip.current.text = text;
-    void navigator.clipboard?.writeText(text).catch(() => {});
+    void copyText(text).catch(() => {});
   };
 
   const remove = (ids: string[]) => d.commit(free(ids).map((c): BoardOp => ({ op: "delete", id: c.id })));
@@ -210,7 +211,7 @@ export function boardActions(d: ActionDeps): BoardActions {
     copyReport: (id) => {
       const output = d.tasks.find((n) => n.id === id)?.output;
       if (!output) return;
-      navigator.clipboard.writeText(output).then(
+      copyText(output).then(
         () => toast.success(t.reportCopied),
         () => toast.error(t.copyFailed),
       );

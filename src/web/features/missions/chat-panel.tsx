@@ -97,7 +97,7 @@ import type { NodeState, PlanDraft, QueuedPrompt, RoundOrigin, Run } from "../..
 import { keyedSrc } from "../board/context";
 import { requestSnapshot } from "../board/export";
 import { MiniFace } from "../team/face";
-import { actDetail, actVerb, pathParts } from "./act-label";
+import { actDetail, actVerb, pathParts, shortPath } from "./act-label";
 import { type Act, type Item, summarize, timeline } from "./activity";
 import { AttachmentTiles, attach, SightNote, useFileDrop, useSight } from "./attachments";
 import { BoardName } from "./board-name";
@@ -1089,7 +1089,7 @@ function ActivityRows({ items, live, cwd }: { items: Item[]; live: boolean; cwd?
 
 function ActRow({ act, live, cwd }: { act: Act; live: boolean; cwd?: string }) {
   const detail = actDetail(act);
-  const short = cwd ? detail.replaceAll(`${cwd}/`, "") : detail;
+  const short = cwd ? shortPath(detail, cwd) : detail;
   const path = SHOWS_PATH.has(act.kind) ? pathParts(short) : null;
   return (
     <TraceRow

@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { newId } from "@/features/board/context";
 import { lang, t } from "@/i18n";
+import { copyText } from "@/lib/clipboard";
 import { cn } from "@/lib/utils";
 import { saveSettings } from "@/stores/settings";
 import type { Settings } from "../../../shared/settings";
@@ -69,7 +70,7 @@ function CopyCommand({ command }: { command: string }) {
         aria-label={tt.copyInstall}
         title={done ? tt.copied : tt.copyInstall}
         onClick={() => {
-          void navigator.clipboard.writeText(command).then(() => {
+          void copyText(command).then(() => {
             setDone(true);
             setTimeout(() => setDone(false), 1500);
           });

@@ -57,6 +57,8 @@ export const pngBlob = async (dataUrl: string) => (await fetch(dataUrl)).blob();
 // The clipboard only takes a write while the click that asked for it is still the current gesture, and rendering the
 // board takes longer than that. So the write starts at once with the picture still on its way, which browsers allow.
 export function copyPngLater(render: Promise<string>): Promise<void> {
+  // Plain http has no clipboard API, and a picture has no other way in.
+  if (!navigator.clipboard?.write) return Promise.reject(new Error("The clipboard needs https."));
   return navigator.clipboard.write([new ClipboardItem({ "image/png": render.then(pngBlob) })]);
 }
 

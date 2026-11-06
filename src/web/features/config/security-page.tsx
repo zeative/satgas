@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Skeleton } from "@/components/ui/skeleton";
 import { useNow } from "@/hooks/use-now";
 import { fmtElapsed, t } from "@/i18n";
+import { copyText } from "@/lib/clipboard";
 import { signOut } from "@/stores/auth";
 import { request } from "@/stores/runs";
 import type { SecurityInfo } from "../../../shared/housekeeping";
@@ -121,7 +122,7 @@ function NewToken({ token, onClose }: { token: string | null; onClose: () => voi
             type="button"
             variant="outline"
             onClick={() => {
-              void navigator.clipboard.writeText(token ?? "").then(() => setCopied(true));
+              void copyText(token ?? "").then(() => setCopied(true));
             }}
           >
             {copied ? <Check /> : <Copy />}

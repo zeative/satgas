@@ -39,3 +39,9 @@ export function pathParts(detail: string): { name: string; dir: string } {
   const i = detail.replace(/\/$/, "").lastIndexOf("/");
   return i < 0 ? { name: detail, dir: "" } : { name: detail.slice(i + 1), dir: detail.slice(0, i) };
 }
+
+// macOS serves /tmp and /var from /private, and agents report the real path while the board keeps the one it was given.
+export function shortPath(detail: string, cwd: string): string {
+  const plain = cwd.replace(/^\/private(?=\/)/, "");
+  return detail.replaceAll(`/private${plain}/`, "").replaceAll(`${plain}/`, "");
+}

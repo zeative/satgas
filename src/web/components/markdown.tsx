@@ -3,6 +3,7 @@ import { memo, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { OutboundLink } from "@/components/outbound-link";
 import { t } from "@/i18n";
+import { copyText } from "@/lib/clipboard";
 import { cn } from "@/lib/utils";
 import { type Inline, parseBlocks, parseInline, tableText } from "@/markdown";
 
@@ -76,7 +77,7 @@ function MdTable({ rows }: { rows: string[][] }) {
     return () => clearTimeout(id);
   }, [copied]);
   const copy = () =>
-    navigator.clipboard.writeText(tableText(rows, "tsv")).then(
+    copyText(tableText(rows, "tsv")).then(
       () => setCopied(true),
       () => toast.error(t.mdTable.failed),
     );

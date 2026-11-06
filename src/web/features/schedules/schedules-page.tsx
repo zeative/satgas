@@ -21,6 +21,7 @@ import { Switch } from "@/components/ui/switch";
 import { useNow } from "@/hooks/use-now";
 import { fmtAgo, fmtDateTime, t } from "@/i18n";
 import { openMission } from "@/lib/actions";
+import { copyText } from "@/lib/clipboard";
 import { cn } from "@/lib/utils";
 import { useRuns } from "@/stores/runs";
 import { deleteSchedule, type Listed, loadSchedules, runScheduleNow, saveSchedule, useSchedules } from "@/stores/schedules";
@@ -412,7 +413,7 @@ function ScheduleDialog({ schedule, onClose }: { schedule?: Schedule; onClose: (
                         size="sm"
                         className="h-8"
                         onClick={() =>
-                          void navigator.clipboard.writeText(url).then(
+                          void copyText(url).then(
                             () => toast.success(ts.copied),
                             () => toast.error(t.copyFailed),
                           )

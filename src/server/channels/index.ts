@@ -1,10 +1,12 @@
 import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { CHANNEL_KINDS, type ChannelKind, type ChannelState, type ChannelStatus, type ChannelsView } from "../../shared/channels";
+import { leadBlocked } from "../../shared/providers";
 import { config } from "../config";
 import { answerRun, approveTask, cancelRun, followUp, startRun } from "../orchestrator";
+import { providerStatuses } from "../providers";
 import { answerSecret } from "../secrets";
-import { taskAgents } from "../settings";
+import { getSettings, taskAgents } from "../settings";
 import { getRun, listRuns, newRunId, patchRun, setRunWatcher } from "../store";
 import { ChannelHub, emptyHubState, type HubState, type Inbound, type Runtime } from "./hub";
 import { TelegramAdapter } from "./telegram";
@@ -32,6 +34,7 @@ const runtime: Runtime = {
   declineSecret: async (board, ask) => (await answerSecret(board, ask, undefined, true)) === null,
   cancel: cancelRun,
   hasAgents: () => taskAgents().length > 0,
+  hasModel: async () => !leadBlocked(getSettings().agents.claude.provider, await providerStatuses()),
   boardUrl: (board) =>
     `${config.publicUrl ?? `http://localhost:${process.env.NODE_ENV === "production" ? config.port : config.webPort}`}/boards/${board}`,
 };

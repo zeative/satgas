@@ -60,14 +60,8 @@ function useInstalled() {
 
 function VersionText({ version, checking }: { version: string | null | undefined; checking: boolean }) {
   return (
-    <span className={cn("inline-flex items-center gap-1.5", version === null && "text-destructive")}>
-      <span
-        aria-hidden="true"
-        className={cn(
-          "size-1.5 shrink-0 rounded-full",
-          version === undefined ? "bg-muted-foreground/40" : version ? "bg-emerald-500" : "bg-destructive",
-        )}
-      />
+    <span className="inline-flex items-center gap-1.5">
+      <span aria-hidden="true" className={cn("size-1.5 shrink-0 rounded-full", version ? "bg-emerald-500" : "bg-muted-foreground/40")} />
       {version === undefined ? (checking ? ti.checking : ti.unchecked) : version ? ti.installed(version) : ti.notFound}
     </span>
   );

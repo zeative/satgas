@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { fmtDateTime, isMac, t } from "@/i18n";
 import { mergeMission } from "@/lib/actions";
+import { copyText } from "@/lib/clipboard";
 import { cn } from "@/lib/utils";
 import { loadMemory, saveEntry, useMemory } from "@/stores/memory";
 import { openReview } from "@/stores/review";
@@ -232,7 +233,7 @@ function TriggerWidget({ card }: { card: Card }) {
                 className="nodrag size-7"
                 aria-label={tw.trigger.copy}
                 title={tw.trigger.copy}
-                onClick={() => void navigator.clipboard.writeText(url).then(() => toast.success(tw.trigger.copied), fail)}
+                onClick={() => void copyText(url).then(() => toast.success(tw.trigger.copied), fail)}
               >
                 <Copy className="size-3.5" />
               </Button>

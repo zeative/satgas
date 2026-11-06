@@ -61,6 +61,8 @@ export interface Runtime {
   declineSecret(board: string, ask: string): Promise<boolean>;
   cancel(board: string): boolean;
   hasAgents(): boolean;
+  // Whether the lead has a working model; a request sent without one would only fail later.
+  hasModel(): Promise<boolean>;
   boardUrl(board: string): string;
 }
 
@@ -184,6 +186,8 @@ export class ChannelHub {
 
   private async toBoard(m: Inbound, key: string, text: string, fresh = false) {
     if (!this.rt.hasAgents()) return void (await this.say(key, "No agent is turned on. Turn one on in Satgas under Integrations."));
+    if (!(await this.rt.hasModel()))
+      return void (await this.say(key, "No model is connected yet. Connect one in Satgas under Integrations, then send this again."));
     const chat = this.chat(key);
     if (!fresh && chat.board && this.rt.getRun(chat.board) && this.rt.follow(chat.board, text, this.origin(m))) {
       this.link(chat.board, key);

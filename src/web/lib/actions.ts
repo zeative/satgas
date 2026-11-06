@@ -5,6 +5,7 @@ import { t } from "@/i18n";
 import { dropDraft } from "@/lib/drafts";
 import { cancelRun, createRun, deleteRun, forkBoard, handleSummary, mergeBack } from "@/stores/runs";
 import type { Run } from "../../shared/types";
+import { copyText } from "./clipboard";
 
 // Every mission action goes through here, so the page, the menu and the command palette behave identically.
 
@@ -36,7 +37,7 @@ export async function runAgain(run: Run) {
 
 export async function copyReport(run: Run) {
   try {
-    await navigator.clipboard.writeText(finalReport(run));
+    await copyText(finalReport(run));
     toast.success(t.reportCopied);
   } catch {
     toast.error(t.copyFailed);

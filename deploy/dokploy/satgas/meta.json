@@ -1,8 +1,8 @@
 {
   "id": "satgas",
   "name": "Satgas",
-  "version": "0.1.1",
-  "description": "Self-hosted workspace where AI coding agents work as a team on a shared canvas. Sign in with SATGAS_TOKEN, then connect Claude Code or Codex under Integrations.",
+  "version": "0.1.2",
+  "description": "Your own AI team, self-hosted. Describe what you want, and a lead hires the right agents, runs Claude Code and Codex in parallel, and puts the results on a shared canvas you can watch and edit.",
   "logo": "satgas.svg",
   "links": {
     "github": "https://github.com/zeative/satgas",
