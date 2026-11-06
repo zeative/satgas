@@ -160,6 +160,7 @@ const server: Server<SocketData> = Bun.serve({
         concurrencyFromEnv: config.concurrency !== null,
         version: pkg.version,
         channels: config.channels,
+        container: config.container,
         // A hung CLI must not hold up the composer; the agent pill simply stays hidden.
         agents: await Promise.race([detectAgents(), Bun.sleep(1500).then(() => null)]),
       }),

@@ -1,21 +1,99 @@
-import { Check, Copy, KeyRound } from "lucide-react";
-import { useState } from "react";
+import { Check, Copy, KeyRound, TriangleAlert } from "lucide-react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { RichText } from "@/components/rich-text";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { update } from "@/features/integrations/update";
 import { useNow } from "@/hooks/use-now";
 import { fmtElapsed, t } from "@/i18n";
 import { copyText } from "@/lib/clipboard";
 import { signOut } from "@/stores/auth";
-import { request } from "@/stores/runs";
+import { request, useRuns } from "@/stores/runs";
+import { loadSettings, useSettings } from "@/stores/settings";
 import type { SecurityInfo } from "../../../shared/housekeeping";
+import { CODEX_SANDBOXES, type CodexSandbox, PERMISSION_MODES, type PermissionMode } from "../../../shared/settings";
 import { LoadFailed, Row, Section, useJson } from "./parts";
 
 const tc = t.config;
+const ti = t.integrations;
 type Saved = SecurityInfo["secrets"][number];
+
+function AccessChoice({
+  id,
+  value,
+  options,
+  onChange,
+}: {
+  id: string;
+  value: string;
+  options: readonly (readonly [string, string])[];
+  onChange: (v: string) => void;
+}) {
+  return (
+    <Select value={value} onValueChange={onChange}>
+      <SelectTrigger id={id} className="w-56">
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent align="end">
+        {options.map(([v, label]) => (
+          <SelectItem key={v} value={v}>
+            {label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
+// How far agents may go. In a container the sandbox setting has nothing to act on, so it stays out of sight there.
+function AgentAccess() {
+  const settings = useSettings((s) => s.settings);
+  const container = useRuns((s) => s.config.container === true);
+  useEffect(() => {
+    if (!useSettings.getState().settings) void loadSettings();
+  }, []);
+  if (!settings) return <Skeleton className="h-32 rounded-xl" />;
+  const { claude, codex } = settings.agents;
+  const risky = claude.permissionMode === "bypassPermissions" || (!container && codex.sandbox === "danger-full-access");
+  return (
+    <Section title={tc.agentAccess}>
+      <div className="flex flex-col gap-2">
+        <Row label={ti.permissions} hint={ti.permissionsHint} htmlFor="agent-permissions">
+          <AccessChoice
+            id="agent-permissions"
+            value={claude.permissionMode}
+            options={PERMISSION_MODES.map((m) => [m, ti.permission[m]] as const)}
+            onChange={(v) =>
+              void update({ ...settings, agents: { ...settings.agents, claude: { ...claude, permissionMode: v as PermissionMode } } })
+            }
+          />
+        </Row>
+        {!container && (
+          <Row label={ti.sandbox} hint={ti.sandboxHint} htmlFor="agent-sandbox">
+            <AccessChoice
+              id="agent-sandbox"
+              value={codex.sandbox}
+              options={CODEX_SANDBOXES.map((m) => [m, ti.sandboxMode[m]] as const)}
+              onChange={(v) =>
+                void update({ ...settings, agents: { ...settings.agents, codex: { ...codex, sandbox: v as CodexSandbox } } })
+              }
+            />
+          </Row>
+        )}
+        {risky && (
+          <p role="status" className="flex items-center gap-1.5 px-1 text-xs text-destructive">
+            <TriangleAlert className="size-3.5 shrink-0" aria-hidden="true" />
+            {ti.bypassHint}
+          </p>
+        )}
+      </div>
+    </Section>
+  );
+}
 
 export function SecurityView() {
   const { data, failed, load } = useJson<SecurityInfo>("/api/security");
@@ -32,6 +110,7 @@ export function SecurityView() {
   };
   return (
     <>
+      <AgentAccess />
       {failed && !data && <LoadFailed onRetry={() => void load()} />}
       {!data && !failed && <Skeleton className="h-64 rounded-xl" />}
       {data && (

@@ -169,7 +169,7 @@ export async function runCodex(req: AgentRequest, { bare = false } = {}): Promis
   if (failure) throw new AgentError(clip(failure, 400));
   // The model only reports this in words, which would otherwise pass as a finished task. The lead needs no commands to plan.
   if (sandboxRefused && !bare)
-    throw new AgentError("Codex's sandbox cannot run commands on this machine. Set its sandbox to Full access under Integrations");
+    throw new AgentError("Codex's sandbox cannot run commands on this machine. Set the sandbox to Full access under Settings, Security");
   if (!usage.output) return { output: last };
   // Codex reports no price, so what it spent stays unpriced.
   const model = getSettings().agents.codex.model || config.codexModel || "codex";

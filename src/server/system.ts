@@ -82,7 +82,7 @@ export function describeSystem(): string {
   const claude = agents.claude;
   const codex = agents.codex;
   const claudeLine = claude.tasks
-    ? `Claude Code: on, model ${claudeModel() || "its CLI default"} through ${providerName(claude.provider ?? DEFAULT_PROVIDER.claude)}; you, the lead, ${claude.plannerModel || config.plannerModel ? `use ${claude.plannerModel || config.plannerModel}` : "use the same model"}`
+    ? `Claude Code: on, model ${claudeModel() || "its CLI default"} through ${providerName(claude.provider ?? DEFAULT_PROVIDER.claude)}; you, the lead, ${config.plannerModel ? `use ${config.plannerModel}` : "use the same model"}`
     : "Claude Code: off";
   const codexLine = codex.tasks
     ? `Codex: on, model ${codex.model || config.codexModel || "its CLI default"} through ${providerName(codex.provider)}; you, the lead, use the same model`
@@ -102,7 +102,7 @@ export function describeSystem(): string {
 
   return [
     "<satgas_system>",
-    "The Satgas you run in, as the person set it up in Integrations (Agents, Connectors, Skills and Tools tabs):",
+    "The Satgas you run in, as the person set it up in Integrations (Connectors, Providers, Skills and Tools tabs):",
     `Agents:\n- ${claudeLine}\n- ${codexLine}`,
     connectors.length
       ? `Connectors the person installed for agents to use; for their area they come first, before any command-line tool. Their tools carry the connector's name (mcp__github__… in Claude Code, mcp__satgas_github__… in Codex):\n${connectors.join("\n")}`

@@ -479,7 +479,7 @@ export async function plan(
             systemPrompt: system,
             jsonSchema: schema,
             // No planner model of its own: the lead answers on the composer's model, like the tasks.
-            model: getSettings().agents.claude.plannerModel || config.plannerModel || undefined,
+            model: config.plannerModel || undefined,
             tools: "",
             ...(drafts ? { onPartial: drafts.onPartial } : {}),
           },

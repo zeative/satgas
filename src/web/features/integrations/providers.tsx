@@ -1,6 +1,7 @@
 import { Check, ExternalLink, Plus, RotateCw, TriangleAlert } from "lucide-react";
 import { useEffect, useId, useState } from "react";
 import { toast } from "sonner";
+import { ClaudeMark, CodexMark } from "@/components/brand-marks";
 import { LogoTile } from "@/components/logo-tile";
 import { OutboundLink } from "@/components/outbound-link";
 import { plain, RichText } from "@/components/rich-text";
@@ -11,12 +12,16 @@ import { lang, t } from "@/i18n";
 import { cn } from "@/lib/utils";
 import { loadProviders, useProviders } from "@/stores/providers";
 import { saveSettings } from "@/stores/settings";
-import { PROVIDERS, type ProviderDef, type Text } from "../../../shared/providers";
-import { SECRET_MASK, type Settings } from "../../../shared/settings";
+import { PROVIDERS, type ProviderDef, type Runtime, type Text } from "../../../shared/providers";
+import { activeAgent, SECRET_MASK, type Settings } from "../../../shared/settings";
 import type { ProviderStatus } from "../../../shared/types";
 
 const ti = t.integrations;
 const say = (text: Text) => text[lang];
+const GROUPS: { runtime: Runtime; Mark: typeof ClaudeMark }[] = [
+  { runtime: "claude", Mark: ClaudeMark },
+  { runtime: "codex", Mark: CodexMark },
+];
 
 export function ProviderLogo({ def, className }: { def: ProviderDef; className?: string }) {
   return (
@@ -95,51 +100,61 @@ export function ProvidersSection({ settings }: { settings: Settings }) {
           </Button>
         </div>
       )}
-      <ul className="grid gap-3 md:grid-cols-2">
-        {PROVIDERS.map((def) => {
-          const status = statusOf(def.kind);
-          const on = status?.state === "ok";
-          const inUse = settings.agents[def.runtime].provider === def.kind;
-          return (
-            <li key={def.kind} className="relative flex gap-4 rounded-xl bg-muted/50 p-4 transition-colors hover:bg-muted/80">
-              <LogoTile logo={def.logo} />
-              <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                <h3 className="text-sm font-medium">
-                  {/* The whole card opens the provider; the name is the accessible target. */}
-                  <button
-                    type="button"
-                    onClick={() => setOpen(def)}
-                    className="text-start after:absolute after:inset-0 after:rounded-xl focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-ring"
-                  >
-                    {def.name}
-                  </button>
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                  <RichText text={say(def.desc)} />
-                </p>
-                <p className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
-                  <StatusText status={status} />
-                  {inUse && on && (
-                    <>
-                      <span aria-hidden="true">·</span>
-                      <span className="shrink-0 text-foreground">{ti.inUse}</span>
-                    </>
-                  )}
-                </p>
-              </div>
-              <span
-                aria-hidden="true"
-                className={cn(
-                  "flex size-8 shrink-0 items-center justify-center rounded-lg",
-                  on ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400" : "border bg-background text-foreground",
-                )}
-              >
-                {on ? <Check className="size-4" /> : <Plus className="size-4" />}
-              </span>
-            </li>
-          );
-        })}
-      </ul>
+      <div className="flex flex-col gap-8">
+        {GROUPS.map(({ runtime, Mark }) => (
+          <section key={runtime} aria-labelledby={`providers-${runtime}`} className="flex flex-col gap-3">
+            <h3 id={`providers-${runtime}`} className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+              <Mark className="size-3.5" />
+              {t.agent[runtime]}
+            </h3>
+            <ul className="grid gap-3 md:grid-cols-2">
+              {PROVIDERS.filter((def) => def.runtime === runtime).map((def) => {
+                const status = statusOf(def.kind);
+                const on = status?.state === "ok";
+                const inUse = activeAgent(settings.agents) === def.runtime && settings.agents[def.runtime].provider === def.kind;
+                return (
+                  <li key={def.kind} className="relative flex gap-4 rounded-xl bg-muted/50 p-4 transition-colors hover:bg-muted/80">
+                    <LogoTile logo={def.logo} />
+                    <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                      <h4 className="text-sm font-medium">
+                        {/* The whole card opens the provider; the name is the accessible target. */}
+                        <button
+                          type="button"
+                          onClick={() => setOpen(def)}
+                          className="text-start after:absolute after:inset-0 after:rounded-xl focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-ring"
+                        >
+                          {def.name}
+                        </button>
+                      </h4>
+                      <p className="text-sm text-muted-foreground">
+                        <RichText text={say(def.desc)} />
+                      </p>
+                      <p className="mt-auto flex min-w-0 items-center gap-1.5 pt-2 text-xs text-muted-foreground">
+                        <StatusText status={status} />
+                        {inUse && on && (
+                          <>
+                            <span aria-hidden="true">·</span>
+                            <span className="shrink-0 text-foreground">{ti.inUse}</span>
+                          </>
+                        )}
+                      </p>
+                    </div>
+                    <span
+                      aria-hidden="true"
+                      className={cn(
+                        "flex size-8 shrink-0 items-center justify-center rounded-lg",
+                        on ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400" : "border bg-background text-foreground",
+                      )}
+                    >
+                      {on ? <Check className="size-4" /> : <Plus className="size-4" />}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        ))}
+      </div>
       {open && <ProviderDialog def={open} settings={settings} onClose={() => setOpen(null)} />}
     </section>
   );

@@ -24,19 +24,18 @@ import type { Runtime } from "../../../shared/providers";
 import type { McpServer } from "../../../shared/settings";
 import type { PackId } from "../../../shared/skills";
 import type { ToolSetting } from "../../../shared/tools";
-import { AgentDetail, AgentsTab } from "./agents";
 import { ChannelsTab } from "./channels";
 import { ConnectorDetail, Discover, type Filter, NO_FILTER, SETUP_TEST, ServerDialog, type Setup, Yours } from "./connectors";
+import { ProvidersSection } from "./providers";
 import { AddSkillMenu, AddSkillsDialog, PackDetail, SkillDetail, type SkillDialog, SkillEditor, SkillsTab } from "./skills";
 import { ToolDetail, ToolDialog, ToolsTab, toolSaved } from "./tools";
 
 const ti = t.integrations;
 
 export interface IntegrationsSearch {
-  tab?: "agents" | "skills" | "tools" | "channels";
+  tab?: "providers" | "skills" | "tools" | "channels";
   view?: "yours";
   connector?: string;
-  agent?: Runtime;
   skill?: string;
   pack?: PackId;
   tool?: string;
@@ -65,7 +64,7 @@ export function IntegrationsPage() {
   const current = search.tab === "channels" && !channels ? "connectors" : (search.tab ?? "connectors");
   const view = search.view ?? "discover";
   const go = (next: IntegrationsSearch) => {
-    const detail = !!(next.connector || next.agent || next.skill || next.pack || next.tool);
+    const detail = !!(next.connector || next.skill || next.pack || next.tool);
     void navigate({ search: next, replace: !detail, state: detail ? { fromList: true } : undefined });
   };
   // A deep-linked detail has no list behind it, so the list takes its place instead.
@@ -79,8 +78,6 @@ export function IntegrationsPage() {
   const detail =
     settings && search.connector ? (
       <ConnectorDetail settings={settings} id={search.connector} onBack={back} />
-    ) : settings && search.agent ? (
-      <AgentDetail settings={settings} runtime={search.agent} onBack={back} />
     ) : search.skill ? (
       <SkillDetail name={search.skill} onBack={back} onOpen={setSkillDialog} />
     ) : settings && search.tool ? (
@@ -98,7 +95,7 @@ export function IntegrationsPage() {
             value={current}
             onValueChange={(v) => {
               setQuery("");
-              go({ tab: v === "agents" || v === "skills" || v === "tools" || v === "channels" ? v : undefined });
+              go({ tab: v === "providers" || v === "skills" || v === "tools" || v === "channels" ? v : undefined });
             }}
             className="gap-8"
           >
@@ -107,7 +104,7 @@ export function IntegrationsPage() {
               <div className="flex flex-wrap items-center gap-2">
                 <TabsList>
                   <TabsTrigger value="connectors">{ti.connectors}</TabsTrigger>
-                  <TabsTrigger value="agents">{ti.agents}</TabsTrigger>
+                  <TabsTrigger value="providers">{ti.providers}</TabsTrigger>
                   <TabsTrigger value="skills">{t.skills.tab}</TabsTrigger>
                   <TabsTrigger value="tools">{t.tools.tab}</TabsTrigger>
                   {channels && <TabsTrigger value="channels">{t.channels.tab}</TabsTrigger>}
@@ -240,8 +237,8 @@ export function IntegrationsPage() {
                 <TabsContent value="channels">
                   <ChannelsTab />
                 </TabsContent>
-                <TabsContent value="agents">
-                  <AgentsTab settings={settings} onOpen={(agent) => go({ tab: "agents", agent })} />
+                <TabsContent value="providers">
+                  <ProvidersSection settings={settings} />
                 </TabsContent>
                 <TabsContent value="tools">
                   <ToolsTab settings={settings} onOpen={(tool) => go({ tab: "tools", tool })} onEdit={setEditingTool} />

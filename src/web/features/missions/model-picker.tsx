@@ -138,7 +138,7 @@ export function ModelPicker() {
         {shown.length === 0 ? (
           <div className="flex flex-col items-start gap-2 p-4 text-sm">
             <p className="text-muted-foreground">{t.picker.none}</p>
-            <Link to="/integrations" search={{ tab: "agents" }} className="text-sm underline-offset-4 hover:underline">
+            <Link to="/integrations" search={{ tab: "providers" }} className="text-sm underline-offset-4 hover:underline">
               {t.picker.manage}
             </Link>
           </div>
@@ -242,7 +242,7 @@ export function ModelPicker() {
             <div className="flex h-9 items-center justify-end border-t px-3 text-xs text-muted-foreground">
               <Link
                 to="/integrations"
-                search={{ tab: "agents" }}
+                search={{ tab: "providers" }}
                 onClick={() => setOpen(false)}
                 className="rounded transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
               >
