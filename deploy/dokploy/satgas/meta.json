@@ -1,7 +1,7 @@
 {
   "id": "satgas",
   "name": "Satgas",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Self-hosted workspace where AI coding agents work as a team on a shared canvas. Sign in with SATGAS_TOKEN, then connect Claude Code or Codex under Integrations.",
   "logo": "satgas.svg",
   "links": {

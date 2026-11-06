@@ -4,6 +4,7 @@ import type { Server, ServerWebSocket } from "bun";
 import pkg from "../../package.json";
 import { sanitizeOps } from "../shared/board";
 import { describeOps, mergeEvents } from "../shared/board-edit";
+import { PROVIDERS } from "../shared/providers";
 import { maskSchedule, nextRun } from "../shared/schedules";
 import { liveSecrets } from "../shared/secrets";
 import { type ChatSession, MAX_SESSIONS, SESSION_TITLE_MAX } from "../shared/sessions";
@@ -40,7 +41,7 @@ import {
   stopRun,
   unqueuePrompt,
 } from "./orchestrator";
-import { providerStatuses } from "./providers";
+import { providerStatuses, testProvider } from "./providers";
 import { checkPull, linkPull, startPullWatch, updatePull } from "./pulls";
 import { workspaceTree } from "./refs";
 import {
@@ -266,6 +267,20 @@ const server: Server<SocketData> = Bun.serve({
     },
     // ?refresh=1 re-runs every check instead of answering from the minute-long cache; only Satgas's own pages may ask,
     // so another site (an <img> pointing here) cannot make it spawn CLIs and call APIs at will.
+    // Tries a provider with one short message; a key in the body is used for this test only and never stored.
+    "/api/providers/test": {
+      POST: api(async (req) => {
+        if (!isTrusted(req)) return forbidden();
+        const body = (await req.json().catch(() => ({}))) as { kind?: unknown; key?: unknown; baseUrl?: unknown };
+        const kind = PROVIDERS.find((p) => p.kind === body.kind)?.kind;
+        if (!kind) return error(400, "Unknown provider.");
+        const problem = await testProvider(kind, {
+          ...(typeof body.key === "string" ? { key: body.key.slice(0, 2000) } : {}),
+          ...(typeof body.baseUrl === "string" ? { baseUrl: body.baseUrl.slice(0, 500) } : {}),
+        });
+        return Response.json({ ok: !problem, error: problem });
+      }),
+    },
     "/api/providers": api(async (req) => {
       const site = req.headers.get("sec-fetch-site");
       const refresh = new URL(req.url).searchParams.has("refresh") && (!site || site === "same-origin" || site === "none");

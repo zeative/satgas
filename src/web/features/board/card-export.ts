@@ -77,7 +77,13 @@ export function plainText(text: string): string {
   const walk = (parts: Inline[]): string =>
     parts
       .map((p) =>
-        p.type === "strong" ? walk(p.children) : p.type === "link" ? (p.text === p.href ? p.href : `${p.text} (${p.href})`) : p.text,
+        p.type === "strong" || p.type === "em"
+          ? walk(p.children)
+          : p.type === "link"
+            ? p.text === p.href
+              ? p.href
+              : `${p.text} (${p.href})`
+            : p.text,
       )
       .join("");
   return walk(parseInline(text));
@@ -105,13 +111,15 @@ const inlineHtml = (parts: Inline[]): string =>
     .map((p) =>
       p.type === "strong"
         ? `<strong>${inlineHtml(p.children)}</strong>`
-        : p.type === "code"
-          ? `<code>${escHtml(p.text)}</code>`
-          : p.type === "link"
-            ? p.external
-              ? `<a href="${escHtml(p.href)}">${escHtml(p.text)}</a>`
-              : escHtml(p.text)
-            : escHtml(p.text),
+        : p.type === "em"
+          ? `<em>${inlineHtml(p.children)}</em>`
+          : p.type === "code"
+            ? `<code>${escHtml(p.text)}</code>`
+            : p.type === "link"
+              ? p.external
+                ? `<a href="${escHtml(p.href)}">${escHtml(p.text)}</a>`
+                : escHtml(p.text)
+              : escHtml(p.text),
     )
     .join("");
 const tableHtml = (rows: string[][]) => {

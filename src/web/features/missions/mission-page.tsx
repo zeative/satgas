@@ -61,7 +61,6 @@ import { WorkspacePanel } from "../workspace/workspace-panel";
 import { BoardName } from "./board-name";
 import { ChatPanel } from "./chat-panel";
 import { CiteButton } from "./cite";
-import { GhostPlan } from "./ghost-plan";
 import { PanelResizer } from "./panel-resizer";
 import { PullsButton } from "./pulls";
 import { RenameSessionDialog, SessionCrumb, SessionSidebar } from "./sessions";
@@ -245,6 +244,11 @@ export function MissionPage({ missionId, focusTask }: { missionId: string; focus
                 {t.reconnecting}
               </p>
             )}
+            {!offline && (
+              <p role="status" className="absolute inset-x-0 top-1/2 flex justify-center text-sm">
+                <span className="satgas-shimmer">{t.openingBoard}</span>
+              </p>
+            )}
             <div className="absolute inset-x-0 bottom-4 flex justify-center px-4">
               <Skeleton className="h-12 w-full max-w-2xl rounded-2xl" />
             </div>
@@ -311,14 +315,10 @@ export function MissionPage({ missionId, focusTask }: { missionId: string; focus
         <BoardPresence run={run} panelOpen={panelOpen} chatOpen={side === "chat"} onToggleChat={toggleChat} />
 
         <div className="relative min-h-0 flex-1">
-          {/* The ghost only stands in for a board that has nothing on it yet; a failed first plan still gets a working board. */}
-          {(run.status === "planning" || run.status === "asking") && !run.nodes.length && !run.board?.cards.length ? (
-            <Planning run={run} onOpenChat={side === "chat" ? undefined : () => setSide("chat")} />
-          ) : (
-            <Suspense fallback={<div className="absolute inset-0" />}>
-              <BoardCanvas key={run.id} run={run} selectedTaskId={selectedId} onSelectTask={selectOnCanvas} panelOpen={panelOpen} />
-            </Suspense>
-          )}
+          {/* Lead stays on the board for every round and says what it is doing itself. */}
+          <Suspense fallback={<div className="absolute inset-0" />}>
+            <BoardCanvas key={run.id} run={run} selectedTaskId={selectedId} onSelectTask={selectOnCanvas} panelOpen={panelOpen} />
+          </Suspense>
           {!run.nodes.length && (run.status === "failed" || run.status === "cancelled") && (
             <p
               className={cn(
@@ -751,26 +751,5 @@ function PillButton({
       </TooltipTrigger>
       <TooltipContent side="bottom">{label}</TooltipContent>
     </Tooltip>
-  );
-}
-
-function Planning({ run, onOpenChat }: { run: Run; onOpenChat?: () => void }) {
-  const live = run.status === "planning";
-  return (
-    <div className="satgas-grid flex h-full flex-col items-center justify-center gap-6 pb-32" aria-busy={live}>
-      <GhostPlan />
-      {live && <p className="satgas-shimmer text-sm">{t.plotting}</p>}
-      {run.status === "asking" && (
-        <div className="flex flex-col items-center gap-3">
-          <p className="text-sm text-muted-foreground">{t.ask.canvas}</p>
-          {onOpenChat && (
-            <Button size="sm" variant="secondary" onClick={onOpenChat}>
-              <MessagesSquare />
-              {t.chat.open}
-            </Button>
-          )}
-        </div>
-      )}
-    </div>
   );
 }

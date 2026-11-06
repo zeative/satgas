@@ -167,6 +167,7 @@ export function ProviderDialog({
   const [baseUrl, setBaseUrl] = useState(cfg?.baseUrl ?? def.baseUrl ?? "");
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
+  const [test, setTest] = useState<"idle" | "testing" | "ok">("idle");
   const uid = useId();
   const inUse = settings.agents.claude.provider === def.kind || settings.agents.codex.provider === def.kind;
 
@@ -187,10 +188,32 @@ export function ProviderDialog({
     onClose();
   };
 
-  const save = () => {
+  const editedUrl = def.baseUrlEditable && baseUrl.trim() && baseUrl.trim() !== def.baseUrl ? baseUrl.trim() : undefined;
+
+  // One short real message, through the values in the form, before anything is saved.
+  const runTest = async () => {
+    setTest("testing");
+    setProblem(null);
+    const res = await fetch("/api/providers/test", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ kind: def.kind, ...(key.trim() ? { key: key.trim() } : {}), ...(editedUrl ? { baseUrl: editedUrl } : {}) }),
+    }).catch(() => null);
+    const data = res?.ok ? ((await res.json().catch(() => null)) as { ok?: boolean; error?: string | null } | null) : null;
+    if (data?.ok) {
+      setTest("ok");
+      return true;
+    }
+    setTest("idle");
+    setProblem(data?.error ?? ti.checkFailed);
+    return false;
+  };
+
+  const save = async () => {
+    if (!(await runTest())) return;
     const entry = {
       ...(def.auth === "key" && key.trim() ? { key: key.trim() } : {}),
-      ...(def.baseUrlEditable && baseUrl.trim() && baseUrl.trim() !== def.baseUrl ? { baseUrl: baseUrl.trim() } : {}),
+      ...(editedUrl ? { baseUrl: editedUrl } : {}),
     };
     void persist({ ...settings.providers, [def.kind]: entry });
   };
@@ -201,10 +224,11 @@ export function ProviderDialog({
   };
 
   const missing = def.auth === "key" && !key.trim() && !hasKey;
+  const testing = test === "testing";
   const rechecking = def.auth === "cli" && checking;
 
   return (
-    <Dialog open onOpenChange={(open) => !open && !busy && onClose()}>
+    <Dialog open onOpenChange={(open) => !open && !busy && !testing && onClose()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader className="flex-row items-center gap-4 text-start">
           <LogoTile logo={def.logo} />
@@ -221,8 +245,8 @@ export function ProviderDialog({
           className="flex flex-col gap-4"
           onSubmit={(e) => {
             e.preventDefault();
-            if (def.auth === "cli") void loadProviders(true);
-            else if (!missing) save();
+            if (def.auth === "cli") void runTest().then(() => loadProviders(true));
+            else if (!missing) void save();
           }}
         >
           {def.auth === "cli" && (
@@ -278,7 +302,16 @@ export function ProviderDialog({
           <div className="flex items-start gap-3 rounded-lg bg-muted/60 px-3 py-2 text-xs">
             <span className="shrink-0 text-muted-foreground">{ti.status}</span>
             <span className="ms-auto min-w-0 text-end">
-              <StatusText status={status} wrap />
+              {test === "testing" ? (
+                <span className="satgas-shimmer">{ti.testing}</span>
+              ) : test === "ok" ? (
+                <span className="inline-flex items-center gap-1.5">
+                  <span aria-hidden="true" className="size-1.5 rounded-full bg-emerald-500" />
+                  {ti.testOk}
+                </span>
+              ) : (
+                <StatusText status={status} wrap />
+              )}
             </span>
           </div>
           {problem && (
@@ -290,21 +323,31 @@ export function ProviderDialog({
         </form>
 
         <DialogFooter className="sm:justify-between">
-          {cfg && def.auth !== "cli" ? (
-            <Button variant="ghost" className="text-destructive hover:text-destructive" disabled={busy || inUse} onClick={disconnect}>
-              {ti.disconnect}
-            </Button>
-          ) : (
-            <span />
-          )}
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={onClose} disabled={busy}>
-              {ti.cancel}
-            </Button>
-            <Button type="submit" form={`${uid}-form`} disabled={busy || missing || rechecking}>
-              {busy || rechecking ? ti.checkingShort : def.auth === "cli" ? ti.recheck : ti.connectBtn}
-            </Button>
+          <div className="flex gap-1">
+            {def.auth !== "cli" && (
+              <Button
+                variant="ghost"
+                className="text-muted-foreground"
+                disabled={busy || testing || missing}
+                onClick={() => void runTest()}
+              >
+                {ti.testConn}
+              </Button>
+            )}
+            {cfg && def.auth !== "cli" && (
+              <Button
+                variant="ghost"
+                className="text-destructive hover:text-destructive"
+                disabled={busy || testing || inUse}
+                onClick={disconnect}
+              >
+                {ti.disconnect}
+              </Button>
+            )}
           </div>
+          <Button type="submit" form={`${uid}-form`} disabled={busy || testing || missing || rechecking}>
+            {busy || rechecking || testing ? ti.checkingShort : def.auth === "cli" ? ti.testConn : ti.connectBtn}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

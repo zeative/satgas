@@ -70,7 +70,9 @@ export function ModelPicker() {
     const st = statusOf(p.kind)?.state;
     return st === "ok" || st === "failed";
   });
-  const current = rail ?? settings.agents.claude.provider;
+  // The lead's provider may not be connected; then the rail opens on one that is.
+  const selected = settings.agents.claude.provider;
+  const current = rail ?? (shown.some((p) => p.kind === selected) ? selected : (shown[0]?.kind ?? selected));
   const def = providerDef.get(current);
   const runtime = def?.runtime ?? "claude";
   const status = statusOf(current);

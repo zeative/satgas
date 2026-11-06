@@ -155,6 +155,12 @@ function InlineParts({ parts }: { parts: Inline[] }) {
     <>
       {parts.map((part, i) => {
         const key = `${part.type}-${i}`;
+        if (part.type === "em")
+          return (
+            <em key={key}>
+              <InlineParts parts={part.children} />
+            </em>
+          );
         if (part.type === "strong")
           return (
             <strong key={key} className="font-medium text-foreground">

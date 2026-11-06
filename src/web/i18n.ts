@@ -121,6 +121,7 @@ const en = {
   connecting: "Connecting",
   offline: "Reconnecting",
   reconnecting: "Reconnecting to Satgas…",
+  openingBoard: "Opening the board",
   noPlanFailed: "The plan failed, so this board has no tasks yet",
   noPlanCancelled: "Planning was stopped, so this board has no tasks yet",
   notFoundTitle: "Board not found",
@@ -459,7 +460,6 @@ const en = {
     fold: "Hide the options",
     unfold: "Show the options",
     stop: "Set the questions aside",
-    canvas: "Answer the planner's questions in the chat to start",
   },
   skills: {
     tab: "Skills",
@@ -883,6 +883,9 @@ const en = {
     providersFailed: "Could not check the providers",
     checkingShort: "Checking…",
     recheck: "Check again",
+    testConn: "Test connection",
+    testing: "Testing the connection",
+    testOk: "The connection works",
     endpoint: "Endpoint",
     endpointHint: "Change it for another region, plan or machine",
     cliSignIn: {
@@ -1694,6 +1697,7 @@ const id: typeof en = {
   connecting: "Menghubungkan",
   offline: "Menyambung ulang",
   reconnecting: "Menyambung ulang ke Satgas…",
+  openingBoard: "Membuka board",
   noPlanFailed: "Rencana gagal dibuat, jadi board ini belum punya tugas",
   noPlanCancelled: "Perencanaan dihentikan, jadi board ini belum punya tugas",
   notFoundTitle: "Board tidak ditemukan",
@@ -2032,7 +2036,6 @@ const id: typeof en = {
     fold: "Sembunyikan pilihan",
     unfold: "Tampilkan pilihan",
     stop: "Kesampingkan pertanyaan",
-    canvas: "Jawab pertanyaan Komandan di chat untuk mulai",
   },
   skills: {
     tab: "Skills",
@@ -2457,6 +2460,9 @@ const id: typeof en = {
     providersFailed: "Provider gagal diperiksa",
     checkingShort: "Memeriksa…",
     recheck: "Cek lagi",
+    testConn: "Tes koneksi",
+    testing: "Mengetes koneksi",
+    testOk: "Koneksi berfungsi",
     endpoint: "Endpoint",
     endpointHint: "Ubah untuk region, paket, atau mesin lain",
     cliSignIn: {

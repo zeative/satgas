@@ -9,6 +9,7 @@ export type Block =
 export type Inline =
   | { type: "text" | "code"; text: string }
   | { type: "strong"; children: Inline[] }
+  | { type: "em"; children: Inline[] }
   | { type: "link"; text: string; href: string; external: boolean };
 
 // Parses the small markdown subset agents use in reports: headings, lists, fenced code, paragraphs.
@@ -98,7 +99,9 @@ function splitRow(line: string): string[] {
 
 // Bold is matched first so it can wrap inline code, e.g. **`file.ts`**. A code span closes on a backtick run
 // as long as its opener, so `` ` ```` ` `` can show backticks.
-const INLINE = /\*\*[^*]+\*\*|(?<!`)(`+)(?!`)(.+?)(?<!`)\1(?!`)|\[[^\]]+\]\([^)\s]+\)|https?:\/\/[^\s<>()]*[^\s<>().,;:!?'"]/g;
+// Single * and _ only open against a word and close against one, so 2 * 3, *.ts and snake_case stay as they are.
+const INLINE =
+  /\*\*\*[^*\n]+\*\*\*|\*\*(?:[^*]|\*(?!\*))+?\*\*|(?<![\w*])\*(?![\s*])[^*\n]+?(?<![\s*])\*(?![\w*])|(?<![\w_])_(?![\s_])[^_\n]+?(?<![\s_])_(?![\w_])|(?<!`)(`+)(?!`)(.+?)(?<!`)\1(?!`)|\[[^\]]+\]\([^)\s]+\)|https?:\/\/[^\s<>()]*[^\s<>().,;:!?'"]/g;
 
 export function parseInline(text: string): Inline[] {
   const out: Inline[] = [];
@@ -115,7 +118,9 @@ export function parseInline(text: string): Inline[] {
 function inlinePart(part: string, code: string | undefined): Inline {
   // One space is trimmed from each side, so a span can start or end with a backtick.
   if (code !== undefined) return { type: "code", text: /^ .*[^ ].* $/.test(code) ? code.slice(1, -1) : code };
+  if (part.startsWith("***")) return { type: "strong", children: [{ type: "em", children: parseInline(part.slice(3, -3)) }] };
   if (part.startsWith("**")) return { type: "strong", children: parseInline(part.slice(2, -2)) };
+  if (part.length > 2 && (part.startsWith("*") || part.startsWith("_"))) return { type: "em", children: parseInline(part.slice(1, -1)) };
   // A bare URL reads as its host and path, without the scheme.
   if (/^https?:\/\//.test(part)) return { type: "link", text: shortUrl(part), href: part, external: true };
   const link = /^\[([^\]]+)\]\(([^)\s]+)\)$/.exec(part);
@@ -129,7 +134,7 @@ function shortUrl(url: string): string {
   return bare.length > 48 ? `${bare.slice(0, 47)}…` : bare;
 }
 
-const flat = (p: Inline): string => (p.type === "strong" ? p.children.map(flat).join("") : p.text);
+const flat = (p: Inline): string => (p.type === "strong" || p.type === "em" ? p.children.map(flat).join("") : p.text);
 
 // A cell as the reader sees it: markup gone, link text kept.
 export const plainCell = (text: string) => parseInline(text).map(flat).join("").trim();

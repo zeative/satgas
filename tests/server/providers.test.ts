@@ -3,7 +3,7 @@ import { chmod, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { config } from "../../src/server/config";
-import { providerStatuses } from "../../src/server/providers";
+import { providerStatuses, testProvider } from "../../src/server/providers";
 import type { Settings } from "../../src/shared/settings";
 
 const g = globalThis as {
@@ -62,16 +62,6 @@ test("requests that arrive while a check runs share it instead of spawning the C
   expect(new Set(lists).size).toBe(1);
   expect((await Bun.file(calls()).text()).trim().split("\n").sort()).toEqual(["auth", "login"]);
   expect(lists[0]?.find((p) => p.kind === "claude")?.state).toBe("ok");
-});
-
-test("a CLI that is missing is reported as not installed", async () => {
-  config.claudeBin = join(dir, "missing");
-  try {
-    const claude = (await providerStatuses(true)).find((p) => p.kind === "claude");
-    expect(claude).toMatchObject({ state: "failed", error: "Claude Code is not installed." });
-  } finally {
-    config.claudeBin = join(dir, "cli");
-  }
 });
 
 test("a Qwen key rejected in one region points to the region that takes it", async () => {
@@ -135,4 +125,51 @@ test("Model Studio's list keeps chat models and drops other kinds, test entries 
     "deepseek-v4-pro",
     "glm-5.3",
   ]);
+});
+
+test("a CLI nobody signed in to, or that is missing, reads as not connected instead of failing", async () => {
+  const before = { claude: config.claudeBin, codex: config.codexBin };
+  const signedOut = join(dir, "signed-out");
+  await Bun.write(signedOut, `#!/bin/sh\necho '{"loggedIn": false}'\nexit 1\n`);
+  await chmod(signedOut, 0o755);
+  config.claudeBin = signedOut;
+  config.codexBin = join(dir, "not-installed");
+  g.__satgasProviders = undefined;
+  g.__satgasProviderCheck = undefined;
+  const list = await providerStatuses(true);
+  for (const kind of ["claude", "codex"]) expect(list.find((s) => s.kind === kind)).toEqual({ kind, state: "off", models: [] } as never);
+  config.claudeBin = before.claude;
+  config.codexBin = before.codex;
+  g.__satgasProviders = undefined;
+});
+
+test("testing a provider really sends a message, and reports what the model answered", async () => {
+  const before = config.claudeBin;
+  const sent = join(dir, "sent.txt");
+  const fake = (result: string) =>
+    `#!/bin/sh\n[ "$1" = auth ] && { echo '{"loggedIn": true}'; exit 0; }\necho "$*" >> "${sent}"\necho '${result}'\n`;
+  const bin = join(dir, "ping");
+  await Bun.write(bin, fake(JSON.stringify({ type: "result", subtype: "success", is_error: false, result: "OK" })));
+  await chmod(bin, 0o755);
+  config.claudeBin = bin;
+  try {
+    expect(await testProvider("claude")).toBeNull();
+    const args = await Bun.file(sent).text();
+    expect(args).toContain("--model haiku");
+    expect(args).toContain("--tools");
+
+    await Bun.write(bin, fake(JSON.stringify({ type: "result", subtype: "error", is_error: true, result: "Model not found" })));
+    await chmod(bin, 0o755);
+    expect(await testProvider("claude")).toContain("Model not found");
+
+    await Bun.write(bin, `#!/bin/sh\n[ "$1" = auth ] && { echo '{"loggedIn": true}'; exit 0; }\nexit 0\n`);
+    await chmod(bin, 0o755);
+    expect(await testProvider("claude")).toBe("The model did not answer.");
+  } finally {
+    config.claudeBin = before;
+  }
+});
+
+test("a keyed provider asks for its key before spending anything", async () => {
+  expect(await testProvider("anthropic")).toBe("Add the key first.");
 });

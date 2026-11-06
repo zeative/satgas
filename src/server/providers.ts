@@ -1,9 +1,19 @@
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { CLAUDE_EFFORTS, claudeEnv, PROVIDERS, type ProviderConfig, type ProviderKind, providerDef } from "../shared/providers";
+import {
+  CLAUDE_EFFORTS,
+  CODEX_KEY_VAR,
+  claudeEnv,
+  codexProviderArgs,
+  nativeClaude,
+  PROVIDERS,
+  type ProviderConfig,
+  type ProviderKind,
+  providerDef,
+} from "../shared/providers";
 import type { Settings } from "../shared/settings";
 import type { ModelInfo, ProviderStatus } from "../shared/types";
-import { childEnv } from "./agents/process";
+import { childEnv, clip, runJsonl } from "./agents/process";
 import { CLAUDE_FAMILIES, claudeAliasIds, prettyClaude } from "./claude-models";
 import { config } from "./config";
 import { getSettings } from "./settings";
@@ -63,6 +73,7 @@ async function checkAll(providers: Settings["providers"], key: string): Promise<
         const models = await check(def.kind, cfg ?? {});
         return { kind: def.kind, state: "ok", models };
       } catch (e) {
+        if (e instanceof NotConnected && def.auth === "cli") return { kind: def.kind, state: "off", models: [] };
         return { kind: def.kind, state: "failed", error: (e as Error).message, models: [] };
       }
     }),
@@ -72,6 +83,8 @@ async function checkAll(providers: Settings["providers"], key: string): Promise<
 }
 
 class CheckError extends Error {}
+// A CLI nobody has signed in to yet is simply not connected, which is no failure to warn about.
+class NotConnected extends CheckError {}
 
 const REJECTED = "The key was rejected.";
 const QWEN_HOSTS = ["https://dashscope-intl.aliyuncs.com", "https://dashscope.aliyuncs.com", "https://dashscope-us.aliyuncs.com"];
@@ -217,7 +230,7 @@ async function run(name: string, cmd: string[], env: Record<string, string | und
     try {
       return Bun.spawn(cmd, { stdout: "pipe", stderr: "pipe", env });
     } catch {
-      throw new CheckError(`${name} is not installed.`);
+      throw new NotConnected(`${name} is not installed.`);
     }
   })();
   let timedOut = false;
@@ -245,12 +258,12 @@ async function claudeSignedIn(env: ReturnType<typeof claudeEnv>) {
   } catch {
     throw new CheckError("Claude Code did not report its sign-in.");
   }
-  if (!status.loggedIn) throw new CheckError("Claude Code is not signed in. Run `claude` to sign in.");
+  if (!status.loggedIn) throw new NotConnected("Claude Code is not signed in. Run `claude` to sign in.");
 }
 
 async function codexSignedIn() {
   const { code, out } = await run("Codex", [config.codexBin, "login", "status"], childEnv({ set: {}, unset: [] }));
-  if (code !== 0 || !/logged in/i.test(out)) throw new CheckError("Codex is not signed in. Run `codex login`.");
+  if (code !== 0 || !/logged in/i.test(out)) throw new NotConnected("Codex is not signed in. Run `codex login`.");
 }
 
 // Codex caches the models its account can use, with the reasoning levels each one takes.
@@ -274,5 +287,86 @@ async function codexModels(): Promise<ModelInfo[]> {
   } catch {
     // No cache yet just means Codex has not run; its default model still works.
     return [];
+  }
+}
+
+const PING_TIMEOUT = 60_000;
+const PING = "Reply with OK.";
+
+// Sends one short message through the same CLI and model path the agents use, because a key can pass every check and
+// still fail on the model. It costs tokens, so it only runs when someone connects a provider or asks for a test.
+async function ping(kind: ProviderKind, cfg: ProviderConfig, model: string) {
+  const def = providerDef.get(kind);
+  const signal = AbortSignal.timeout(PING_TIMEOUT);
+  const cwd = config.dataDir;
+  let failure: string | undefined;
+  let answered = false;
+  const reason = () => failure;
+  if (def?.runtime === "claude") {
+    const cmd = [config.claudeBin, "-p", "--output-format", "stream-json", "--verbose", "--no-session-persistence"];
+    if (config.leanAgents) cmd.push("--strict-mcp-config", "--setting-sources", "");
+    if (model) cmd.push("--model", model);
+    cmd.push("--system-prompt", PING, "--tools", "");
+    const env = claudeEnv(kind, cfg, model);
+    const set = nativeClaude(kind) ? env.set : { ...env.set, CLAUDE_CODE_MAX_OUTPUT_TOKENS: "64" };
+    await runJsonl(
+      cmd,
+      { prompt: "hi", cwd, signal },
+      (ev) => {
+        if (ev.type !== "result") return;
+        answered = true;
+        if (ev.is_error || ev.subtype !== "success") failure = String(ev.result || ev.subtype || "The model did not answer.");
+      },
+      reason,
+      { set, unset: env.unset },
+    );
+  } else {
+    const cmd = [config.codexBin, "exec", "--json", "--ephemeral", "--skip-git-repo-check", "-C", cwd, "-s", "read-only"];
+    if (config.leanAgents) cmd.push("--ignore-user-config");
+    if (model) cmd.push("-m", model);
+    cmd.push(...codexProviderArgs(kind, cfg), "-");
+    const key = cfg.key?.trim();
+    await runJsonl(
+      cmd,
+      { prompt: PING, cwd, signal },
+      (ev) => {
+        if (ev.type === "turn.completed" || ev.type === "item.completed") answered = true;
+        else if (ev.type === "turn.failed") failure = ev.error?.message ?? "The model did not answer.";
+      },
+      reason,
+      { set: key ? { [CODEX_KEY_VAR]: key } : {}, unset: [] },
+    );
+  }
+  if (failure) throw new CheckError(clip(failure, 300));
+  if (!answered) throw new CheckError("The model did not answer.");
+}
+
+let testing = false;
+
+// `typed` is what the dialog holds right now, so a key can be tried before it is saved; an empty key keeps the saved one.
+export async function testProvider(kind: ProviderKind, typed: ProviderConfig = {}): Promise<string | null> {
+  const def = providerDef.get(kind);
+  if (!def) return "Unknown provider.";
+  if (testing) return "A test is already running.";
+  testing = true;
+  try {
+    const { providers, agents } = getSettings();
+    const saved = providers[kind] ?? {};
+    const cfg: ProviderConfig = {
+      ...saved,
+      ...(typed.key?.trim() ? { key: typed.key.trim() } : {}),
+      ...(typed.baseUrl?.trim() ? { baseUrl: typed.baseUrl.trim() } : {}),
+    };
+    if (def.auth === "key" && !cfg.key) return "Add the key first.";
+    const models = await check(kind, cfg);
+    // The model the agents will really use when this provider is the active one; otherwise the lightest it offers.
+    const chosen = agents[def.runtime].provider === kind ? agents[def.runtime].model : "";
+    const model = chosen || (nativeClaude(kind) ? "haiku" : (models[0]?.id ?? ""));
+    await ping(kind, cfg, model);
+    return null;
+  } catch (e) {
+    return clip((e as Error).message, 300);
+  } finally {
+    testing = false;
   }
 }

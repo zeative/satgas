@@ -110,3 +110,28 @@ test("a table copies as spreadsheet cells and exports as CSV, markup gone", () =
   expect(tableText(rows, "tsv")).toBe('Aplikasi\tInti\nMonveo\tInput suara, scan struk\nMoni\tPaling "mirip"');
   expect(tableText(rows, "csv")).toBe('Aplikasi,Inti\nMonveo,"Input suara, scan struk"\nMoni,"Paling ""mirip"""');
 });
+
+const texts = (parts: ReturnType<typeof parseInline>): string[] =>
+  parts.flatMap((p) => (p.type === "em" || p.type === "strong" ? [p.type, ...texts(p.children)] : [p.text]));
+
+test("single stars and underscores are emphasis, even around quotes, not stray marks", () => {
+  expect(texts(parseInline('misal: *"bikinin website"* atau *"risetin laptop 2026"*.'))).toEqual([
+    "misal: ",
+    "em",
+    '"bikinin website"',
+    " atau ",
+    "em",
+    '"risetin laptop 2026"',
+    ".",
+  ]);
+  expect(texts(parseInline("a _soft_ word"))).toEqual(["a ", "em", "soft", " word"]);
+  expect(texts(parseInline("***both***"))).toEqual(["strong", "em", "both"]);
+  expect(texts(parseInline("**bold with *inner* word**"))).toEqual(["strong", "bold with ", "em", "inner", " word"]);
+});
+
+test("stars and underscores that are not emphasis stay as written", () => {
+  for (const plain of ["2 * 3 * 4", "*.ts and *.js", "snake_case_name", "__init__.py", "a*b*c", "5*", "foo_ and _bar"]) {
+    expect(texts(parseInline(plain))).toEqual([plain]);
+  }
+  expect(parseInline("`*not em*`")).toEqual([{ type: "code", text: "*not em*" }]);
+});
