@@ -68,6 +68,8 @@ export function codexArgs(
   const model = agents.codex.model || (agents.codex.provider === "codex" ? config.codexModel : undefined);
   if (model) cmd.push("-m", model);
   if (agents.codex.effort) cmd.push("-c", `model_reasoning_effort=${JSON.stringify(agents.codex.effort)}`);
+  // The lead only plans. Left with tools it looks things up and answers by itself instead of giving the work to a task.
+  if (lead) cmd.push("-c", "features.shell_tool=false", "-c", "features.unified_exec=false", "-c", 'web_search="disabled"');
   cmd.push(...codexProviderArgs(agents.codex.provider, providers[agents.codex.provider] ?? {}));
   cmd.push(...mcp.args, ...codexHookArgs(tools), "-");
   return cmd;

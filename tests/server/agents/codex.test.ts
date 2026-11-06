@@ -235,6 +235,8 @@ test("inside a container Codex skips its sandbox, except for the lead", () => {
     expect(sandbox(codexArgs(dir))).toBe("danger-full-access");
     expect(sandbox(codexArgs(dir, undefined, null, true))).toBe("danger-full-access");
     expect(sandbox(codexArgs(dir, undefined, null, true, true))).toBe("read-only");
+    expect(codexArgs(dir, undefined, null, true, true)).toContain("features.shell_tool=false");
+    expect(codexArgs(dir)).not.toContain("features.shell_tool=false");
   } finally {
     config.container = before;
   }

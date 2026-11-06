@@ -1,7 +1,7 @@
 {
   "id": "satgas",
   "name": "Satgas",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Your own AI team, self-hosted. Describe what you want, and a lead hires the right agents, runs Claude Code and Codex in parallel, and puts the results on a shared canvas you can watch and edit.",
   "logo": "satgas.svg",
   "links": {
