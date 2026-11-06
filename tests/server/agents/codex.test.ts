@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import { rm } from "node:fs/promises";
-import { codexArgs, codexMcp, codexSpawnEnv, runCodex, shellBody } from "../../../src/server/agents/codex";
+import { codexArgs, codexMcp, codexSpawnEnv, readableCodexError, runCodex, shellBody } from "../../../src/server/agents/codex";
 import { AgentError } from "../../../src/server/agents/process";
 import { config } from "../../../src/server/config";
 import { teamServer } from "../../../src/server/team";
@@ -177,4 +177,19 @@ test("a variable Codex already has with another value stays inline instead of ch
 test("the spawn environment carries the MCP secrets the arguments name", () => {
   const mcp = codexMcp([{ id: "1", name: "pw", enabled: true, transport: "stdio", command: "npx", env: { SATGAS_TEST_TOKEN: "v" } }], {});
   expect(codexSpawnEnv(mcp).set).toMatchObject({ SATGAS_TEST_TOKEN: "v" });
+});
+
+test("a provider's refusal reads as its message, while a server error keeps the status a retry looks for", () => {
+  expect(
+    readableCodexError(
+      "unexpected status 404 Not Found: The model `gpt-x` does not exist or you do not have access to it., url: https://api.openai.com/v1/responses, cf-ray: abc, request id: req_1",
+    ),
+  ).toBe("The model `gpt-x` does not exist or you do not have access to it. Pick another model in the composer");
+  expect(readableCodexError("unexpected status 401 Unauthorized: Incorrect API key provided, url: https://x")).toBe(
+    "Incorrect API key provided",
+  );
+  expect(readableCodexError("unexpected status 503 Service Unavailable: busy, url: https://x")).toBe(
+    "unexpected status 503 Service Unavailable: busy",
+  );
+  expect(readableCodexError("Reconnecting... 1/5")).toBe("Reconnecting... 1/5");
 });

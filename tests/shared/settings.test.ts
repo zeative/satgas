@@ -1,5 +1,14 @@
 import { describe, expect, test } from "bun:test";
-import { maskSettings, restoreSecrets, SECRET_MASK, type Settings, sanitizeSettings, splitArgs } from "../../src/shared/settings";
+import {
+  activeAgent,
+  maskSettings,
+  restoreSecrets,
+  SECRET_MASK,
+  type Settings,
+  sanitizeSettings,
+  splitArgs,
+  withAgent,
+} from "../../src/shared/settings";
 
 const defaults: Settings = {
   agents: {
@@ -182,4 +191,23 @@ test("tasks at once only takes a value from the list", () => {
   const bad = sanitizeSettings({ concurrency: 500 }, defaults);
   expect(typeof ok === "object" && ok.concurrency).toBe(6);
   expect(typeof bad === "object" && bad.concurrency).toBe(3);
+});
+
+test("only one agent works at a time, and an old file with both on keeps Claude Code", () => {
+  const both = sanitizeSettings({ agents: { claude: { tasks: true }, codex: { tasks: true } } }, defaults);
+  if (typeof both === "string") throw new Error(both);
+  expect([both.agents.claude.tasks, both.agents.codex.tasks]).toEqual([true, false]);
+  const neither = sanitizeSettings({ agents: { claude: { tasks: false }, codex: { tasks: false } } }, defaults);
+  if (typeof neither === "string") throw new Error(neither);
+  expect(activeAgent(neither.agents)).toBe("claude");
+  const codex = sanitizeSettings({ agents: { claude: { tasks: false }, codex: { tasks: true } } }, defaults);
+  if (typeof codex === "string") throw new Error(codex);
+  expect(activeAgent(codex.agents)).toBe("codex");
+});
+
+test("turning one agent on turns the other off, and the reverse restores it", () => {
+  const on = withAgent(defaults.agents, "codex", true);
+  expect(activeAgent(on)).toBe("codex");
+  expect(on.claude.tasks).toBe(false);
+  expect(activeAgent(withAgent(on, "codex", false))).toBe("claude");
 });

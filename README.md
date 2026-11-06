@@ -28,7 +28,7 @@ A self-hosted workspace where AI coding agents work as a team on a shared canvas
 
 A coding agent in a terminal is one long scroll, and running several at once means juggling windows. Satgas gives them one place to work. You say what you want, a lead hires the people the job needs and splits the work, and you watch each of them work on the board. What they make lands there too, as cards you can move, edit and build on.
 
-The agents are the real [Claude Code](https://code.claude.com/docs) and [Codex](https://github.com/openai/codex) CLIs, running on your machine or server, so the result is real files in a real folder.
+The agents are the real [Claude Code](https://code.claude.com/docs) or [Codex](https://github.com/openai/codex) CLI, running on your machine or server, so the result is real files in a real folder. You pick one model, and Satgas uses whichever CLI serves it.
 
 > _Satgas_ is Indonesian for _satuan tugas_, a task force.
 
@@ -40,9 +40,9 @@ The agents are the real [Claude Code](https://code.claude.com/docs) and [Codex](
 ```mermaid
 flowchart LR
   You([You]) -->|one request| Lead[Lead]
-  Lead -->|hires and plans| A[Researcher<br/>Claude Code]
-  Lead --> B[Writer<br/>Claude Code]
-  Lead --> C[Engineer<br/>Codex]
+  Lead -->|hires and plans| A[Researcher]
+  Lead --> B[Writer]
+  Lead --> C[Engineer]
   A -->|findings| B
   B -->|copy| C
   A --> Board[(Board)]
@@ -76,7 +76,7 @@ flowchart LR
 **Runs without you**
 
 - **Schedules and webhooks.** Start work on an interval, at a time of day, or when another service calls.
-- **Channels** <sup>beta</sup>. Message your team from [Telegram or WhatsApp](#channels).
+- **Channels** <sup>experimental</sup>. Message your team from [Telegram or WhatsApp](#channels), off by default.
 
 **Set up your way**
 
@@ -93,8 +93,7 @@ The UI is in English and Bahasa Indonesia. It follows your system theme until yo
 **You need**
 
 - [Bun](https://bun.sh) 1.2 or newer
-- [Claude Code](https://code.claude.com/docs) installed and signed in, because the lead always runs on it
-- Optional: [Codex CLI](https://github.com/openai/codex), for tasks assigned to Codex
+- [Claude Code](https://code.claude.com/docs) or the [Codex CLI](https://github.com/openai/codex), for the provider you want to use
 
 **Run it**
 
@@ -130,7 +129,7 @@ bun run build      # creates dist/satgas
 
 ## Channels
 
-Message your team without opening Satgas. Turn a channel on under **Integrations → Channels**, then pair your chat with the one-time code shown there.
+Message your team without opening Satgas. Channels are experimental and have not been tried on real accounts yet, so they stay off until you set `SATGAS_CHANNELS=1`. Then turn a channel on under **Integrations → Channels** and pair your chat with the one-time code shown there.
 
 - **Telegram** uses a bot of your own, made with [@BotFather](https://t.me/BotFather). Satgas connects outward, so it needs no public address.
 - **WhatsApp** connects with [zaileys](https://github.com/zeative/zaileys) by scanning a QR code. This is not an official WhatsApp connection and a number can get banned, so use a spare one.
@@ -211,6 +210,7 @@ Most settings live in the app under **Configurations** and **Integrations**. Env
 | `SATGAS_LEAN_AGENTS`                     | `1`                                                 | Set to `0` to let agents load your own CLI settings, hooks and MCP servers |
 | `SATGAS_TEAM_TALK`                       | follows the setting                                 | Force team talk on (`1`) or off (`0`)                                      |
 | `SATGAS_CLAUDE_BIN` / `SATGAS_CODEX_BIN` | `claude` / `codex`                                  | Paths to the CLIs                                                          |
+| `SATGAS_CHANNELS`                        | off                                                 | Set to `1` to turn on the experimental chat channels                       |
 | `SATGAS_TELEGRAM_API`                    | `https://api.telegram.org`                          | Your own Telegram Bot API server                                           |
 | `SATGAS_REPO`                            | `zeative/satgas`                                    | Repository shown on the home page, for forks                               |
 | `SATGAS_UPDATE_API`                      | `https://api.github.com`                            | Where releases are read from, for forks                                    |

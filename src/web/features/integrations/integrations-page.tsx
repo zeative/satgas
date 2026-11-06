@@ -17,6 +17,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { t } from "@/i18n";
 import { cn } from "@/lib/utils";
+import { useRuns } from "@/stores/runs";
 import { loadSettings, saveSettings, useSettings } from "@/stores/settings";
 import { CATALOG, CATEGORIES } from "../../../shared/catalog";
 import type { Runtime } from "../../../shared/providers";
@@ -60,7 +61,8 @@ export function IntegrationsPage() {
   const [editing, setEditing] = useState<McpServer | "new" | null>(null);
   const [skillDialog, setSkillDialog] = useState<SkillDialog | null>(null);
   const [editingTool, setEditingTool] = useState<ToolSetting | "new" | null>(null);
-  const current = search.tab ?? "connectors";
+  const channels = useRuns((r) => r.config.channels === true);
+  const current = search.tab === "channels" && !channels ? "connectors" : (search.tab ?? "connectors");
   const view = search.view ?? "discover";
   const go = (next: IntegrationsSearch) => {
     const detail = !!(next.connector || next.agent || next.skill || next.pack || next.tool);
@@ -108,7 +110,7 @@ export function IntegrationsPage() {
                   <TabsTrigger value="agents">{ti.agents}</TabsTrigger>
                   <TabsTrigger value="skills">{t.skills.tab}</TabsTrigger>
                   <TabsTrigger value="tools">{t.tools.tab}</TabsTrigger>
-                  <TabsTrigger value="channels">{t.channels.tab}</TabsTrigger>
+                  {channels && <TabsTrigger value="channels">{t.channels.tab}</TabsTrigger>}
                 </TabsList>
                 {current === "tools" && (
                   <Button size="sm" className="ms-auto" onClick={() => setEditingTool("new")}>

@@ -199,10 +199,8 @@ export const providerDef = new Map(PROVIDERS.map((p) => [p.kind, p]));
 export const PROVIDER_KINDS = PROVIDERS.map((p) => p.kind);
 export const DEFAULT_PROVIDER: Record<Runtime, ProviderKind> = { claude: "claude", codex: "codex" };
 
-// The lead always runs on Claude Code, so only these can start work. A CLI sign-in comes last: it needs a terminal on the server.
-export const LEAD_PROVIDERS = PROVIDERS.filter((p) => p.runtime === "claude").sort(
-  (a, b) => Number(a.auth === "cli") - Number(b.auth === "cli"),
-);
+// Any provider can start work, since the lead runs on whichever agent serves it. A CLI sign-in comes last: it needs a terminal on the server.
+export const LEAD_PROVIDERS = [...PROVIDERS].sort((a, b) => Number(a.auth === "cli") - Number(b.auth === "cli"));
 
 // No answer yet means not blocked: a slow check must not lock out someone already connected.
 export function leadBlocked(selected: ProviderKind, statuses: { kind: ProviderKind; state: string }[] | null): boolean {

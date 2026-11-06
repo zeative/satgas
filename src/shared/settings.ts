@@ -151,6 +151,15 @@ function server(v: unknown): McpServer | string {
 }
 
 // Settings arrive from the browser, so every field is checked and bounded; the result or a message for the person.
+// One agent works at a time, chosen through the model in the composer, and the lead runs on it too.
+export const activeAgent = (agents: Settings["agents"]): Runtime => (agents.codex.tasks && !agents.claude.tasks ? "codex" : "claude");
+
+// Turning one agent on turns the other off, and the reverse, so undoing a change restores the first.
+export function withAgent(agents: Settings["agents"], agent: Runtime, on: boolean): Settings["agents"] {
+  const claude = agent === "claude" ? on : !on;
+  return { claude: { ...agents.claude, tasks: claude }, codex: { ...agents.codex, tasks: !claude } };
+}
+
 export function sanitizeSettings(input: unknown, defaults: Settings): Settings | string {
   const raw = input as { agents?: Record<string, Record<string, unknown>>; mcpServers?: unknown };
   if (!raw || typeof raw !== "object") return "The settings were malformed.";
@@ -158,10 +167,12 @@ export function sanitizeSettings(input: unknown, defaults: Settings): Settings |
   const codex = raw.agents?.codex ?? {};
   const prov = providers((raw as { providers?: unknown }).providers ?? defaults.providers);
   if (typeof prov === "string") return prov;
+  const codexTasks = typeof codex.tasks === "boolean" ? codex.tasks : defaults.agents.codex.tasks;
+  const claudeTasks = (typeof claude.tasks === "boolean" ? claude.tasks : defaults.agents.claude.tasks) || !codexTasks;
   const out: Settings = {
     agents: {
       claude: {
-        tasks: typeof claude.tasks === "boolean" ? claude.tasks : defaults.agents.claude.tasks,
+        tasks: claudeTasks,
         provider: providerFor("claude", claude.provider, defaults.agents.claude.provider ?? DEFAULT_PROVIDER.claude),
         effort:
           claude.effort === "" || CLAUDE_EFFORTS.includes(claude.effort as Effort)
@@ -175,7 +186,7 @@ export function sanitizeSettings(input: unknown, defaults: Settings): Settings |
           : defaults.agents.claude.permissionMode,
       },
       codex: {
-        tasks: typeof codex.tasks === "boolean" ? codex.tasks : defaults.agents.codex.tasks,
+        tasks: !claudeTasks,
         provider: providerFor("codex", codex.provider, defaults.agents.codex.provider ?? DEFAULT_PROVIDER.codex),
         // Codex lists its own levels per model, so any short lowercase word passes through.
         effort: typeof codex.effort === "string" && /^[a-z]{0,12}$/.test(codex.effort) ? codex.effort : defaults.agents.codex.effort,

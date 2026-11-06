@@ -304,7 +304,7 @@ test("several messages sent during one round run together as one next round", as
   expect(getRun(id)?.rounds).toEqual(["satu\n\ndua"]);
 });
 
-test("a task the provider refuses runs once more on the other agent, and the lead learns why", async () => {
+test("a task the provider refuses is not retried on another agent, and the reason stays on the task", async () => {
   setFake({
     FAKE_CLI_OUTPUT: planned({
       title: "Issues",
@@ -320,22 +320,12 @@ test("a task the provider refuses runs once more on the other agent, and the lea
       is_error: true,
       result: 'API Error: 400 {"code":"InvalidParameter","message":"Input data may contain inappropriate content."}',
     }),
-    FAKE_CLI_CODEX_OUTPUT: jsonl(
-      { type: "item.completed", item: { type: "agent_message", text: "Mapped 27 issues." } },
-      { type: "turn.completed" },
-    ),
   });
   const { id } = startRun("Map the issues of the jailbreaks repo", dir);
   await until(() => getRun(id)?.status === "done" || getRun(id)?.status === "failed");
   const node = getRun(id)?.nodes.find((n) => n.id === "map");
-  expect(getRun(id)?.status).toBe("done");
-  expect(node).toMatchObject({
-    status: "done",
-    agent: "codex",
-    output: "Mapped 27 issues.",
-    recovery: { kind: "refused", from: "claude", to: "codex" },
-  });
-  expect(node?.error).toBeUndefined();
+  expect(node).toMatchObject({ status: "failed", agent: "claude", recovery: { kind: "refused", from: "claude" } });
+  expect(node?.recovery?.to).toBeUndefined();
 });
 
 test("the lead changes setup from a message: known changes apply with Undo, outside code waits for Allow", async () => {

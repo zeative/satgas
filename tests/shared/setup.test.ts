@@ -52,6 +52,7 @@ test("each change comes with the way back", () => {
   const agent = applyToSettings(base, { op: "agent", agent: "codex", tasks: true }, id);
   if (typeof agent === "string") throw new Error(agent);
   expect(agent.settings.agents.codex.tasks).toBe(true);
+  expect(agent.settings.agents.claude.tasks).toBe(false);
   expect(agent.undo).toEqual([{ op: "agent", agent: "codex", tasks: false }]);
 });
 

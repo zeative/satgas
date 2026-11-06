@@ -110,7 +110,7 @@ await prepareSkills().catch((e) => console.error(`Could not prepare skills: ${(e
 void pruneUploads();
 startPullWatch();
 startSecretSweep();
-void startChannels().catch((e) => console.error(`Could not start channels: ${(e as Error).message}`));
+if (config.channels) void startChannels().catch((e) => console.error(`Could not start channels: ${(e as Error).message}`));
 await loadSchedules();
 await loadMemory();
 startSchedules();
@@ -159,6 +159,7 @@ const server: Server<SocketData> = Bun.serve({
         concurrency: config.concurrency ?? getSettings().concurrency,
         concurrencyFromEnv: config.concurrency !== null,
         version: pkg.version,
+        channels: config.channels,
         // A hung CLI must not hold up the composer; the agent pill simply stays hidden.
         agents: await Promise.race([detectAgents(), Bun.sleep(1500).then(() => null)]),
       }),

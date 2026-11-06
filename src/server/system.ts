@@ -83,9 +83,9 @@ export function describeSystem(): string {
   const codex = agents.codex;
   const claudeLine = claude.tasks
     ? `Claude Code: on, model ${claudeModel() || "its CLI default"} through ${providerName(claude.provider ?? DEFAULT_PROVIDER.claude)}; you, the lead, ${claude.plannerModel || config.plannerModel ? `use ${claude.plannerModel || config.plannerModel}` : "use the same model"}`
-    : "Claude Code: off for tasks (it still plans)";
+    : "Claude Code: off";
   const codexLine = codex.tasks
-    ? `Codex: on, model ${codex.model || config.codexModel || "its CLI default"} through ${providerName(codex.provider)}`
+    ? `Codex: on, model ${codex.model || config.codexModel || "its CLI default"} through ${providerName(codex.provider)}; you, the lead, use the same model`
     : "Codex: off";
 
   const on = mcpServers.filter((s) => s.enabled);

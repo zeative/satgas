@@ -6,11 +6,13 @@ import { cleanCommands, MEMORY_PER_ROUND, MEMORY_TYPES } from "../shared/memory"
 import { parsePartial } from "../shared/partial-json";
 import { type Asked, cleanQuestions, describeAnswers, MAX_OPTIONS, MAX_QUESTIONS } from "../shared/questions";
 import { MIN_EVERY_MINUTES } from "../shared/schedules";
+import { activeAgent } from "../shared/settings";
 import { MAX_SETUP } from "../shared/setup";
 import { cleanHires, MAX_TEAM, type Member } from "../shared/team";
-import { langName, type Plan, type PlanDraft, type PlanNode } from "../shared/types";
+import { langName, type Plan, type PlanDraft, type PlanNode, type Usage } from "../shared/types";
 import { runClaude } from "./agents/claude";
-import { AgentError, type AgentRequest } from "./agents/process";
+import { runCodex } from "./agents/codex";
+import { AgentError, type AgentRequest, type AgentResult } from "./agents/process";
 import { config } from "./config";
 import { getSettings, taskAgents } from "./settings";
 import { describeSystem } from "./system";
@@ -461,19 +463,60 @@ export async function plan(
       ? 'use "claude" by default; use "codex" for focused, well-specified coding or refactoring work.'
       : `always use "${agents[0]}"; it is the only agent turned on.`;
   const drafts = req.onDraft ? draftReader(req.onDraft) : null;
-  const { structured, output, usage } = await runClaude(
-    { ...req, prompt },
-    {
-      systemPrompt: SYSTEM.replace("AGENT_RULE", rule),
-      jsonSchema: req.asked?.answers ? ANSWERED_SCHEMA : req.mustAsk ? ASK_SCHEMA : PLAN_SCHEMA,
-      // No planner model of its own: the lead answers on the composer's model, like the tasks.
-      model: getSettings().agents.claude.plannerModel || config.plannerModel || undefined,
-      tools: "",
-      ...(drafts ? { onPartial: drafts.onPartial } : {}),
-    },
-  ).finally(() => drafts?.stop());
+  const system = SYSTEM.replace("AGENT_RULE", rule);
+  const schema = req.asked?.answers ? ANSWERED_SCHEMA : req.mustAsk ? ASK_SCHEMA : PLAN_SCHEMA;
+  const codex = activeAgent(getSettings().agents) === "codex";
+  const askLead = (note = "") =>
+    codex
+      ? // OpenAI's strict schemas need every field required, which these are not, so Codex is told the shape instead.
+        runCodex(
+          { ...req, prompt: `${system}\n\n${prompt}\n\n${codexReply(schema, schema === PLAN_SCHEMA)}${note}`, readOnly: true },
+          { bare: true },
+        )
+      : runClaude(
+          { ...req, prompt },
+          {
+            systemPrompt: system,
+            jsonSchema: schema,
+            // No planner model of its own: the lead answers on the composer's model, like the tasks.
+            model: getSettings().agents.claude.plannerModel || config.plannerModel || undefined,
+            tools: "",
+            ...(drafts ? { onPartial: drafts.onPartial } : {}),
+          },
+        );
+  const first = await askLead().finally(() => drafts?.stop());
+  try {
+    return settlePlan(first, req, team, agents);
+  } catch (e) {
+    // Nothing forces Codex into the plan's shape, so a bad answer gets one more try, told what was wrong.
+    if (!codex || !(e instanceof AgentError)) throw e;
+    req.onLog({ kind: "info", text: "The plan came back invalid, so the lead is trying again" });
+    const second = await askLead(`\n\nYour previous reply was rejected: ${e.message} Reply again with that fixed.`);
+    return settlePlan({ ...second, usage: addUsage(first.usage, second.usage) }, req, team, agents);
+  }
+}
+
+function addUsage(a: Usage | undefined, b: Usage | undefined): Usage | undefined {
+  if (!a || !b) return b ?? a;
+  const byModel = { ...a.byModel };
+  for (const [model, u] of Object.entries(b.byModel ?? {})) {
+    const had = byModel[model];
+    byModel[model] = had
+      ? { input: had.input + u.input, read: had.read + u.read, write: had.write + u.write, output: had.output + u.output }
+      : u;
+  }
+  return { input: a.input + b.input, cached: a.cached + b.cached, output: a.output + b.output, byModel };
+}
+
+function settlePlan(
+  { structured, output, usage }: AgentResult,
+  req: Parameters<typeof plan>[0],
+  team: Member[],
+  agents: ReturnType<typeof taskAgents>,
+): Plan {
   const result = (structured ?? safeParse(output)) as Plan | undefined;
-  if (!result) throw new AgentError("The planner did not return a valid plan.");
+  if (!result || typeof result !== "object" || !(result.nodes === undefined || Array.isArray(result.nodes)))
+    throw new AgentError("The planner did not return a valid plan.");
   if (usage) result.usage = usage;
   else delete result.usage;
   // Questions only stand in for a plan, and only once per request.
@@ -491,8 +534,10 @@ export async function plan(
   const memory = req.memory?.learn ? cleanCommands(result.memory) : [];
   if (memory.length) result.memory = memory;
   else delete result.memory;
+  // Told the shape rather than held to it, a model may leave out a task's dependencies.
+  const nodes = (result.nodes ?? []).map((n) => ({ ...n, dependsOn: Array.isArray(n.dependsOn) ? n.dependsOn : [] }));
   const hires = cleanHires(result.hires, team, agents);
-  result.nodes = staff(result.nodes ?? [], team, hires);
+  result.nodes = staff(nodes, team, hires);
   // Only people who got a task join the team.
   const used = new Set(result.nodes.map((n) => n.member));
   result.hires = hires.filter((h) => used.has(h.id));
@@ -535,10 +580,23 @@ async function listDir(cwd: string): Promise<string> {
   }
 }
 
-function safeParse(s: string): unknown {
-  try {
-    return JSON.parse(s);
-  } catch {
-    return undefined;
+const codexReply = (schema: unknown, mayPlan: boolean) =>
+  [
+    `Reply with one JSON object and nothing else. It must match this JSON schema:\n${JSON.stringify(schema)}`,
+    // Weaker models fill every field of a shape they are shown, and turn a clear request into a question.
+    ...(mayPlan
+      ? [
+          'Leave "questions" empty and plan the tasks unless the person must decide something only they know. Never ask what the request already says.',
+        ]
+      : []),
+  ].join("\n\n");
+
+// A model told to answer in JSON may still wrap it in a code fence or a sentence.
+export function safeParse(s: string): unknown {
+  for (const text of [s, s.slice(s.indexOf("{"), s.lastIndexOf("}") + 1)]) {
+    try {
+      return JSON.parse(text);
+    } catch {}
   }
+  return undefined;
 }

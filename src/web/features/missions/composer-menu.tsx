@@ -18,7 +18,7 @@ import { Switch } from "@/components/ui/switch";
 import { t } from "@/i18n";
 import { loadSettings, saveSettings, useSettings } from "@/stores/settings";
 import { loadSkills, useSkills } from "@/stores/skills";
-import type { Settings } from "../../../shared/settings";
+import { type Settings, withAgent } from "../../../shared/settings";
 
 // The composer's + menu, shared by Home and the board: files, skills, agent switches and connectors.
 export function ComposerMenu({ onSkill, onAddFiles }: { onSkill?: (name: string) => void; onAddFiles?: () => void }) {
@@ -76,9 +76,7 @@ export function ComposerMenu({ onSkill, onAddFiles }: { onSkill?: (name: string)
                     icon={<Mark className="size-4" />}
                     label={t.agent[kind]}
                     on={settings.agents[kind].tasks}
-                    onToggle={(tasks) =>
-                      void persist({ ...settings, agents: { ...settings.agents, [kind]: { ...settings.agents[kind], tasks } } })
-                    }
+                    onToggle={(tasks) => void persist({ ...settings, agents: withAgent(settings.agents, kind, tasks) })}
                   />
                 ))}
                 <DropdownMenuSeparator />

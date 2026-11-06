@@ -2,7 +2,7 @@
 // connectors, built-in tools, switches) apply at once and can be undone; anything that would run code from outside
 // Satgas waits for the person's Allow in the chat. Keys never travel here: a connector that needs one asks in the chat.
 import { byId, catalogOf, toServer } from "./catalog";
-import type { Settings } from "./settings";
+import { type Settings, withAgent } from "./settings";
 import { TOOL_WHENS, type ToolWhen, toolDef } from "./tools";
 import type { AgentKind } from "./types";
 
@@ -144,8 +144,8 @@ export function applyToSettings(s: Settings, c: SetupCommand, newId: () => strin
     };
     if ((c.tasks === undefined || c.tasks === before.tasks) && (c.model === undefined || c.model === before.model))
       return "Nothing to change on that agent";
-    const next = { ...before, ...(c.tasks !== undefined ? { tasks: c.tasks } : {}), ...(c.model !== undefined ? { model: c.model } : {}) };
-    return { settings: { ...s, agents: { ...s.agents, [c.agent]: next } }, undo: [undo] };
+    const agents = { ...s.agents, [c.agent]: { ...before, ...(c.model !== undefined ? { model: c.model } : {}) } };
+    return { settings: { ...s, agents: c.tasks !== undefined ? withAgent(agents, c.agent, c.tasks) : agents }, undo: [undo] };
   }
   if (c.op === "tool-off") {
     const stored = s.tools.find((x) => x.id === c.toolId);

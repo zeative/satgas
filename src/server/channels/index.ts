@@ -2,6 +2,7 @@ import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { CHANNEL_KINDS, type ChannelKind, type ChannelState, type ChannelStatus, type ChannelsView } from "../../shared/channels";
 import { leadBlocked } from "../../shared/providers";
+import { activeAgent } from "../../shared/settings";
 import { config } from "../config";
 import { answerRun, approveTask, cancelRun, followUp, startRun } from "../orchestrator";
 import { providerStatuses } from "../providers";
@@ -34,7 +35,10 @@ const runtime: Runtime = {
   declineSecret: async (board, ask) => (await answerSecret(board, ask, undefined, true)) === null,
   cancel: cancelRun,
   hasAgents: () => taskAgents().length > 0,
-  hasModel: async () => !leadBlocked(getSettings().agents.claude.provider, await providerStatuses()),
+  hasModel: async () => {
+    const { agents } = getSettings();
+    return !leadBlocked(agents[activeAgent(agents)].provider, await providerStatuses());
+  },
   boardUrl: (board) =>
     `${config.publicUrl ?? `http://localhost:${process.env.NODE_ENV === "production" ? config.port : config.webPort}`}/boards/${board}`,
 };

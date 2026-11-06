@@ -46,8 +46,11 @@ const run = (): Run => ({
 });
 
 test("looks up what each token names and leaves the rest as words", async () => {
-  const refs = await resolveRefs(run(), '/ask /claude /nope tolong @codex rapikan @src/app.ts lihat @"tujuan & kpi" @../etc/passwd @ghost');
-  expect(refs).toEqual({ ask: true, only: "claude", agents: ["codex"], files: ["src/app.ts"], cards: ["k1"] });
+  const refs = await resolveRefs(
+    run(),
+    '/ask /claude /nope tolong @claude rapikan @src/app.ts lihat @"tujuan & kpi" @../etc/passwd @ghost',
+  );
+  expect(refs).toEqual({ ask: true, only: "claude", agents: ["claude"], files: ["src/app.ts"], cards: ["k1"] });
 });
 
 test("describes the lookup in words for the planner and the agents", async () => {

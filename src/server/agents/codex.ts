@@ -83,18 +83,29 @@ export const shellBody = (cmd: string) => /^(?:\/\S*\/)?(?:ba|z|da)?sh\s+-l?c\s+
 const mcpLine = (item: { server?: unknown; tool?: unknown; arguments?: unknown }) =>
   `mcp__${item.server}__${item.tool} ${describeInput(item.arguments)}`.trim();
 
-// Codex warns about the hook-trust flag on every run; Satgas wrote those hooks itself, so it is no error worth showing.
-const HOOK_TRUST_NOTICE = /dangerously-bypass-hook-trust/;
+// Codex warns about the hook-trust flag on every run (Satgas wrote those hooks itself) and about models it has no notes on;
+// neither stops the work, so neither is an error worth showing.
+const NOTICE = /dangerously-bypass-hook-trust|Model metadata for .* not found/;
 
-export async function runCodex(req: AgentRequest): Promise<AgentResult> {
+// Codex passes on a provider's refusal with the status and request details around it. Server errors keep their status, which
+// is how a retry recognises them.
+export function readableCodexError(text: string): string {
+  const message = text
+    .replace(/^unexpected status 4\d\d[^:]*:\s*/i, "")
+    .replace(/,\s*url:\s[\s\S]*$/i, "")
+    .trim();
+  return /does not exist or you do not have access/i.test(message) ? `${message} Pick another model in the composer` : message;
+}
+
+// `bare` is the lead's run: it only answers, so it gets no connectors or tool hooks.
+export async function runCodex(req: AgentRequest, { bare = false } = {}): Promise<AgentResult> {
   let last = "";
   let failure: string | undefined;
   const usage = { input: 0, cached: 0, output: 0 };
-  const mcp = codexMcp([
-    ...getSettings().mcpServers,
-    ...(req.teamToken ? [teamServer(req.teamToken, config.port, true, !!req.teamTalk)] : []),
-  ]);
-  const tools = await prepareToolHooks("codex");
+  const mcp = codexMcp(
+    bare ? [] : [...getSettings().mcpServers, ...(req.teamToken ? [teamServer(req.teamToken, config.port, true, !!req.teamTalk)] : [])],
+  );
+  const tools = bare ? null : await prepareToolHooks("codex");
   try {
     await runJsonl(
       codexArgs(req.cwd, mcp, tools, !!req.readOnly),
@@ -121,7 +132,7 @@ export async function runCodex(req: AgentRequest): Promise<AgentResult> {
             }
           } else if (item.type === "command_execution" && item.exit_code && item.exit_code !== 0) {
             req.onLog({ kind: "error", text: `Command failed (exit ${item.exit_code})` });
-          } else if (item.type === "error" && item.message && !HOOK_TRUST_NOTICE.test(item.message)) {
+          } else if (item.type === "error" && item.message && !NOTICE.test(item.message)) {
             req.onLog({ kind: "error", text: clip(item.message, 300) });
           }
         } else if (ev.type === "turn.completed") {
@@ -131,10 +142,10 @@ export async function runCodex(req: AgentRequest): Promise<AgentResult> {
           // Errors before this were retries the turn recovered from ("Reconnecting... 1/5").
           failure = undefined;
         } else if (ev.type === "turn.failed") {
-          failure = ev.error?.message ?? "Codex failed.";
+          failure = readableCodexError(ev.error?.message ?? "Codex failed.");
         } else if (ev.type === "error" && ev.message) {
-          req.onLog({ kind: "error", text: clip(ev.message, 300) });
-          failure = ev.message;
+          failure = readableCodexError(ev.message);
+          req.onLog({ kind: "error", text: clip(failure, 300) });
         }
       },
       () => (failure ? clip(failure, 400) : undefined),

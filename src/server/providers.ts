@@ -149,29 +149,43 @@ async function check(kind: ProviderKind, cfg: ProviderConfig): Promise<ModelInfo
       // Agents need tool calls, so models without them would only fail mid-task.
       return list(data)
         .filter((m) => Array.isArray(m.supported_parameters) && m.supported_parameters.includes("tools"))
-        .map((m) => ({ id: String(m.id), name: String(m.name ?? m.id), desc: contextOf(m.context_length) }));
+        .map((m) => ({
+          id: String(m.id),
+          name: String(m.name ?? m.id),
+          desc: contextOf(m.context_length),
+          efforts: claudeLevels((m.reasoning as { supported_efforts?: unknown } | null)?.supported_efforts),
+        }));
     }
     case "ollama": {
       const data = (await json(`${base}/api/tags`, {}, `Ollama is not running at \`${base}\`.`)) as {
         models?: { name?: string; details?: { parameter_size?: string; quantization_level?: string } }[];
       };
-      return (data.models ?? []).flatMap((m) =>
-        m.name
-          ? [
-              {
-                id: m.name,
-                name: m.name,
-                desc: [m.details?.parameter_size, m.details?.quantization_level].filter(Boolean).join(" · ") || undefined,
-              },
-            ]
-          : [],
+      return Promise.all(
+        (data.models ?? []).flatMap((m) =>
+          m.name
+            ? [
+                ollamaLevels(base, m.name).then((efforts) => ({
+                  id: m.name as string,
+                  name: m.name as string,
+                  desc: [m.details?.parameter_size, m.details?.quantization_level].filter(Boolean).join(" · ") || undefined,
+                  efforts,
+                })),
+              ]
+            : [],
+        ),
       );
     }
     case "codex":
       await codexSignedIn();
       return codexModels();
-    case "openai":
-      return openaiModels(await json("https://api.openai.com/v1/models", bearer(key))).filter((m) => /^(gpt-|o\d|codex)/.test(m.id));
+    case "openai": {
+      const models = openaiModels(await json("https://api.openai.com/v1/models", bearer(key))).filter(
+        (m) => /^(gpt-|o\d|codex)/.test(m.id) && !OPENAI_NOT_AGENT.test(m.id),
+      );
+      // OpenAI's list says nothing about reasoning, so levels come from Codex's cache for the models it knows.
+      const known = new Map((await codexCache()).map((m) => [m.slug, m]));
+      return chatModels(models).map((m) => ({ ...m, ...levelsOf(known.get(m.id)) }));
+    }
     case "groq":
       return openaiModels(await json(`${base}/models`, bearer(key)));
     case "lmstudio":
@@ -204,6 +218,25 @@ async function json(url: string, headers: Record<string, string>, unreachable?: 
   });
 }
 
+// `--effort` refuses anything else, so a model's `none` or `minimal` cannot be offered. No defaultEffort here: without the
+// flag Claude Code picks the level itself, not the model.
+function claudeLevels(levels: unknown): string[] | undefined {
+  if (!Array.isArray(levels)) return undefined;
+  const usable = CLAUDE_EFFORTS.filter((e) => levels.includes(e));
+  return usable.length ? usable : undefined;
+}
+
+// `thinking.values` holds named levels, or only true and false for a model with a plain on/off switch.
+async function ollamaLevels(base: string, model: string): Promise<string[] | undefined> {
+  try {
+    const res = await fetch(`${base}/api/show`, { method: "POST", body: JSON.stringify({ model }), signal: AbortSignal.timeout(TIMEOUT) });
+    if (!res.ok) return undefined;
+    return claudeLevels(((await res.json()) as { thinking?: { values?: unknown } }).thinking?.values);
+  } catch {
+    return undefined;
+  }
+}
+
 const list = (data: unknown): Record<string, unknown>[] => {
   const d = (data as { data?: unknown })?.data;
   return Array.isArray(d) ? (d as Record<string, unknown>[]) : [];
@@ -213,6 +246,7 @@ const list = (data: unknown): Record<string, unknown>[] => {
 // entries; agents can only use chat models, and a dated snapshot is noise next to its own alias.
 const NOT_CHAT =
   /mock|^pre-|image|audio|asr|tts|realtime|omni|embedding|rerank|^wan|^text-|-mt-|^qwen-mt|ocr|character|-vl|vl-|livetranslate|speech|tingwu|intent|ccai/i;
+const OPENAI_NOT_AGENT = /transcribe|diarize|search|instruct/;
 const SNAPSHOT = /-(\d{4}-\d{2}-\d{2}|\d{4})$/;
 export function chatModels(models: ModelInfo[]): ModelInfo[] {
   const ids = new Set(models.map((m) => m.id));
@@ -267,27 +301,35 @@ async function codexSignedIn() {
 }
 
 // Codex caches the models its account can use, with the reasoning levels each one takes.
-async function codexModels(): Promise<ModelInfo[]> {
+async function codexCache(): Promise<Record<string, unknown>[]> {
   const file = join(process.env.CODEX_HOME ?? join(homedir(), ".codex"), "models_cache.json");
   try {
     const data = (await Bun.file(file).json()) as { models?: Record<string, unknown>[] };
-    return (data.models ?? [])
-      .filter((m) => m.visibility === "list" && typeof m.slug === "string")
-      .sort((a, b) => Number(a.priority ?? 0) - Number(b.priority ?? 0))
-      .map((m) => ({
-        id: String(m.slug),
-        name: String(m.display_name ?? m.slug),
-        // Shown as a caption, so a closing period goes.
-        desc: typeof m.description === "string" && m.description ? m.description.replace(/\.\s*$/, "") : undefined,
-        efforts: Array.isArray(m.supported_reasoning_levels)
-          ? (m.supported_reasoning_levels as { effort?: string }[]).flatMap((l) => (l.effort ? [l.effort] : []))
-          : undefined,
-        defaultEffort: typeof m.default_reasoning_level === "string" ? m.default_reasoning_level : undefined,
-      }));
+    return (data.models ?? []).filter((m) => typeof m.slug === "string");
   } catch {
     // No cache yet just means Codex has not run; its default model still works.
     return [];
   }
+}
+
+const levelsOf = (m: Record<string, unknown> | undefined): Pick<ModelInfo, "efforts" | "defaultEffort"> => ({
+  efforts: Array.isArray(m?.supported_reasoning_levels)
+    ? (m.supported_reasoning_levels as { effort?: string }[]).flatMap((l) => (l.effort ? [l.effort] : []))
+    : undefined,
+  defaultEffort: typeof m?.default_reasoning_level === "string" ? m.default_reasoning_level : undefined,
+});
+
+async function codexModels(): Promise<ModelInfo[]> {
+  return (await codexCache())
+    .filter((m) => m.visibility === "list")
+    .sort((a, b) => Number(a.priority ?? 0) - Number(b.priority ?? 0))
+    .map((m) => ({
+      id: String(m.slug),
+      name: String(m.display_name ?? m.slug),
+      // Shown as a caption, so a closing period goes.
+      desc: typeof m.description === "string" && m.description ? m.description.replace(/\.\s*$/, "") : undefined,
+      ...levelsOf(m),
+    }));
 }
 
 const PING_TIMEOUT = 60_000;

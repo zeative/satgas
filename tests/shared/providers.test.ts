@@ -84,7 +84,7 @@ describe("leadBlocked", () => {
         { kind: "codex", state: "ok" },
       ]),
     ).toBe(true);
-    expect(LEAD_PROVIDERS.every((p) => p.runtime === "claude")).toBe(true);
+    expect(LEAD_PROVIDERS).toHaveLength(PROVIDERS.length);
   });
 
   test("offers the CLI sign-in last, since it needs a terminal on the server", () => {

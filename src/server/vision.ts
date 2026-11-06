@@ -160,12 +160,12 @@ export async function canSee(kind: ProviderKind, model: string): Promise<boolean
   return (await sight(kind, model)) ?? SEES_BY_NAME.test(model);
 }
 
-// The Claude agent plans and works; Codex counts only while it takes tasks.
+// Only the agent working now counts.
 export async function blindAgents(): Promise<{ claude: boolean; codex: boolean }> {
   const { claude, codex } = getSettings().agents;
   const codexModel = codex.model || (codex.provider === "codex" ? (config.codexModel ?? "") : "");
   const [claudeSees, codexSees] = await Promise.all([
-    canSee(claude.provider, claudeModel()),
+    claude.tasks ? canSee(claude.provider, claudeModel()) : Promise.resolve(true),
     codex.tasks ? canSee(codex.provider, codexModel) : Promise.resolve(true),
   ]);
   return { claude: !claudeSees, codex: !codexSees };

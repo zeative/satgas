@@ -9,13 +9,14 @@ import { lang, t } from "@/i18n";
 import { cn } from "@/lib/utils";
 import { loadProviders, useProviders } from "@/stores/providers";
 import { loadSettings, saveSettings, useSettings } from "@/stores/settings";
-import { LEAD_PROVIDERS, leadBlocked, type ProviderDef, type ProviderKind } from "../../../shared/providers";
+import { LEAD_PROVIDERS, leadBlocked, type ProviderDef, type ProviderKind, providerDef } from "../../../shared/providers";
+import { activeAgent, withAgent } from "../../../shared/settings";
 
 const tp = t.picker;
 
 // True once the checks answer and the lead has no working provider; an unknown answer never blocks anyone.
 export function useNeedsProvider() {
-  const selected = useSettings((s) => s.settings?.agents.claude.provider);
+  const selected = useSettings((s) => (s.settings ? s.settings.agents[activeAgent(s.settings.agents)].provider : undefined));
   const statuses = useProviders((s) => s.statuses);
   useEffect(() => {
     if (!useProviders.getState().statuses) void loadProviders();
@@ -27,8 +28,9 @@ export function useNeedsProvider() {
 function setLeadProvider(kind: ProviderKind) {
   const settings = useSettings.getState().settings;
   if (!settings) return;
-  const claude = { ...settings.agents.claude, provider: kind, model: "", effort: "" as const };
-  void saveSettings({ ...settings, agents: { ...settings.agents, claude } });
+  const runtime = providerDef.get(kind)?.runtime ?? "claude";
+  const agents = withAgent(settings.agents, runtime, true);
+  void saveSettings({ ...settings, agents: { ...agents, [runtime]: { ...agents[runtime], provider: kind, model: "", effort: "" } } });
 }
 
 function ProviderChoices() {

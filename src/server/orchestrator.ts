@@ -313,7 +313,7 @@ export function continueTask(id: string, nodeId: string, message?: string): "ok"
   const done = (async () => {
     let failed = false;
     try {
-      await runNode(getRun(id) ?? run, { ...node, status: "running" }, false, ctrl.signal, { message: text });
+      await runNode(getRun(id) ?? run, { ...onActiveAgent(id, node), status: "running" }, false, ctrl.signal, { message: text });
     } catch {
       failed = true;
     }
@@ -506,10 +506,19 @@ async function execute(run: Run, round: number, prompt: string, signal: AbortSig
 
 const AGENT_NAME = { claude: "Claude Code", codex: "Codex" } as const;
 
-// A task that failed because of the system around it (the provider refused, a key, the network) runs once more where it
-// can succeed: on the other agent when this provider would fail again, on the same one for a passing glitch. A failure of
-// the work itself is left to the lead and the person, since running it again would only repeat it.
-async function runWithRecovery(run: Run, node: NodeState, sight: Sight["blind"], signal: AbortSignal, trees = false): Promise<void> {
+// A task planned before the model changed carries on with the agent working now.
+function onActiveAgent(runId: string, node: NodeState): NodeState {
+  const now = taskAgents()[0];
+  if (!now || node.agent === now) return node;
+  patchNode(runId, node.id, { agent: now });
+  return { ...node, agent: now };
+}
+
+// A task that failed for a passing glitch of the system around it (the network, a timeout) runs once more. A provider that
+// would only fail again has no other agent to go to, and a failure of the work itself would just repeat, so both are left
+// to the lead and the person.
+async function runWithRecovery(run: Run, planned: NodeState, sight: Sight["blind"], signal: AbortSignal, trees = false): Promise<void> {
+  const node = onActiveAgent(run.id, planned);
   await awaitApproval(run, node, signal);
   try {
     await runNode(run, node, sight[node.agent], signal, undefined, trees);

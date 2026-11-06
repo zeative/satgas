@@ -24,6 +24,7 @@ interface RunsState {
     concurrency: number | null;
     concurrencyFromEnv?: boolean;
     version: string | null;
+    channels?: boolean;
     agents: Record<AgentKind, string | null> | null;
   };
 }
@@ -165,6 +166,7 @@ async function loadConfig() {
         concurrency: typeof cfg.concurrency === "number" ? cfg.concurrency : null,
         concurrencyFromEnv: cfg.concurrencyFromEnv === true,
         version: typeof cfg.version === "string" ? cfg.version : null,
+        channels: cfg.channels === true,
         agents:
           cfg.agents && typeof cfg.agents === "object" ? { claude: cfg.agents.claude ?? null, codex: cfg.agents.codex ?? null } : null,
       },

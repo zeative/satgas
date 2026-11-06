@@ -9,7 +9,14 @@ import { t } from "@/i18n";
 import { cn } from "@/lib/utils";
 import { useRuns } from "@/stores/runs";
 import { nativeClaude, PROVIDERS, providerDef, type Runtime } from "../../../shared/providers";
-import { CODEX_SANDBOXES, type CodexSandbox, PERMISSION_MODES, type PermissionMode, type Settings } from "../../../shared/settings";
+import {
+  CODEX_SANDBOXES,
+  type CodexSandbox,
+  PERMISSION_MODES,
+  type PermissionMode,
+  type Settings,
+  withAgent,
+} from "../../../shared/settings";
 import { DetailPage, DetailSection, ExternalText, Fact } from "./detail";
 import { ModelSelect } from "./model-select";
 import { ProviderLogo, ProvidersSection, StatusText, useProviderStatus } from "./providers";
@@ -121,7 +128,7 @@ export function AgentsTab({ settings, onOpen }: { settings: Settings; onOpen: (r
                 <Switch
                   className="relative z-10 shrink-0"
                   checked={conf.tasks}
-                  onCheckedChange={(tasks) => setAgent(settings, a.runtime, { tasks })}
+                  onCheckedChange={(tasks) => void update({ ...settings, agents: withAgent(settings.agents, a.runtime, tasks) })}
                   aria-label={`${ti.useForTasks}: ${a.name}`}
                   title={ti.useForTasks}
                 />
@@ -144,7 +151,7 @@ export function AgentDetail({ settings, runtime, onBack }: { settings: Settings;
   const status = statusOf(conf.provider);
   const models = status?.models ?? [];
   const model = models.find((m) => m.id === conf.model);
-  const efforts = model?.efforts ?? (runtime === "claude" ? ["low", "medium", "high", "xhigh", "max"] : []);
+  const efforts = model?.efforts ?? (runtime === "claude" && nativeClaude(conf.provider) ? ["low", "medium", "high", "xhigh", "max"] : []);
   const choices = PROVIDERS.filter((p) => p.runtime === runtime && statusOf(p.kind)?.state !== "off");
   const set = (patch: Record<string, unknown>) => setAgent(settings, runtime, patch);
 
@@ -158,7 +165,11 @@ export function AgentDetail({ settings, runtime, onBack }: { settings: Settings;
       action={
         <label htmlFor={`${runtime}-tasks`} className="flex items-center gap-2.5 text-sm text-muted-foreground">
           {ti.useForTasks}
-          <Switch id={`${runtime}-tasks`} checked={conf.tasks} onCheckedChange={(tasks) => set({ tasks })} />
+          <Switch
+            id={`${runtime}-tasks`}
+            checked={conf.tasks}
+            onCheckedChange={(tasks) => void update({ ...settings, agents: withAgent(settings.agents, runtime, tasks) })}
+          />
         </label>
       }
       aside={
@@ -172,9 +183,7 @@ export function AgentDetail({ settings, runtime, onBack }: { settings: Settings;
           <Fact label={ti.version}>
             <VersionText version={version} checking={checking} />
           </Fact>
-          <Fact label={ti.role}>
-            {runtime === "claude" ? (conf.tasks ? ti.plans : ti.plansOnly) : conf.tasks ? ti.takesTasks : ti.noTasks}
-          </Fact>
+          <Fact label={ti.role}>{conf.tasks ? ti.plans : ti.noTasks}</Fact>
           <Fact label={ti.connectorsReach}>{runtime === "claude" ? ti.reachAll : ti.reachLocal}</Fact>
           <Fact label={ti.moreInfo}>
             <ExternalText href={a.docs}>{ti.documentation}</ExternalText>

@@ -10,13 +10,12 @@ import { t } from "@/i18n";
 import { cn } from "@/lib/utils";
 import { loadProviders, useProviders } from "@/stores/providers";
 import { loadSettings, saveSettings, useSettings } from "@/stores/settings";
-import { CLAUDE_EFFORTS, nativeClaude, PROVIDERS, type ProviderKind, providerDef, type Runtime } from "../../../shared/providers";
-import type { Settings } from "../../../shared/settings";
+import { CLAUDE_EFFORTS, nativeClaude, PROVIDERS, type ProviderKind, providerDef } from "../../../shared/providers";
+import { activeAgent, type Settings, withAgent } from "../../../shared/settings";
 import type { ModelInfo, ProviderStatus } from "../../../shared/types";
 
 const ti = t.integrations;
-const AGENT: Record<Runtime, string> = { claude: t.agent.claude, codex: t.agent.codex };
-const TOP_EFFORTS = new Set(["high", "xhigh", "max"]);
+const TOP_EFFORTS = new Set(["high", "xhigh", "max", "ultra"]);
 
 async function persist(next: Settings) {
   const problem = await saveSettings(next);
@@ -30,7 +29,8 @@ function modelsOf(kind: ProviderKind, status: ProviderStatus | undefined): Model
   return cliDefault ? [{ id: "", name: ti.defaultModel, efforts: kind === "codex" ? undefined : CLAUDE_EFFORTS }, ...list] : list;
 }
 
-// Picks where each agent's model calls go: connected providers on the rail, their models, then reasoning.
+// Picks the one model everything runs on: connected providers on the rail, their models, then reasoning.
+// The agent follows from the provider, so nobody has to know which CLI serves it.
 // Providers that failed their check stay on the rail, dimmed, so the reason is one click away; unset ones are hidden.
 export function ModelPicker() {
   const settings = useSettings((s) => s.settings);
@@ -70,38 +70,39 @@ export function ModelPicker() {
     const st = statusOf(p.kind)?.state;
     return st === "ok" || st === "failed";
   });
-  // The lead's provider may not be connected; then the rail opens on one that is.
-  const selected = settings.agents.claude.provider;
+  // The working provider may not be connected; then the rail opens on one that is.
+  const working = activeAgent(settings.agents);
+  const lead = settings.agents[working];
+  const selected = lead.provider;
   const current = rail ?? (shown.some((p) => p.kind === selected) ? selected : (shown[0]?.kind ?? selected));
   const def = providerDef.get(current);
   const runtime = def?.runtime ?? "claude";
   const status = statusOf(current);
   const agent = settings.agents[runtime];
-  const active = agent.provider === current;
+  const active = runtime === working && agent.provider === current;
   const models = modelsOf(current, status);
   const chosen = active ? models.find((m) => m.id === agent.model) : undefined;
   const efforts = chosen?.efforts ?? (runtime === "claude" && nativeClaude(current) ? CLAUDE_EFFORTS : []);
-  const off = (r: Runtime) => r === "codex" && !settings.agents.codex.tasks;
-  const locked = off(runtime);
 
   const choose = (m: ModelInfo) => {
     const keep = m.efforts?.includes(agent.effort) ? agent.effort : "";
-    void persist({ ...settings, agents: { ...settings.agents, [runtime]: { ...agent, provider: current, model: m.id, effort: keep } } });
+    const agents = withAgent(settings.agents, runtime, true);
+    void persist({ ...settings, agents: { ...agents, [runtime]: { ...agents[runtime], provider: current, model: m.id, effort: keep } } });
   };
   const setEffort = (effort: string) => void persist({ ...settings, agents: { ...settings.agents, [runtime]: { ...agent, effort } } });
-  const turnOn = () => void persist({ ...settings, agents: { ...settings.agents, codex: { ...settings.agents.codex, tasks: true } } });
 
-  // The pill names one model, Claude Code's, since it plans every mission; Codex's choice sits on its own rail inside.
-  const lead = settings.agents.claude;
   const leadDef = providerDef.get(lead.provider);
   const leadName = lead.model
     ? (statusOf(lead.provider)?.models.find((m) => m.id === lead.model)?.name ?? lead.model)
-    : t.picker.defaultOf(leadDef?.name ?? t.agent.claude);
+    : t.picker.defaultOf(leadDef?.name ?? t.agent[working]);
   // A saved model the provider no longer lists would only fail at the next mission, so the pill says so now.
   const leadStatus = statusOf(lead.provider);
   const missing =
     !!lead.model && leadStatus?.state === "ok" && leadStatus.models.length > 0 && !leadStatus.models.some((m) => m.id === lead.model);
   const missingNote = missing ? t.picker.unavailable(lead.model, leadDef?.name ?? lead.provider) : undefined;
+  // A level saved before this model's levels were known must not read as if it applied.
+  const leadInfo = leadStatus?.models.find((m) => m.id === lead.model);
+  const leadEfforts: readonly string[] = leadInfo?.efforts ?? (nativeClaude(lead.provider) ? CLAUDE_EFFORTS : []);
 
   return (
     <Popover
@@ -127,7 +128,9 @@ export function ModelPicker() {
             leadDef && <ProviderLogo def={leadDef} className="size-4 shrink-0" />
           )}
           <span className={cn("truncate", missing ? "text-muted-foreground line-through" : "text-foreground")}>{leadName}</span>
-          {lead.effort && <span className={cn("shrink-0", TOP_EFFORTS.has(lead.effort) && "satgas-gold")}>{ti.effort[lead.effort]}</span>}
+          {lead.effort && leadEfforts.includes(lead.effort) && (
+            <span className={cn("shrink-0", TOP_EFFORTS.has(lead.effort) && "satgas-gold")}>{ti.effort[lead.effort] ?? lead.effort}</span>
+          )}
           <ChevronDown className="size-3.5 shrink-0 opacity-70" aria-hidden="true" />
         </button>
       </PopoverTrigger>
@@ -145,7 +148,6 @@ export function ModelPicker() {
               <ul className="flex flex-col items-center gap-1 border-e py-2" aria-label={ti.providers}>
                 {shown.map((p, i) => {
                   const failed = statusOf(p.kind)?.state === "failed";
-                  const dim = failed || off(p.runtime);
                   const prev = shown[i - 1];
                   return (
                     <li key={p.kind} className="flex flex-col items-center">
@@ -154,19 +156,13 @@ export function ModelPicker() {
                       <button
                         type="button"
                         aria-pressed={current === p.kind}
-                        aria-disabled={dim || undefined}
-                        title={
-                          failed
-                            ? `${p.name}: ${plain(statusOf(p.kind)?.error ?? ti.checkFailed)}`
-                            : off(p.runtime)
-                              ? t.picker.agentOff(AGENT[p.runtime])
-                              : p.name
-                        }
+                        aria-disabled={failed || undefined}
+                        title={failed ? `${p.name}: ${plain(statusOf(p.kind)?.error ?? ti.checkFailed)}` : p.name}
                         onClick={() => setRail(p.kind)}
                         className={cn(
                           "relative flex size-8 items-center justify-center rounded-lg transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
                           current === p.kind && "bg-muted",
-                          dim && "opacity-40 grayscale",
+                          failed && "opacity-40 grayscale",
                         )}
                       >
                         <ProviderLogo def={p} className="size-4" />
@@ -190,19 +186,7 @@ export function ModelPicker() {
                   </div>
                 ) : (
                   <Command className="rounded-none bg-transparent" loop>
-                    <CommandInput placeholder={t.picker.search} className="h-9 py-0" disabled={locked} />
-                    {locked && (
-                      <div className="flex items-center justify-between gap-3 border-b px-3 py-2 text-xs text-muted-foreground">
-                        <span>{t.picker.offShort(AGENT[runtime])}</span>
-                        <button
-                          type="button"
-                          onClick={turnOn}
-                          className="shrink-0 rounded-md px-1.5 py-0.5 font-medium text-foreground transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-                        >
-                          {t.picker.turnOn}
-                        </button>
-                      </div>
-                    )}
+                    <CommandInput placeholder={t.picker.search} className="h-9 py-0" />
                     <CommandList className="max-h-72 p-1">
                       <CommandEmpty className="px-2 py-6 text-center text-sm text-muted-foreground">
                         {models.length ? t.picker.noModels : t.picker.noList}
@@ -214,9 +198,8 @@ export function ModelPicker() {
                             <CommandItem
                               key={m.id || "default"}
                               value={`${m.name} ${m.id}`}
-                              disabled={locked}
                               onSelect={() => choose(m)}
-                              className="min-h-7 gap-2 rounded-md px-2 py-1 data-[disabled=true]:bg-transparent data-[disabled=true]:opacity-50"
+                              className="min-h-7 gap-2 rounded-md px-2 py-1"
                             >
                               {def && <ProviderLogo def={def} className="size-4 shrink-0" />}
                               <span className="truncate">{m.name}</span>
@@ -241,9 +224,8 @@ export function ModelPicker() {
                       <li key={e || "default"}>
                         <button
                           type="button"
-                          disabled={locked}
                           onClick={() => setEffort(e)}
-                          className="flex min-h-7 w-full items-center gap-2 rounded-md px-2 py-1 text-start text-sm transition-colors hover:bg-accent focus-visible:bg-accent focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50"
+                          className="flex min-h-7 w-full items-center gap-2 rounded-md px-2 py-1 text-start text-sm transition-colors hover:bg-accent focus-visible:bg-accent focus-visible:outline-none"
                         >
                           <span className={cn(TOP_EFFORTS.has(e) && "satgas-gold")}>{ti.effort[e] ?? e}</span>
                           {e && chosen?.defaultEffort === e && <span className="text-xs text-muted-foreground">{ti.effort[""]}</span>}
@@ -252,13 +234,12 @@ export function ModelPicker() {
                       </li>
                     ))
                   ) : (
-                    <li className="px-2 py-2 text-xs text-muted-foreground">{ti.reasoningHint}</li>
+                    <li className="px-2 py-2 text-xs text-muted-foreground">{chosen ? ti.reasoningOwn : ti.reasoningPick}</li>
                   )}
                 </ul>
               </div>
             </div>
-            <div className="flex h-9 items-center justify-between border-t px-3 text-xs text-muted-foreground">
-              <span>{t.picker.usedBy(AGENT[runtime])}</span>
+            <div className="flex h-9 items-center justify-end border-t px-3 text-xs text-muted-foreground">
               <Link
                 to="/integrations"
                 search={{ tab: "agents" }}

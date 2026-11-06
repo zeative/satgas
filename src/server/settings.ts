@@ -20,7 +20,7 @@ export function defaultSettings(): Settings {
         permissionMode:
           config.claudePermissionMode === "bypassPermissions" ? "bypassPermissions" : ("acceptEdits" satisfies PermissionMode),
       },
-      codex: { tasks: true, provider: "codex", effort: "", model: config.codexModel ?? "", sandbox: config.codexSandbox as CodexSandbox },
+      codex: { tasks: false, provider: "codex", effort: "", model: config.codexModel ?? "", sandbox: config.codexSandbox as CodexSandbox },
     },
     providers: {},
     mcpServers: [],

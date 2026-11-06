@@ -127,6 +127,99 @@ test("Model Studio's list keeps chat models and drops other kinds, test entries 
   ]);
 });
 
+// Runs one provider's check against stand-in answers and returns its models.
+async function modelsWith(kind: "openrouter" | "openai" | "ollama", answer: (url: string) => unknown) {
+  const { defaultSettings } = await import("../../src/server/settings");
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(input);
+    return new Response(JSON.stringify(answer(`${url} ${init?.body ?? ""}`)));
+  }) as typeof fetch;
+  try {
+    g.__satgasProviders = undefined;
+    g.__satgasSettings = { ...defaultSettings(), providers: { [kind]: { key: "test-key" } } };
+    return (await providerStatuses(true)).find((s) => s.kind === kind)?.models ?? [];
+  } finally {
+    globalThis.fetch = realFetch;
+    g.__satgasSettings = undefined;
+    g.__satgasProviders = undefined;
+  }
+}
+
+test("OpenRouter offers the levels each model reports, limited to what --effort accepts", async () => {
+  const models = await modelsWith("openrouter", () => ({
+    data: [
+      {
+        id: "a/levels",
+        supported_parameters: ["tools"],
+        reasoning: { default_effort: "medium", supported_efforts: ["max", "high", "low", "none", "minimal"] },
+      },
+      { id: "b/switch", supported_parameters: ["tools"], reasoning: { mandatory: false } },
+      { id: "c/plain", supported_parameters: ["tools"], reasoning: null },
+      { id: "d/no-tools", supported_parameters: [], reasoning: { supported_efforts: ["high"] } },
+    ],
+  }));
+  expect(models.map((m) => [m.id, m.efforts, m.defaultEffort])).toEqual([
+    ["a/levels", ["low", "high", "max"], undefined],
+    ["b/switch", undefined, undefined],
+    ["c/plain", undefined, undefined],
+  ]);
+});
+
+test("OpenAI lists only models agents can use, with levels when Codex knows the model", async () => {
+  await Bun.write(
+    join(dir, "models_cache.json"),
+    JSON.stringify({
+      models: [
+        {
+          slug: "gpt-known",
+          visibility: "hide",
+          default_reasoning_level: "medium",
+          supported_reasoning_levels: [{ effort: "low" }, { effort: "ultra" }],
+        },
+      ],
+    }),
+  );
+  const ids = [
+    "gpt-known",
+    "gpt-4o",
+    "gpt-4o-2024-08-06",
+    "gpt-4o-mini-transcribe",
+    "gpt-4o-mini-transcribe-2025-03-20",
+    "gpt-4o-transcribe-diarize",
+    "gpt-4o-mini-tts",
+    "gpt-4o-search-preview",
+    "gpt-4o-audio-preview",
+    "gpt-4o-realtime-preview",
+    "gpt-image-1",
+    "gpt-3.5-turbo-instruct",
+    "dall-e-3",
+  ];
+  try {
+    const models = await modelsWith("openai", () => ({ data: ids.map((id) => ({ id })) }));
+    expect(models.map((m) => [m.id, m.efforts, m.defaultEffort])).toEqual([
+      ["gpt-4o", undefined, undefined],
+      ["gpt-known", ["low", "ultra"], "medium"],
+    ]);
+  } finally {
+    await rm(join(dir, "models_cache.json"), { force: true });
+  }
+});
+
+test("Ollama offers named thinking levels, and none for an on/off switch or a failed lookup", async () => {
+  const models = await modelsWith("ollama", (asked) => {
+    if (asked.includes("/api/tags")) return { models: [{ name: "named" }, { name: "switch" }, { name: "bare" }] };
+    if (asked.includes('"named"')) return { thinking: { values: ["low", "medium", "high", "turbo"], default: "medium" } };
+    if (asked.includes('"switch"')) return { thinking: { values: [false, true], default: true } };
+    return {};
+  });
+  expect(models.map((m) => [m.id, m.efforts])).toEqual([
+    ["named", ["low", "medium", "high"]],
+    ["switch", undefined],
+    ["bare", undefined],
+  ]);
+});
+
 test("a CLI nobody signed in to, or that is missing, reads as not connected instead of failing", async () => {
   const before = { claude: config.claudeBin, codex: config.codexBin };
   const signedOut = join(dir, "signed-out");
