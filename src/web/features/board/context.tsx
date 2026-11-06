@@ -1,5 +1,6 @@
 import { createContext, useContext } from "react";
 import type { BoardOp, Card } from "../../../shared/board";
+import { randomUuid } from "../../../shared/random-uuid";
 
 // Stable for the life of a board, so a change here never re-renders every card; per-card state rides on node data.
 export interface BoardApi {
@@ -24,7 +25,7 @@ export function useBoard(): BoardApi {
   return api;
 }
 
-export const newId = () => crypto.randomUUID().slice(0, 12);
+export const newId = () => randomUuid().slice(0, 12);
 
 // Workspace files load through the board's key, so sandboxed previews and new tabs work without the sign-in cookie.
 export function keyedSrc(src: string | undefined, runId: string, key: string | undefined): string | undefined {

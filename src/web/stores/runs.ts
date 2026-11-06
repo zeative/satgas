@@ -3,6 +3,7 @@ import { create } from "zustand";
 import { t } from "@/i18n";
 import { applyOps, type BoardOp, emptyBoard, toWire } from "../../shared/board";
 import type { Answer } from "../../shared/questions";
+import { randomUuid } from "../../shared/random-uuid";
 import { MAIN_SESSION } from "../../shared/sessions";
 import type { AgentKind, ClientMessage, GitInfo, LogLine, Run, RunSummary, SearchHit, ServerEvent } from "../../shared/types";
 import { currentSession } from "./chat-session";
@@ -40,7 +41,7 @@ const set = useRuns.setState;
 const get = useRuns.getState;
 
 // Identifies this tab, so the server echo of its own board changes can be skipped.
-const clientId = crypto.randomUUID();
+const clientId = randomUuid();
 
 let ws: WebSocket | undefined;
 let retry = 0;

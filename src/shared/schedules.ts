@@ -1,3 +1,4 @@
+import { randomUuid } from "./random-uuid";
 // Work that starts without anyone typing: on an interval, at a time of day, or when another service calls a webhook.
 // Each run is a new board, or a follow-up round on one board the schedule is bound to.
 
@@ -163,7 +164,7 @@ export function sanitizeSchedule(input: unknown, before?: Schedule, now = Date.n
     const seconds = Number(t.dedupeSeconds);
     trigger = {
       type: "webhook",
-      token: old?.token ?? crypto.randomUUID().replace(/-/g, ""),
+      token: old?.token ?? randomUuid().replace(/-/g, ""),
       filters: parsed,
       ...(signature ? { signature } : {}),
       ...(dedupeKey ? { dedupeKey, dedupeSeconds: Number.isInteger(seconds) && seconds >= 10 && seconds <= 3600 ? seconds : 120 } : {}),
@@ -172,7 +173,7 @@ export function sanitizeSchedule(input: unknown, before?: Schedule, now = Date.n
   const boardId = text(raw.boardId, 64);
   const cwd = text(raw.cwd, 1000);
   return {
-    id: before?.id ?? crypto.randomUUID().slice(0, 8),
+    id: before?.id ?? randomUuid().slice(0, 8),
     title,
     prompt,
     ...(boardId ? { boardId } : {}),

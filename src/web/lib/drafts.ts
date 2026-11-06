@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { randomUuid } from "../../shared/random-uuid";
 
 // A composer's unsent message survives a reload: the text in localStorage, attached files in IndexedDB (they can be
 // large). Every composer and every open tab with the same key shows the same draft.
@@ -53,7 +54,7 @@ const TEXT_EXT = /\.(md|mdx|txt|csv|tsv|json|ya?ml|xml|html?|css|js|jsx|ts|tsx|p
 async function toDraft(file: File): Promise<DraftFile> {
   const isText = TEXT_TYPE.test(file.type) || TEXT_EXT.test(file.name);
   const lines = isText && file.size < 2 * 1024 * 1024 ? (await file.text()).split("\n").length : undefined;
-  return { id: crypto.randomUUID(), name: file.name || "pasted", type: file.type, size: file.size, lines, blob: file };
+  return { id: randomUuid(), name: file.name || "pasted", type: file.type, size: file.size, lines, blob: file };
 }
 
 // A deleted board's unsent draft goes with it, text and files alike.
