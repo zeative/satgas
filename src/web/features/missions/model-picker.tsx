@@ -35,22 +35,6 @@ function modelsOf(kind: ProviderKind, status: ProviderStatus | undefined): Model
 // Providers that failed their check stay on the rail, dimmed, so the reason is one click away; unset ones are hidden.
 const RAIL_MARK = { claude: ClaudeMark, codex: CodexMark };
 
-function RailDivider({ runtime, first }: { runtime: keyof typeof RAIL_MARK; first: boolean }) {
-  const Mark = RAIL_MARK[runtime];
-  return (
-    <span
-      role="img"
-      aria-label={t.agent[runtime]}
-      title={t.agent[runtime]}
-      className={cn("mb-1 flex w-full cursor-default items-center gap-1 px-1.5 select-none", !first && "mt-1")}
-    >
-      <span aria-hidden="true" className="h-px flex-1 bg-border" />
-      <Mark className="size-3 shrink-0 opacity-50 grayscale" />
-      <span aria-hidden="true" className="h-px flex-1 bg-border" />
-    </span>
-  );
-}
-
 export function ModelPicker() {
   const settings = useSettings((s) => s.settings);
   const loadError = useSettings((s) => s.error);
@@ -164,36 +148,49 @@ export function ModelPicker() {
         ) : (
           <>
             <div className="grid grid-cols-[3rem_minmax(0,1fr)] sm:grid-cols-[3rem_minmax(0,1fr)_11rem]">
-              <ul
-                className="flex flex-col items-center gap-1 border-e py-2 max-sm:max-h-[17.25rem] max-sm:overflow-y-auto"
+              <div
+                role="group"
                 aria-label={ti.providers}
+                className="flex flex-col items-center gap-2 border-e py-2 max-sm:max-h-[17.25rem] max-sm:overflow-y-auto"
               >
-                {shown.map((p, i) => {
-                  const failed = statusOf(p.kind)?.state === "failed";
-                  const prev = shown[i - 1];
+                {(["claude", "codex"] as const).map((runtime) => {
+                  const group = shown.filter((p) => p.runtime === runtime);
+                  if (!group.length) return null;
+                  const Mark = RAIL_MARK[runtime];
                   return (
-                    <li key={p.kind} className="flex w-full flex-col items-center">
-                      {/* Each agent's small mark divides the rail; it is not a provider, so it takes no click. */}
-                      {prev?.runtime !== p.runtime && <RailDivider runtime={p.runtime} first={!prev} />}
-                      <button
-                        type="button"
-                        aria-pressed={current === p.kind}
-                        aria-disabled={failed || undefined}
-                        title={failed ? `${p.name}: ${plain(statusOf(p.kind)?.error ?? ti.checkFailed)}` : p.name}
-                        onClick={() => setRail(p.kind)}
-                        className={cn(
-                          "relative flex size-8 items-center justify-center rounded-lg transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
-                          current === p.kind && "bg-muted",
-                          failed && "opacity-40 grayscale",
-                        )}
-                      >
-                        <ProviderLogo def={p} className="size-4" />
-                        {current === p.kind && <span aria-hidden="true" className="absolute -end-2 h-4 w-0.5 rounded-full bg-signal" />}
-                      </button>
-                    </li>
+                    // Each agent's providers share one tray, headed by its mark, which only names the group.
+                    <ul key={runtime} aria-label={t.agent[runtime]} className="flex flex-col items-center gap-1 rounded-xl bg-muted/50 p-1">
+                      <li aria-hidden="true" title={t.agent[runtime]} className="flex h-5 items-center justify-center select-none">
+                        <Mark className="size-3 opacity-60" />
+                      </li>
+                      {group.map((p) => {
+                        const failed = statusOf(p.kind)?.state === "failed";
+                        return (
+                          <li key={p.kind}>
+                            <button
+                              type="button"
+                              aria-pressed={current === p.kind}
+                              aria-disabled={failed || undefined}
+                              title={failed ? `${p.name}: ${plain(statusOf(p.kind)?.error ?? ti.checkFailed)}` : p.name}
+                              onClick={() => setRail(p.kind)}
+                              className={cn(
+                                "relative flex size-8 items-center justify-center rounded-lg transition-colors hover:bg-background/60 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+                                current === p.kind && "bg-background shadow-xs",
+                                failed && "opacity-40 grayscale",
+                              )}
+                            >
+                              <ProviderLogo def={p} className="size-4" />
+                              {current === p.kind && (
+                                <span aria-hidden="true" className="absolute -end-2 h-4 w-0.5 rounded-full bg-signal" />
+                              )}
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
                   );
                 })}
-              </ul>
+              </div>
 
               <div className="flex min-w-0 flex-col sm:border-e">
                 {status?.state === "failed" ? (
