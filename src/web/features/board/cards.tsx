@@ -1,6 +1,6 @@
 import { Handle, type Node, type NodeProps, NodeResizer, Position, type ReactFlowState, useStore } from "@xyflow/react";
 import { Download, ExternalLink, Lock, Maximize2, Monitor, RotateCw, Smartphone } from "lucide-react";
-import { lazy, memo, Suspense, useContext, useDeferredValue, useEffect, useRef, useState } from "react";
+import { lazy, memo, Suspense, useContext, useDeferredValue, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { LinkedText } from "@/components/linked-text";
 import { InlineText, Markdown } from "@/components/markdown";
@@ -623,7 +623,9 @@ function TableBody({ rows }: { rows: string[][] }) {
 }
 
 // The page runs sandboxed in an opaque origin; it only takes clicks while its card is selected, so the board stays draggable.
-// Phones are where pages break; the card shows one at a common phone width, centred, next to the full width.
+// A page renders at a real screen width and is shrunk to fit, so a small card shows the page as built instead of reflowing
+// it to the card's width. Phones are where pages break; the card shows one at a common phone width, centred.
+const DESKTOP_W = 1280;
 const PHONE_W = 390;
 
 function PreviewBody({ card, interactive }: { card: Card; interactive: boolean }) {
@@ -631,6 +633,18 @@ function PreviewBody({ card, interactive }: { card: Card; interactive: boolean }
   const [phone, setPhone] = useState(false);
   const page = !isPdf(card.src ?? "");
   const { runId, fileKey } = useBoard();
+  const box = useRef<HTMLDivElement>(null);
+  const [size, setSize] = useState({ w: card.w, h: Math.max(card.h - 32, 0) });
+  useLayoutEffect(() => {
+    const el = box.current;
+    if (!el) return;
+    // Layout size, untouched by the canvas zoom, so the page keeps one width whatever the zoom.
+    const ro = new ResizeObserver(([e]) => e && setSize({ w: e.contentRect.width, h: e.contentRect.height }));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const view = phone ? PHONE_W : Math.max(DESKTOP_W, size.w);
+  const scale = size.w > 0 ? Math.min(1, size.w / view) : 1;
   return (
     <div className="flex size-full flex-col">
       <div className="card-handle flex h-8 shrink-0 items-center gap-2 border-b bg-muted/40 px-2.5">
@@ -652,16 +666,32 @@ function PreviewBody({ card, interactive }: { card: Card; interactive: boolean }
           <RotateCw />
         </Button>
       </div>
-      <iframe
-        key={nonce}
-        src={keyedSrc(card.src, runId, fileKey)}
-        title={card.title ?? card.src ?? "preview"}
-        // A PDF needs the browser's own viewer, which a sandboxed frame refuses; it carries no page script to contain.
-        sandbox={isPdf(card.src ?? "") ? undefined : "allow-scripts allow-forms"}
-        loading="lazy"
-        style={phone ? { width: PHONE_W, maxWidth: "100%" } : undefined}
-        className={cn("nodrag nowheel min-h-0 w-full flex-1 bg-white", phone && "mx-auto border-x", !interactive && "pointer-events-none")}
-      />
+      <div ref={box} className="relative min-h-0 flex-1 overflow-hidden">
+        <iframe
+          key={nonce}
+          src={keyedSrc(card.src, runId, fileKey)}
+          title={card.title ?? card.src ?? "preview"}
+          // A PDF needs the browser's own viewer, which a sandboxed frame refuses; it carries no page script to contain.
+          sandbox={page ? "allow-scripts allow-forms" : undefined}
+          loading="lazy"
+          style={
+            page
+              ? {
+                  width: view,
+                  height: size.h / scale,
+                  left: Math.max(0, (size.w - view * scale) / 2),
+                  transform: scale < 1 ? `scale(${scale})` : undefined,
+                }
+              : undefined
+          }
+          className={cn(
+            "nodrag nowheel absolute top-0 left-0 origin-top-left bg-white",
+            !page && "size-full",
+            phone && "border-x",
+            !interactive && "pointer-events-none",
+          )}
+        />
+      </div>
     </div>
   );
 }
