@@ -162,6 +162,67 @@ if (gsap && ST && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
       { scale: 1, ease: "none", scrollTrigger: { trigger: ".final-panel", start: "top bottom", end: "bottom bottom", scrub: true } },
     );
 
+  // Connectors draw themselves once a board scrolls in, then the live one starts flowing.
+  for (const box of document.querySelectorAll("[data-edges]"))
+    ST.create({
+      trigger: box,
+      start: "top 70%",
+      once: true,
+      onEnter: () => {
+        const paths = [...box.querySelectorAll(".edges path")];
+        for (const p of paths) {
+          const len = p.getTotalLength();
+          gsap.fromTo(
+            p,
+            { strokeDasharray: len, strokeDashoffset: len },
+            {
+              strokeDashoffset: 0,
+              duration: 0.9,
+              delay: 0.25 * paths.indexOf(p),
+              ease: "power2.inOut",
+              onComplete: () => {
+                p.style.strokeDasharray = "";
+                p.style.strokeDashoffset = "";
+                p.classList.toggle("live", p.dataset.live !== undefined);
+              },
+            },
+          );
+        }
+        box.classList.add("drawn");
+      },
+    });
+
+  // A teammate selects each headline as it comes in, the way a colleague would on a shared board.
+  const picks = new IntersectionObserver(
+    (entries) => {
+      for (const e of entries) {
+        if (!e.isIntersecting) continue;
+        picks.unobserve(e.target);
+        e.target.classList.add("picked");
+        setTimeout(() => e.target.classList.remove("picked"), 2600);
+      }
+    },
+    { threshold: 0.9 },
+  );
+  for (const t of document.querySelectorAll(".tn")) picks.observe(t);
+
+  // Each cursor walks from card to card as its board scrolls past.
+  for (const cur of document.querySelectorAll(".cur[data-path]")) {
+    const box = cur.parentElement;
+    const ids = cur.dataset.path.split(" ");
+    const at = (id, axis) => {
+      const r = document.getElementById(id)?.getBoundingClientRect();
+      const o = box.getBoundingClientRect();
+      if (!r) return 0;
+      return axis === "x" ? r.left - o.left + r.width * 0.7 : r.top - o.top + r.height * 0.6;
+    };
+    const tl = gsap.timeline({
+      scrollTrigger: { trigger: box, start: "top 75%", end: "bottom 45%", scrub: 0.6, invalidateOnRefresh: true },
+    });
+    tl.set(cur, { x: () => at(ids[0], "x"), y: () => at(ids[0], "y") });
+    for (const id of ids.slice(1)) tl.to(cur, { x: () => at(id, "x"), y: () => at(id, "y"), ease: "power1.inOut", duration: 1 });
+  }
+
   const mm = gsap.matchMedia();
   mm.add("(min-width: 961px)", () => {
     // Each window rises a little inside its painting while the frame scrolls past; the frame itself never moves.
@@ -196,6 +257,64 @@ if (gsap && ST && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
       };
     }
   });
+}
+
+// The board's connectors: each container lists "from>to" card ids; a trailing * marks the edge where work is flowing now.
+const SVG = "http://www.w3.org/2000/svg";
+for (const box of document.querySelectorAll("[data-edges]")) {
+  const svg = document.createElementNS(SVG, "svg");
+  svg.classList.add("edges");
+  svg.setAttribute("aria-hidden", "true");
+  box.prepend(svg);
+  const pairs = box.dataset.edges.split(/\s+/).map((s) => ({ live: s.endsWith("*"), ids: s.replace("*", "").split(">") }));
+  const draw = () => {
+    svg.replaceChildren();
+    const o = box.getBoundingClientRect();
+    for (const { live, ids } of pairs) {
+      const a = document.getElementById(ids[0])?.getBoundingClientRect();
+      const b = document.getElementById(ids[1])?.getBoundingClientRect();
+      if (!a || !b) continue;
+      const dx = b.left + b.width / 2 - (a.left + a.width / 2);
+      const dy = b.top + b.height / 2 - (a.top + a.height / 2);
+      let x1, y1, x2, y2, d;
+      // Side to side when the cards sit in a row, top to bottom when one is under the other.
+      if (Math.abs(dx) > Math.abs(dy)) {
+        const ltr = dx > 0;
+        x1 = (ltr ? a.right : a.left) - o.left;
+        x2 = (ltr ? b.left : b.right) - o.left;
+        y1 = a.top + a.height / 2 - o.top;
+        y2 = b.top + b.height / 2 - o.top;
+        const k = (x2 - x1) / 2;
+        d = `M${x1} ${y1} C${x1 + k} ${y1} ${x2 - k} ${y2} ${x2} ${y2}`;
+      } else {
+        const down = dy > 0;
+        x1 = a.left + a.width / 2 - o.left;
+        x2 = b.left + b.width / 2 - o.left;
+        y1 = (down ? a.bottom : a.top) - o.top;
+        y2 = (down ? b.top : b.bottom) - o.top;
+        const k = (y2 - y1) / 2;
+        d = `M${x1} ${y1} C${x1} ${y1 + k} ${x2} ${y2 - k} ${x2} ${y2}`;
+      }
+      const path = document.createElementNS(SVG, "path");
+      path.setAttribute("d", d);
+      if (live) path.dataset.live = "";
+      svg.append(path);
+      for (const [cx, cy] of [
+        [x1, y1],
+        [x2, y2],
+      ]) {
+        const dot = document.createElementNS(SVG, "circle");
+        dot.setAttribute("cx", String(cx));
+        dot.setAttribute("cy", String(cy));
+        dot.setAttribute("r", "3");
+        svg.append(dot);
+      }
+      if (box.classList.contains("drawn") || !window.gsap) path.classList.toggle("live", live);
+    }
+  };
+  new ResizeObserver(draw).observe(box);
+  draw();
+  box.drawEdges = draw;
 }
 
 const nav = document.querySelector(".nav");

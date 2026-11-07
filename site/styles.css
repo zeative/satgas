@@ -98,14 +98,6 @@ kbd,
   width: min(var(--wrap), 100% - 64px);
   margin-inline: auto;
 }
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
-}
 .i {
   width: 16px;
   height: 16px;
@@ -1005,75 +997,6 @@ a.u:hover {
 .mf .w.hl {
   color: var(--amber);
 }
-
-/* How it works: four steps in a row above one stage that shows the product at that step. */
-.flow {
-  display: grid;
-  gap: 32px;
-}
-.flow-list {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 24px;
-}
-.flow-step {
-  position: relative;
-  display: grid;
-  align-content: start;
-  gap: 8px;
-  padding: 20px 0 0;
-  border: 0;
-  border-top: 1px solid var(--line2);
-  background: transparent;
-  color: var(--t3);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-  transition: color 200ms var(--ease);
-}
-.flow-step:hover,
-.flow-step.on {
-  color: var(--t1);
-}
-.flow-step:focus-visible {
-  outline: 2px solid var(--amber);
-  outline-offset: 4px;
-  border-radius: 4px;
-}
-.flow-t {
-  font: 500 17px / 1.3 var(--sans);
-}
-.flow-d {
-  font-size: 14px;
-  line-height: 1.55;
-  color: var(--t3);
-}
-.flow-step.on .flow-d {
-  color: var(--t2);
-}
-/* The open step's top line fills amber for the time it stays open. */
-.flow-bar {
-  position: absolute;
-  inset: -1px 0 auto;
-  height: 1px;
-  overflow: hidden;
-}
-.flow-bar::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: var(--amber);
-  transform: scaleX(0);
-  transform-origin: left;
-  transition: transform 300ms var(--ease);
-}
-.flow-step.on .flow-bar::after {
-  transform: scaleX(var(--fill, 1));
-}
-.flow.auto .flow-step.on .flow-bar::after {
-  transition: none;
-  animation: flow-run var(--flow-ms, 6000ms) linear forwards;
-}
 @keyframes flow-run {
   from {
     transform: scaleX(0);
@@ -1082,474 +1005,11 @@ a.u:hover {
     transform: scaleX(1);
   }
 }
-.flow-stage {
-  position: relative;
-  height: 440px;
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  overflow: hidden;
-  background-color: var(--s1);
-  background-image:
-    radial-gradient(50% 60% at 50% 45%, rgb(255 185 14 / 0.07), transparent 70%),
-    radial-gradient(rgb(237 237 240 / 0.07) 1px, transparent 1px);
-  background-size:
-    auto,
-    20px 20px;
-}
-.flow-panel {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  padding: 40px;
-  animation: flow-in 400ms var(--ease);
-}
-.flow-panel[hidden] {
-  display: none;
-}
 @keyframes flow-in {
   from {
     opacity: 0;
     transform: translateY(8px);
   }
-}
-
-/* 01 Ask */
-.fp-ask {
-  width: min(460px, 100%);
-  display: grid;
-  gap: 16px;
-}
-.fp-composer {
-  display: grid;
-  gap: 12px;
-  padding: 16px;
-  border-radius: 16px;
-  border: 1px solid var(--line2);
-  background: var(--s2);
-  box-shadow: 0 24px 48px rgb(0 0 0 / 0.35);
-}
-.fp-composer p {
-  font-size: 15px;
-  line-height: 1.5;
-  color: var(--t1);
-}
-.fp-composer .chip {
-  justify-self: start;
-}
-.fp-tools {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: var(--t2);
-}
-.fp-tools img {
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-}
-.fp-send {
-  margin-inline-start: auto;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  background: var(--t1);
-  color: #111113;
-}
-.fp-send .i {
-  rotate: -90deg;
-}
-.fp-reply {
-  display: flex;
-  gap: 12px;
-  padding: 16px;
-  border-radius: 16px;
-  border: 1px solid var(--line);
-  background: rgb(19 19 20 / 0.8);
-}
-.fp-reply img {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  flex: none;
-}
-.fp-reply b {
-  display: block;
-  font-size: 14px;
-  font-weight: 500;
-}
-.fp-reply span {
-  font-size: 13px;
-  color: var(--t3);
-}
-.fp-q {
-  margin-top: 12px;
-  font-size: 14px;
-}
-.fp-opts {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 8px;
-}
-.fp-opts span {
-  height: 28px;
-  padding: 0 12px;
-  border-radius: 14px;
-  border: 1px solid var(--line2);
-  display: inline-flex;
-  align-items: center;
-  font-size: 12px;
-  color: var(--t2);
-}
-.fp-opts .sel {
-  border-color: var(--amber);
-  color: var(--t1);
-  background: var(--amber-soft);
-}
-
-/* 02 Plan */
-.fp-plan {
-  width: min(600px, 100%);
-  display: grid;
-  justify-items: center;
-}
-.fp-lead {
-  display: grid;
-  justify-items: center;
-  gap: 4px;
-  text-align: center;
-}
-.fp-lead img {
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  box-shadow:
-    0 0 0 2px var(--bg),
-    0 0 0 4px var(--amber);
-  margin-bottom: 8px;
-}
-.fp-lead b {
-  font-size: 15px;
-  font-weight: 500;
-}
-.fp-lead span {
-  font-size: 13px;
-  color: var(--t3);
-}
-.fp-wires {
-  width: 100%;
-  height: 60px;
-  margin-top: 16px;
-}
-.fp-wires path {
-  fill: none;
-  stroke: rgb(255 185 14 / 0.7);
-  stroke-width: 1.5;
-  stroke-dasharray: 5 5;
-  vector-effect: non-scaling-stroke;
-}
-.fp-hires {
-  width: 100%;
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
-}
-.fp-hires div {
-  display: grid;
-  justify-items: center;
-  gap: 4px;
-  padding: 16px 8px;
-  border-radius: 14px;
-  border: 1px solid var(--line);
-  background: var(--s1);
-  text-align: center;
-}
-.fp-hires img {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  margin-bottom: 4px;
-}
-.fp-hires b {
-  font-size: 14px;
-  font-weight: 500;
-}
-.fp-hires span {
-  font-size: 12px;
-  color: var(--t3);
-}
-
-/* 03 Work */
-.fp-work {
-  width: min(520px, 100%);
-  display: grid;
-  gap: 8px;
-}
-.fp-task {
-  display: grid;
-  grid-template-columns: 24px minmax(0, 1fr) 80px auto 16px;
-  align-items: center;
-  gap: 12px;
-  height: 52px;
-  padding: 0 16px;
-  border-radius: 12px;
-  border: 1px solid var(--line);
-  background: var(--s1);
-  font-size: 14px;
-}
-.fp-task img {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-}
-.fp-task .t {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.fp-task .s {
-  font: 12px var(--mono);
-  color: var(--t3);
-  white-space: nowrap;
-}
-.fp-task .ok {
-  color: var(--green);
-  display: grid;
-}
-.fp-track {
-  height: 4px;
-  border-radius: 2px;
-  background: var(--s3);
-  overflow: hidden;
-}
-.fp-track i {
-  display: block;
-  height: 100%;
-  border-radius: 2px;
-  background: var(--amber);
-}
-.fp-task.done .fp-track i {
-  background: var(--green);
-}
-.fp-task.wait {
-  opacity: 0.55;
-}
-.fp-dot {
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  border: 1.5px dashed var(--line2);
-}
-.fp-live {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 8px;
-  padding: 12px 16px;
-  border-radius: 12px;
-  background: rgb(0 0 0 / 0.3);
-  font-size: 13px;
-  color: var(--t2);
-}
-.fp-live .i {
-  color: var(--t3);
-}
-.fp-live b {
-  font-weight: 500;
-  color: var(--t1);
-}
-.fp-live code {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* 04 Build on it */
-.fp-build {
-  width: min(540px, 100%);
-  display: grid;
-  gap: 20px;
-}
-.fp-cards {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-}
-.fp-card {
-  display: grid;
-  gap: 8px;
-  align-content: start;
-  height: 132px;
-  padding: 16px;
-  border-radius: 14px;
-  border: 1px solid var(--line);
-  background: var(--s1);
-}
-.fp-card span {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: var(--t1);
-  margin-bottom: 8px;
-}
-.fp-card span .i {
-  color: var(--t3);
-}
-.fp-card i {
-  display: block;
-  height: 6px;
-  border-radius: 3px;
-  background: var(--s3);
-}
-.fp-card.amber {
-  border-color: rgb(255 185 14 / 0.35);
-  background: linear-gradient(180deg, rgb(255 185 14 / 0.1), var(--s1));
-}
-.fp-composer.small p {
-  font-size: 14px;
-}
-
-/* Watch them work: the activity feed beside the page it is building. */
-.watch2 {
-  display: grid;
-  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
-}
-.w-feed {
-  border-right: 1px solid var(--line);
-  padding: 8px 0;
-}
-.w-head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  height: 48px;
-  padding: 0 16px;
-  font-size: 14px;
-}
-.w-head img {
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-}
-.w-head b {
-  font-weight: 500;
-}
-.w-head span:not(.spin) {
-  color: var(--t3);
-}
-.w-head .spin {
-  margin-inline-start: auto;
-}
-.w-feed .rowi {
-  height: 36px;
-  font-size: 13px;
-}
-.w-page {
-  display: grid;
-  grid-template-rows: auto 1fr;
-  padding: 16px;
-  background: var(--bg);
-}
-.w-bar {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  height: 32px;
-  padding: 0 12px;
-  border: 1px solid var(--line);
-  border-bottom: 0;
-  border-radius: 10px 10px 0 0;
-  background: var(--s2);
-  font: 12px var(--mono);
-  color: var(--t3);
-}
-.w-bar i {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--s3);
-}
-.w-bar span {
-  margin-inline-start: 8px;
-}
-.w-page .mk-frame {
-  border: 1px solid var(--line);
-  border-radius: 0 0 10px 10px;
-}
-.w-points {
-  margin-top: 40px;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 24px;
-}
-.w-points div {
-  display: grid;
-  align-content: start;
-  gap: 4px;
-  font-size: 15px;
-  color: var(--t2);
-}
-.w-points b {
-  font-weight: 500;
-  color: var(--t1);
-}
-
-/* The canvas: results as cards on a dotted board, in two even rows. */
-.board {
-  display: grid;
-  gap: 48px;
-  padding: 56px 32px 40px;
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  background-color: var(--s1);
-  background-image: radial-gradient(rgb(237 237 240 / 0.07) 1px, transparent 1px);
-  background-size: 20px 20px;
-}
-.b-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 24px;
-}
-.board .card {
-  position: relative;
-  flex: 1 1 0;
-  min-width: 0;
-  padding: 16px;
-  font-size: 13px;
-  overflow: visible;
-  background: var(--s2);
-}
-.board .card.doc {
-  flex-grow: 1.3;
-}
-.board .card.code {
-  flex-grow: 1.6;
-  padding: 0;
-}
-.board .card.sticky {
-  flex-grow: 0.8;
-  background: #3a3218;
-}
-.board .card.clip {
-  flex-grow: 1.4;
-  padding: 0;
-}
-.board .card.clip table {
-  border-radius: 12px;
-  overflow: hidden;
-}
-.board .card.pr {
-  flex-grow: 1.2;
-}
-.board .card h5 {
-  margin: 0 0 8px;
-  font-size: 13px;
-  font-weight: 500;
 }
 .doc p {
   font-size: 12px;
@@ -1655,28 +1115,6 @@ a.u:hover {
   margin-top: 20px;
   font-size: 14px;
   color: var(--t3);
-}
-
-/* Real engineering: three proofs, each a row of words beside the thing itself. */
-.eng-list {
-  border-top: 1px solid var(--line);
-}
-.eng-item {
-  display: grid;
-  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
-  gap: 48px;
-  align-items: center;
-  padding-block: 40px;
-  border-bottom: 1px solid var(--line);
-}
-.eng-copy {
-  display: grid;
-  gap: 8px;
-}
-.eng-copy p {
-  color: var(--t2);
-  font-size: 15px;
-  max-width: 420px;
 }
 .diff {
   border: 1px solid var(--line);
@@ -1800,59 +1238,6 @@ a.u:hover {
 .pr-time .ok .i {
   color: var(--green);
 }
-
-/* Integrations: a wall of the connectors' own logos, then schedules and channels. */
-.logos {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 1px;
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  overflow: hidden;
-  background: var(--line);
-}
-.logos li {
-  display: grid;
-  justify-items: center;
-  align-content: center;
-  gap: 12px;
-  height: 120px;
-  background: var(--s1);
-  font-size: 13px;
-  color: var(--t2);
-  transition: background-color 160ms var(--ease);
-}
-.logos li:hover {
-  background: var(--s2);
-}
-.logos img {
-  width: 28px;
-  height: 28px;
-  border-radius: 7px;
-  object-fit: contain;
-}
-.int-more {
-  margin-top: 40px;
-  display: grid;
-  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
-  gap: 48px;
-}
-.int-more > div {
-  display: grid;
-  align-content: start;
-  gap: 12px;
-}
-.int-more h3 {
-  font-size: 16px;
-  font-weight: 500;
-}
-.int-more p {
-  font-size: 15px;
-  max-width: 400px;
-}
 .sched {
   border-top: 1px solid var(--line);
 }
@@ -1881,14 +1266,6 @@ a.u:hover {
 .channel-logos img {
   width: 24px;
   height: 24px;
-}
-
-/* Self-host: the terminal, and the other ways to run it beside it. */
-.self {
-  display: grid;
-  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
-  gap: 48px;
-  align-items: start;
 }
 .term2 {
   background: var(--s1);
@@ -1919,13 +1296,6 @@ a.u:hover {
   color: var(--t1);
   overflow-x: auto;
 }
-.term2 .p {
-  color: var(--t3);
-  user-select: none;
-}
-.term2 .c {
-  color: var(--green);
-}
 .copy-btn {
   margin-inline-start: auto;
   display: inline-flex;
@@ -1946,29 +1316,6 @@ a.u:hover {
 .copy-btn:hover {
   color: var(--t1);
   border-color: var(--line2);
-}
-.ways2 {
-  border-top: 1px solid var(--line);
-}
-.ways2 div {
-  display: grid;
-  gap: 4px;
-  padding-block: 20px;
-  border-bottom: 1px solid var(--line);
-}
-.ways2 b {
-  font-weight: 500;
-  font-size: 15px;
-}
-.ways2 span {
-  color: var(--t2);
-  font-size: 14px;
-}
-
-/* Pricing: one panel, two halves. */
-.plans {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
 }
 .plan {
   padding: 40px;
@@ -2028,13 +1375,6 @@ a.u:hover {
   grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
   gap: 48px;
   align-items: start;
-}
-.faq-head {
-  display: grid;
-  gap: 16px;
-}
-.faq-head .lede {
-  font-size: 17px;
 }
 .faq {
   border-top: 1px solid var(--line);
@@ -2195,53 +1535,6 @@ footer .sponsor img {
   .faq2 {
     gap: 24px;
   }
-  .flow-list {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 20px 16px;
-  }
-  .flow-stage {
-    height: 440px;
-  }
-  .flow-panel {
-    padding: 24px 16px;
-  }
-  .fp-hires {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-  .fp-wires {
-    display: none;
-  }
-  .fp-task {
-    grid-template-columns: 24px minmax(0, 1fr) auto 16px;
-  }
-  .fp-task .fp-track {
-    display: none;
-  }
-  .w-feed {
-    border-right: 0;
-    border-bottom: 1px solid var(--line);
-  }
-  .w-points {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .board {
-    padding: 40px 16px 16px;
-    gap: 40px;
-  }
-  .b-row {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 40px;
-  }
-  .board .card {
-    flex: none;
-  }
-  .board .card.clip {
-    overflow-x: auto;
-  }
-  .logos li {
-    height: 96px;
-  }
   .plan + .plan {
     border-left: 0;
     border-top: 1px solid var(--line);
@@ -2265,21 +1558,6 @@ footer .sponsor img {
   }
   .gh .label {
     display: none;
-  }
-  .flow-d {
-    display: none;
-  }
-  .flow-list {
-    gap: 16px;
-  }
-  /* On a phone the wall keeps its 7 by 2 shape with logos only; the names would not fit. */
-  .logos li {
-    height: 64px;
-    font-size: 0;
-  }
-  .logos img {
-    width: 24px;
-    height: 24px;
   }
   .plan {
     padding: 24px;
@@ -2315,219 +1593,571 @@ footer .sponsor img {
     transition: none;
   }
 }
-
-/* Statements: the point in white, the explanation in grey, one sentence run. */
-.say {
-  max-width: 880px;
-  margin: 0 0 40px;
-  font: 500 clamp(26px, 3vw, 36px) / 1.22 var(--brand);
-  letter-spacing: -0.02em;
-  color: var(--t1);
-}
-.say span {
-  color: var(--t3);
-}
-
-/* A frame: words on one side, the product sitting on a painting on the other, cropped by the frame. */
-.frame {
-  display: grid;
-  grid-template-columns: minmax(0, 4fr) minmax(0, 8fr);
-  gap: 12px;
-  padding: 12px;
-  border: 1px solid var(--line);
-  border-radius: 20px;
-  background: #111112;
-}
-.frame.flip {
-  grid-template-columns: minmax(0, 8fr) minmax(0, 4fr);
-}
-.frame.flip .f-copy {
-  order: 2;
-}
-.f-copy {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 32px;
-  padding: 28px 20px 20px;
-}
-.f-copy .say {
-  margin: 0;
-  font-size: clamp(22px, 2.2vw, 28px);
-}
-.f-art {
-  position: relative;
-  min-height: 560px;
-  border-radius: 12px;
-  overflow: hidden;
-  background: var(--art) center / cover;
-}
-.f-win {
-  position: absolute;
-  top: 56px;
-  left: 56px;
-  width: 960px;
-  border-radius: 12px;
-  box-shadow: 0 30px 80px rgb(0 0 0 / 0.5);
-}
-.f-win > * {
-  background: var(--s1);
-}
-.f-points {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-.f-points li {
-  display: grid;
-  gap: 4px;
-  padding-block: 14px;
-  border-top: 1px solid var(--line);
-  font-size: 14px;
-}
-.f-points b {
-  font-weight: 500;
-}
 .f-points span,
 .kinds {
   color: var(--t3);
   font-size: 14px;
   line-height: 1.55;
 }
-.flow-stage.art {
-  background: var(--art) center / cover;
+
+/* Everything below the manifesto is one board: a dotted canvas, real cards, connectors, and the team's cursors. */
+:root {
+  --c-raka: oklch(0.72 0.13 240);
+  --c-sinta: oklch(0.72 0.14 330);
+  --c-dewi: oklch(0.74 0.13 150);
+  --c-bima: oklch(0.78 0.13 70);
+}
+.cv-page {
+  margin-top: 96px;
+  border-top: 1px solid var(--line);
+  background-color: var(--bg);
+  background-image: radial-gradient(rgb(237 237 240 / 0.075) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+.cv {
+  padding-block: 120px 0;
+}
+.cv:last-child {
+  padding-bottom: 120px;
+}
+.cv-in {
+  position: relative;
 }
 
-/* Three proofs side by side, split by hairlines. */
-.trio {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  border-block: 1px solid var(--line);
+/* A text node on the board, which an agent selects as it scrolls in. */
+.tn {
+  position: relative;
+  width: fit-content;
+  max-width: 720px;
+  margin-bottom: 72px;
+  padding: 12px 16px;
+  margin-inline-start: -16px;
 }
-.trio.two {
-  margin-top: 40px;
-  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+.tn h2 {
+  font-size: clamp(30px, 3.6vw, 44px);
 }
-.cell {
-  display: grid;
-  align-content: start;
-  gap: 8px;
-  padding: 32px 28px;
+.tn p {
+  margin-top: 12px;
+  max-width: 600px;
+  font-size: 17px;
+  line-height: 1.6;
+  color: var(--t2);
+}
+.tn::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 1.5px solid var(--who);
+  border-radius: 4px;
+  opacity: 0;
+  transition: opacity 300ms var(--ease);
+  pointer-events: none;
+}
+.tn::after {
+  content: attr(data-pick);
+  position: absolute;
+  top: -11px;
+  left: -1px;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 4px 4px 4px 0;
+  background: var(--who);
+  color: #0d0d0e;
+  font: 500 12px / 22px var(--sans);
+  opacity: 0;
+  transition: opacity 300ms var(--ease);
+  pointer-events: none;
+}
+.tn.picked::before,
+.tn.picked::after {
+  opacity: 1;
+}
+
+/* Cards: the board's own node style. */
+.nd {
+  position: relative;
   min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--line2);
+  border-radius: 12px;
+  background: var(--s1);
+  font-size: 13px;
+  box-shadow: 0 16px 40px rgb(0 0 0 / 0.32);
 }
-.cell + .cell {
-  border-left: 1px solid var(--line);
-}
-.cell:first-child {
-  padding-left: 0;
-}
-.cell:last-child {
-  padding-right: 0;
-}
-.cell-vis {
-  height: 220px;
-  margin-bottom: 20px;
-  display: grid;
-  align-items: center;
-  min-width: 0;
-}
-.cell-vis .diff {
-  font-size: 11px;
-}
-.cell h3 {
-  font-size: 16px;
+.nd h3 {
+  margin-top: 16px;
+  font-size: 15px;
   font-weight: 500;
 }
-.cell p {
-  color: var(--t3);
-  font-size: 14px;
+.nd > p,
+.nd h3 + p {
+  margin-top: 4px;
+  font-size: 13px;
   line-height: 1.55;
+  color: var(--t3);
+}
+.nd h5 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 500;
+}
+.nd.sticky {
+  background: #3a3218;
+  border-color: rgb(255 185 14 / 0.25);
+  color: #f3e7c4;
+  font-size: 14px;
+  line-height: 1.45;
 }
 
-/* Connectors as chips drifting in rows, alternate rows the other way. */
-.f-chips {
+/* Connectors drawn between cards, and the cursors that travel them. */
+.edges {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+.edges path {
+  fill: none;
+  stroke: rgb(237 237 240 / 0.26);
+  stroke-width: 1.5;
+}
+.edges path.live {
+  stroke: var(--amber);
+  stroke-dasharray: 4 6;
+  animation: edge-run 1.2s linear infinite;
+}
+.edges circle {
+  fill: var(--bg);
+  stroke: rgb(237 237 240 / 0.4);
+  stroke-width: 1.5;
+}
+@keyframes edge-run {
+  to {
+    stroke-dashoffset: -20;
+  }
+}
+.cur {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 3;
+  display: none;
+  align-items: flex-start;
+  gap: 2px;
+  font: 500 12px / 1 var(--sans);
+  color: #0d0d0e;
+  pointer-events: none;
+}
+.motion .cur {
+  display: inline-flex;
+}
+.cur svg {
+  width: 16px;
+  height: 16px;
+  fill: var(--who);
+  stroke: #0d0d0e;
+  stroke-width: 1;
+}
+.cur b {
+  margin-top: 12px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: var(--who);
+  font-weight: 500;
+}
+
+/* How it works: four cards in a row, joined left to right. */
+.steps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 48px;
+}
+.sv {
   display: grid;
   align-content: center;
-  gap: 12px;
-  min-height: 320px;
+  gap: 8px;
+  height: 128px;
+  padding: 12px;
+  border-radius: 8px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+}
+.sv.ask p {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--t1);
+}
+.sv .model {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--t3);
+}
+.sv .model i {
+  margin-inline-start: auto;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--t1);
+  color: #111113;
+}
+.sv .model i .i {
+  width: 12px;
+  height: 12px;
+  transform: rotate(-90deg);
+}
+.sv.hires {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.sv.hires span {
+  display: grid;
+  grid-template-columns: 20px 1fr;
+  column-gap: 8px;
+  align-items: center;
+  font-size: 12px;
+}
+.sv.hires img {
+  grid-row: span 2;
+  border-radius: 50%;
+}
+.sv.hires em {
+  font-style: normal;
+  font-size: 11px;
+  color: var(--t3);
+}
+.sv.work span {
+  display: grid;
+  grid-template-columns: 16px 1fr;
+  align-items: center;
+  gap: 8px;
+}
+.sv.work img {
+  border-radius: 50%;
+}
+.sv.work i {
+  height: 4px;
+  border-radius: 2px;
+  background:
+    linear-gradient(var(--amber), var(--amber)) 0 0 / var(--w) 100% no-repeat,
+    var(--s3);
+}
+.sv.work .wait {
+  opacity: 0.5;
+}
+.sv.build {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.sv.build span {
+  height: 44px;
+  border-radius: 6px;
+  border: 1px solid var(--line2);
+  background: var(--s2);
+}
+.sv.build span.amber {
+  border-color: rgb(255 185 14 / 0.4);
+}
+.sv.build p {
+  grid-column: 1 / -1;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  font-size: 11px;
+  color: var(--t2);
+}
+
+/* Watch them work: the feed card wired to the page it is building. */
+.watch-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  gap: 64px;
+  align-items: start;
+}
+.nd.flog {
+  padding: 8px 0;
+}
+.nd.flog .rowi {
+  height: 36px;
+  font-size: 13px;
+}
+.nd.preview {
+  padding: 8px;
+}
+.nd.preview .mk-frame {
+  border-radius: 6px;
+}
+.notes {
+  margin-top: 56px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 48px;
+}
+.notes h3 {
+  font-size: 15px;
+  font-weight: 500;
+}
+.notes p,
+.file p {
+  margin-top: 4px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--t3);
+}
+
+/* The canvas section: the cards in a loose grid, wired where one fed the next. */
+.bgrid {
+  display: grid;
+  grid-template-columns: 1.1fr 1.4fr 0.9fr 1fr;
+  gap: 56px 48px;
+  align-items: start;
+}
+.bgrid .code {
+  padding: 0;
+}
+.bgrid .code .by {
+  top: -22px;
+}
+.bgrid .clip {
+  padding: 0;
+  overflow: visible;
+}
+.bgrid .clip table {
   border-radius: 12px;
   overflow: hidden;
-  background: var(--s1);
-  mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
 }
-.chip-row {
+#b-next {
+  grid-column: 4;
+  grid-row: 1;
+}
+#b-table {
+  grid-column: 1 / span 2;
+  grid-row: 2;
+  width: 72%;
+}
+#b-note {
+  grid-column: 3;
+  grid-row: 2;
+  margin-top: 24px;
+}
+#b-pr {
+  grid-column: 4;
+  grid-row: 2;
+  margin-top: 16px;
+}
+.kinds {
+  margin-top: 40px;
+  font-size: 14px;
+  color: var(--t3);
+}
+
+/* Real files: three file cards with what each proves under them. */
+.files {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 48px;
+}
+.file .nd {
+  height: 240px;
+  display: grid;
+  align-items: center;
+  margin-bottom: 20px;
+}
+.file h3 {
+  font-size: 15px;
+  font-weight: 500;
+}
+.file .diff {
   overflow: hidden;
+  font-size: 10.5px;
+  border: 0;
+  background: none;
 }
-.chip-run {
+.file .graph {
+  border: 0;
+  background: none;
+}
+.file .pr-time {
+  border: 0;
+  background: none;
+  padding: 0 0 0 4px;
+}
+.file .pr-time::before {
+  left: 13px;
+  top: 8px;
+  bottom: 8px;
+}
+
+/* Integrations: connectors wired into the team, like nodes on the board. */
+.hubgrid {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr 1fr;
+  gap: 120px;
+  align-items: center;
+}
+.hubgrid .col {
+  display: grid;
+  gap: 16px;
+}
+.nd.lg {
   display: flex;
-  gap: 12px;
-  width: max-content;
-  animation: mq 36s linear infinite;
-}
-.chip-row.rev .chip-run {
-  animation-direction: reverse;
-  animation-duration: 44s;
-}
-.chip-l {
-  display: inline-flex;
   align-items: center;
   gap: 10px;
-  height: 48px;
-  padding: 0 18px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: var(--s2);
+  height: 52px;
+  padding: 0 16px;
   font-size: 14px;
   color: var(--t2);
-  white-space: nowrap;
+  box-shadow: none;
 }
-.chip-l img {
+.nd.lg img {
   width: 20px;
   height: 20px;
   border-radius: 5px;
   object-fit: contain;
 }
-.ways2 div {
-  padding-block: 14px;
+.nd.hub {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  padding: 28px;
+  border-color: rgb(255 185 14 / 0.35);
+  text-align: center;
 }
-.ways2 b {
+.nd.hub img {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  margin-bottom: 6px;
+}
+.nd.hub b {
+  font-size: 15px;
+  font-weight: 500;
+}
+.nd.hub span {
+  font: 12px var(--mono);
+  color: var(--t3);
+}
+.pair {
+  margin-top: 72px;
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  gap: 48px;
+}
+.pair .sched {
+  border-top: 0;
+}
+.pair .sched-row:last-child {
+  border-bottom: 0;
+}
+.nd.phone {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+
+/* Self-host: the terminal card, with the other ways to run it beside it. */
+.selfgrid {
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  gap: 48px;
+  align-items: start;
+}
+.nd.term2 {
+  padding: 0;
+  overflow: visible;
+}
+.nd.term2 .bar {
+  border-radius: 12px 12px 0 0;
+}
+.ways3 {
+  display: grid;
+  gap: 16px;
+}
+.ways3 .nd {
+  display: grid;
+  gap: 4px;
+  box-shadow: none;
+}
+.ways3 b {
   font-size: 14px;
+  font-weight: 500;
 }
-.ways2 span {
+.ways3 span {
   font-size: 13px;
   color: var(--t3);
 }
+
+/* Pricing and questions, as cards on the same board. */
+.plans2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 48px;
+}
+.nd.plan {
+  padding: 32px;
+}
+.nd.plan.soon {
+  border-style: dashed;
+}
+.cv .faq2 {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  gap: 48px;
+  align-items: start;
+}
+.nd.faq {
+  padding: 8px 24px;
+  border-top: 1px solid var(--line2);
+}
+.nd.faq details:last-child {
+  border-bottom: 0;
+}
+
 @media (max-width: 960px) {
-  .frame,
-  .frame.flip,
-  .trio,
-  .trio.two {
+  .steps,
+  .watch-grid,
+  .notes,
+  .bgrid,
+  .files,
+  .pair,
+  .selfgrid,
+  .plans2,
+  .cv .faq2 {
     grid-template-columns: minmax(0, 1fr);
   }
-  .frame.flip .f-copy {
-    order: 0;
+  .steps,
+  .bgrid {
+    gap: 48px;
   }
-  .f-art {
-    min-height: 0;
-    padding: 24px 0 0 20px;
+  #b-table,
+  #b-note,
+  #b-pr,
+  #b-next {
+    grid-column: auto;
+    grid-row: auto;
+    width: auto;
+    justify-self: stretch;
   }
-  .f-win {
-    position: relative;
-    inset: auto;
-    width: 760px;
+  .hubgrid {
+    grid-template-columns: 1fr;
+    gap: 32px;
   }
-  .cell,
-  .cell:first-child,
-  .cell:last-child {
-    padding: 28px 0;
+  .hubgrid .col {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  .cell + .cell {
-    border-left: 0;
-    border-top: 1px solid var(--line);
+  .watch-grid {
+    gap: 48px;
   }
-}
-@media (prefers-reduced-motion: reduce) {
-  .chip-run {
-    animation: none;
+  .cv {
+    padding-top: 88px;
+  }
+  .tn {
+    margin-bottom: 48px;
+  }
+  .nd.preview {
+    overflow: hidden;
   }
 }
