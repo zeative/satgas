@@ -16,6 +16,13 @@ if (stage && canvas) {
   fit();
 }
 
+// The team's page is a desktop page; each frame shrinks it whole to its own width.
+for (const frame of document.querySelectorAll(".mk-frame")) {
+  const fitPage = () => frame.style.setProperty("--k", String(frame.clientWidth / 1280));
+  new ResizeObserver(fitPage).observe(frame);
+  fitPage();
+}
+
 // One play of the run: who was hired, the lines to them, their steps, then what they made. Reduced motion skips to the end.
 if (scene && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
   scene.classList.add("play");

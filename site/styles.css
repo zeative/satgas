@@ -5,6 +5,13 @@
   font-weight: 100 900;
   font-display: swap;
 }
+/* The sample page's editorial serif. Instrument Serif, SIL Open Font License 1.1 (assets/fonts/OFL-InstrumentSerif.txt). */
+@font-face {
+  font-family: "Instrument Serif";
+  src: url("assets/fonts/instrument-serif-latin-400.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
 @font-face {
   font-family: "Sora Variable";
   src: url("assets/fonts/sora-latin-wght-normal.woff2") format("woff2-variations");
@@ -603,156 +610,178 @@ table.mini tr:last-child td {
   font: 11px var(--mono);
   color: var(--t3);
 }
-.mk {
-  background: radial-gradient(120% 90% at 88% 18%, #9a5420 0%, #43200d 40%, #170c06 78%);
-  color: #f6efe6;
-  font-family: var(--sans);
-}
-.mk-nav {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 16px 4px;
-  font-size: 11px;
-  color: #d9c6b3;
-}
-.mk-logo {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-inline-end: auto;
-  font:
-    italic 600 15px Georgia,
-    "Times New Roman",
-    serif;
-  color: #f6efe6;
-}
-.mk-logo i {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #f2a33a;
-}
-.mk-nav b {
-  padding: 4px 10px;
-  border-radius: 12px;
-  border: 1px solid rgb(246 239 230 / 0.22);
-  font-weight: 500;
-  color: #f6efe6;
-}
-.mk-hero {
-  display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
-  align-items: center;
-  gap: 12px;
-  padding: 12px 16px 16px;
-}
-.mk-tag {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 10px;
-  border: 1px solid rgb(242 163 58 / 0.4);
-  font-size: 11px;
-  color: #f2c080;
-}
-.mk h4 {
-  margin: 8px 0 0;
-  font: 600 21px / 1.05 var(--sans);
-  letter-spacing: -0.035em;
-}
-.mk-cta {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 12px;
-  font-size: 11px;
-  color: #d9c6b3;
-  white-space: nowrap;
-}
-.mk-cta b {
-  padding: 4px 12px;
-  border-radius: 12px;
-  background: #f2a33a;
-  color: #1a0d06;
-  font-weight: 600;
-}
-/* The product, drawn: a kraft pouch with its seal and label, lit from the top left. */
-.mk-bag {
+/* The page the team made, built at a desktop size (1280 x 800) and shrunk whole to its frame, like a real preview.
+   Its backdrop is Gradient Lab's "Amber Hour" (backgrounds.supply), free to use without credit. */
+.mk-frame {
   position: relative;
-  aspect-ratio: 3 / 4;
-  width: 82%;
-  justify-self: center;
-  border-radius: 8px 8px 12px 12px;
-  background: linear-gradient(160deg, #f1e6d6, #d9c4a8 58%, #c2a685);
-  box-shadow:
-    0 16px 28px rgb(0 0 0 / 0.5),
-    inset 0 -10px 18px rgb(0 0 0 / 0.1),
-    inset 8px 0 14px rgb(255 255 255 / 0.25);
-  transform: rotate(-7deg);
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  background: #0f0905;
 }
-.mk-seal {
+.mkd {
   position: absolute;
-  inset: 0 0 auto;
-  height: 14%;
-  border-radius: 8px 8px 0 0;
-  background: repeating-linear-gradient(90deg, #2b1a10 0 3px, #3a2416 3px 6px);
+  top: 0;
+  left: 0;
+  width: 1280px;
+  height: 800px;
+  transform-origin: 0 0;
+  transform: scale(var(--k, 0.25));
+  color: #f7f1ea;
+  font-family: var(--sans);
+  isolation: isolate;
 }
-.mk-label {
+/* Mirrored so the light falls bottom right and the left stays dark for the words. */
+.mkd::before {
+  content: "";
   position: absolute;
-  inset: 32% 12% 14%;
-  border-radius: 6px;
-  background: #1d110a;
-  display: grid;
-  place-content: center;
-  text-align: center;
-  gap: 4px;
+  inset: 0;
+  z-index: -1;
+  /* A shade from the bottom keeps the week's schedule readable over the brightest part of the light. */
+  background:
+    linear-gradient(to top, rgb(12 8 5 / 0.78), rgb(12 8 5 / 0.3) 34%, transparent 56%),
+    url("assets/bg/amber-hour.jpg") center / cover;
+  transform: scaleX(-1);
 }
-.mk-label em {
+.mkd-nav {
+  height: 72px;
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  padding: 0 64px;
+  font-size: 14px;
+  color: rgb(244 237 228 / 0.6);
+  border-bottom: 1px solid rgb(244 237 228 / 0.1);
+}
+.mkd-logo {
+  margin-inline-end: 40px;
   font:
-    italic 600 18px Georgia,
+    400 30px / 1 "Instrument Serif",
+    Georgia,
     serif;
-  color: #f2a33a;
+  color: #f4ede4;
 }
-.mk-label small {
-  font-size: 11px;
-  color: #d9c6b3;
+.mkd-end {
+  margin-inline-start: auto;
 }
-.mk-plans {
+.mkd-head {
+  position: absolute;
+  left: 64px;
+  right: 64px;
+  top: 132px;
+}
+.mkd-meta {
+  font-size: 14px;
+  color: rgb(244 237 228 / 0.6);
+}
+.mkd h4 {
+  margin: 20px 0 0;
+  font:
+    400 112px / 0.94 "Instrument Serif",
+    Georgia,
+    serif;
+  letter-spacing: -0.02em;
+  color: #f4ede4;
+}
+.mkd-row {
+  position: absolute;
+  left: 64px;
+  right: 64px;
+  top: 428px;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: 360px 340px 1fr;
+  gap: 48px;
+  align-items: start;
+}
+.mkd-row p {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.6;
+  color: rgb(244 237 228 / 0.68);
+}
+.mkd-notes {
+  display: grid;
   gap: 8px;
-  padding: 0 16px 16px;
+  font:
+    400 22px / 1.25 "Instrument Serif",
+    Georgia,
+    serif;
+  color: #f4ede4;
 }
-.mk-plans div {
-  padding: 8px 12px;
-  border-radius: 8px;
-  border: 1px solid rgb(246 239 230 / 0.14);
-  font-size: 12px;
+.mkd-notes span {
+  font: 400 13px var(--sans);
+  color: rgb(244 237 228 / 0.55);
 }
-.mk-plans div.on {
-  border-color: #f2a33a;
-  background: rgb(242 163 58 / 0.12);
+.mkd-buy {
+  justify-self: end;
+  display: grid;
+  gap: 12px;
+  justify-items: end;
 }
-.mk-plans em {
-  display: block;
-  margin-top: 4px;
+.mkd-buy b {
+  display: inline-flex;
+  align-items: center;
+  gap: 16px;
+  height: 52px;
+  padding: 0 24px;
+  border-radius: 4px;
+  background: #f4ede4;
+  color: #17100b;
+  font-size: 15px;
+  font-weight: 500;
+}
+.mkd-buy i {
   font-style: normal;
-  font-weight: 600;
-  color: #f2a33a;
-  font-variant-numeric: tabular-nums;
 }
-.mk-lg h4 {
-  font-size: 32px;
+.mkd-buy span {
+  font-size: 13px;
+  color: rgb(244 237 228 / 0.6);
 }
-.mk-lg .mk-hero {
-  padding: 24px 24px 24px;
+/* The promise itself, as this week's schedule: what is done, what is happening now, what comes next. */
+.mkd-week {
+  position: absolute;
+  left: 64px;
+  right: 64px;
+  bottom: 56px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 24px;
 }
-.mk-lg .mk-nav,
-.mk-lg .mk-plans {
-  padding-inline: 24px;
+.mkd-week li {
+  display: grid;
+  gap: 6px;
+  padding-top: 20px;
+  border-top: 1px solid rgb(244 237 228 / 0.22);
+  opacity: 0.62;
 }
-.mk-lg .mk-plans {
-  padding-bottom: 24px;
+.mkd-week li.done {
+  opacity: 0.85;
+}
+.mkd-week li.now {
+  opacity: 1;
+  border-top: 2px solid #f2a33a;
+  padding-top: 19px;
+}
+.mkd-week span {
+  font-size: 13px;
+  color: rgb(244 237 228 / 0.6);
+}
+.mkd-week b {
+  font:
+    400 28px / 1.1 "Instrument Serif",
+    Georgia,
+    serif;
+  color: #f4ede4;
+}
+.mkd-week em {
+  font: 400 13px / 1.4 var(--mono);
+  font-style: normal;
+  color: rgb(244 237 228 / 0.55);
+}
+.mkd-week li.now em {
+  color: #f2c080;
 }
 
 /* Chat panel */
