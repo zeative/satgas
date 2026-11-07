@@ -797,8 +797,11 @@ table.mini tr:last-child td {
   flex-direction: column;
   min-height: 0;
 }
+/* Reset what the sections' .head layout would otherwise leak in. */
 .chat .head {
   height: 52px;
+  margin: 0;
+  gap: 0;
   display: flex;
   align-items: center;
   padding: 0 16px;
@@ -819,6 +822,7 @@ table.mini tr:last-child td {
   border: 1px solid var(--line);
   border-radius: 12px;
   overflow: hidden;
+  flex: none;
 }
 .group .gh-row {
   display: flex;
