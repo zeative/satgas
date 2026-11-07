@@ -29,51 +29,30 @@ export interface CatalogItem {
   logo: { src: string; dark?: string; icon?: boolean };
   desc: Text;
   about: Text;
+  features: { title: Text; text: Text }[];
+  // What the server offers its agents, by the names it gives them.
+  tools: string[];
+  // The month it joined the catalog, as YYYY-MM.
+  added: string;
+  support?: string;
+  privacy?: string;
   server: { transport: "stdio"; command: string; args: string[] } | { transport: "http"; url: string };
   secrets?: Secret[];
-  note?: Text;
+  // The address to sign in at, when it differs from the one a key is sent to.
+  oauthUrl?: string;
+  // The person would rather sign in, so a key is only offered while signing in is not possible.
+  preferSignIn?: boolean;
 }
 
-const npx = (...args: string[]) => ({ transport: "stdio" as const, command: "npx", args: ["-y", ...args] });
+const feature = (enTitle: string, en: string, idTitle: string, id: string) => ({
+  title: { en: enTitle, id: idTitle },
+  text: { en, id },
+});
+const names = (list: string) => list.split(/\s+/).filter(Boolean);
 
-// Every entry was checked against its publisher's package or README (2026-11); commands run as written.
+// Every entry was checked against its publisher's README (2026-11). Tools come from each server's own tools/list, except
+// GitHub's (its README) and Zapi's and Monveo's (their connectors), which need a sign-in to ask.
 export const CATALOG: CatalogItem[] = [
-  {
-    id: "playwright",
-    name: "Playwright",
-    by: "Microsoft",
-    site: "https://playwright.dev",
-    docs: "https://github.com/microsoft/playwright-mcp",
-    category: "browser",
-    logo: { src: "/brands/playwright.svg" },
-    desc: {
-      en: "Drive a real browser: open pages, click, fill forms and take screenshots",
-      id: "Kendalikan browser sungguhan: buka halaman, klik, isi form, dan ambil tangkapan layar",
-    },
-    about: {
-      en: "Agents get a real Chromium window they drive through the page's accessibility tree, not screenshots. They can open what they just built, click through it, fill forms, read the console and save screenshots as proof.",
-      id: "Agen mendapat jendela Chromium sungguhan yang dikendalikan lewat accessibility tree halaman, bukan tangkapan layar. Mereka bisa membuka hasil kerjanya, mengklik, mengisi form, membaca console, dan menyimpan tangkapan layar sebagai bukti.",
-    },
-    server: npx("@playwright/mcp@latest"),
-  },
-  {
-    id: "chrome-devtools",
-    name: "Chrome DevTools",
-    by: "Google",
-    site: "https://developer.chrome.com",
-    docs: "https://github.com/ChromeDevTools/chrome-devtools-mcp",
-    category: "browser",
-    logo: { src: "/brands/chrome-devtools.png", icon: true },
-    desc: {
-      en: "Inspect pages in Chrome: console, network requests and performance traces",
-      id: "Periksa halaman di Chrome: console, request jaringan, dan jejak performa",
-    },
-    about: {
-      en: "Gives agents the Chrome DevTools they would use by hand: console messages, network requests and performance traces with insights, on a live page, so they can find why something is slow or broken.",
-      id: "Memberi agen Chrome DevTools yang biasa dipakai manual: pesan console, request jaringan, jejak performa, dan pemeriksaan halaman langsung, supaya mereka bisa menemukan kenapa sesuatu lambat atau rusak.",
-    },
-    server: npx("chrome-devtools-mcp@latest"),
-  },
   {
     id: "context7",
     name: "Context7",
@@ -90,12 +69,31 @@ export const CATALOG: CatalogItem[] = [
       en: "Pulls current, version-specific documentation and code examples for the libraries a task uses, so agents write against today's APIs instead of what they remember. Works without a key; a free key raises the rate limit.",
       id: "Mengambil dokumentasi dan contoh kode terbaru sesuai versi library yang dipakai tugas, supaya agen menulis kode untuk API hari ini, bukan yang mereka ingat. Jalan tanpa key; key gratis menaikkan batas pemakaian.",
     },
-    server: npx("@upstash/context7-mcp"),
+    features: [
+      feature(
+        "Find the library",
+        "match a library's name to the entry that holds its documentation",
+        "Cari library",
+        "cocokkan nama library dengan entri yang menyimpan dokumentasinya",
+      ),
+      feature(
+        "Read current docs",
+        "ask a question and get documentation and code examples for that version",
+        "Baca dokumentasi terbaru",
+        "ajukan pertanyaan dan dapatkan dokumentasi serta contoh kode untuk versi itu",
+      ),
+    ],
+    tools: names("query-docs resolve-library-id"),
+    added: "2026-11",
+    support: "https://github.com/upstash/context7/issues",
+    privacy: "https://upstash.com/trust/privacy.pdf",
+    server: { transport: "http", url: "https://mcp.context7.com/mcp" },
+    oauthUrl: "https://mcp.context7.com/mcp/oauth",
     secrets: [
       {
         key: "CONTEXT7_API_KEY",
         label: { en: "API key (optional, raises rate limits)", id: "API key (opsional, menaikkan batas pemakaian)" },
-        in: "env",
+        in: "header",
         optional: true,
         help: "https://context7.com/dashboard",
       },
@@ -114,8 +112,57 @@ export const CATALOG: CatalogItem[] = [
       en: "GitHub's own server: agents can read code across repositories, open and comment on issues and pull requests, check Actions runs and read notifications.",
       id: "Server resmi GitHub: agen bisa membaca kode di berbagai repository, membuka dan mengomentari issue serta pull request, mengecek run Actions, dan membaca notifikasi.",
     },
+    features: [
+      feature(
+        "Code and repositories",
+        "read files, search code, and work with branches, commits and releases",
+        "Kode dan repository",
+        "baca file, cari kode, dan kelola branch, commit, serta rilis",
+      ),
+      feature(
+        "Issues and pull requests",
+        "open, comment on, review and merge them",
+        "Issue dan pull request",
+        "buka, komentari, review, dan merge",
+      ),
+      feature(
+        "Actions",
+        "list runs, read job logs and trigger workflows",
+        "Actions",
+        "lihat daftar run, baca log job, dan jalankan workflow",
+      ),
+      feature(
+        "Security",
+        "check code scanning, Dependabot and secret scanning alerts, and security advisories",
+        "Keamanan",
+        "cek peringatan code scanning, Dependabot, dan secret scanning, serta security advisory",
+      ),
+      feature("Notifications", "read them, dismiss them and manage subscriptions", "Notifikasi", "baca, tutup, dan atur langganannya"),
+    ],
+    tools: names(`
+      actions_get actions_list actions_run_trigger add_comment_to_pending_review add_issue_comment add_reply_to_pull_request_comment
+      assign_copilot_to_issue assign_copilot_to_issue_with_intent create_branch create_gist create_or_update_file create_pull_request
+      create_pull_request_with_copilot create_repository create_repository_ruleset custom_properties_read custom_properties_write
+      delete_file delete_repository discussion_comment_write dismiss_notification fork_repository get_code_quality_finding
+      get_code_scanning_alert get_commit get_copilot_space get_dependabot_alert get_discussion get_discussion_comments get_file_contents
+      get_gist get_global_security_advisory get_job_logs get_label get_latest_release get_me get_notification_details get_release_by_tag
+      get_repository_tree get_secret_scanning_alert get_tag get_team_members get_teams github_support_docs_search issue_read issue_write
+      label_write list_branches list_code_scanning_alerts list_commits list_copilot_spaces list_dependabot_alerts
+      list_discussion_categories list_discussions list_gists list_global_security_advisories list_issue_fields list_issue_types
+      list_issues list_label list_notifications list_org_repository_security_advisories list_pull_requests list_releases
+      list_repository_collaborators list_repository_security_advisories list_secret_scanning_alerts list_starred_repositories list_tags
+      manage_notification_subscription manage_repository_notification_subscription mark_all_notifications_read merge_pull_request
+      projects_get projects_list projects_write pull_request_read pull_request_review_write push_files repository_ruleset_read
+      request_copilot_review search_code search_commits search_issues search_orgs search_pull_requests search_repositories search_users
+      star_repository sub_issue_write ui_get unstar_repository update_gist update_issue_comment update_pull_request
+      update_pull_request_branch
+    `),
+    added: "2026-11",
+    support: "https://github.com/github/github-mcp-server/issues",
+    privacy: "https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement",
     // Every toolset, so agents also reach notifications and Actions runs.
     server: { transport: "http", url: GITHUB_MCP_ALL },
+    preferSignIn: true,
     secrets: [
       {
         key: "Authorization",
@@ -135,17 +182,40 @@ export const CATALOG: CatalogItem[] = [
     category: "data",
     logo: { src: "/brands/zapi.svg", icon: true },
     desc: {
-      en: "Social media, search and other public data through one API key",
-      id: "Media sosial, pencarian, dan data publik lain lewat satu API key",
+      en: "Social media, search and other public data in one connector",
+      id: "Media sosial, pencarian, dan data publik lain dalam satu konektor",
     },
     about: {
-      en: "Zapi's remote server: agents search its catalogue of scrapers, read what each one takes and returns, and run it to get clean JSON back. Every call counts against your key's monthly quota.",
-      id: "Server remote Zapi: agen mencari di katalog scraper-nya, membaca input dan output tiap scraper, lalu menjalankannya untuk mendapat JSON yang bersih. Setiap panggilan memakai kuota bulanan key kamu.",
+      en: "Zapi's remote server: agents search its catalogue of scrapers, read what each one takes and returns, and run it to get clean JSON back. Every call counts against your monthly quota.",
+      id: "Server remote Zapi: agen mencari di katalog scraper-nya, membaca input dan output tiap scraper, lalu menjalankannya untuk mendapat JSON yang bersih. Setiap panggilan memakai kuota bulanan kamu.",
     },
+    features: [
+      feature(
+        "Find a scraper",
+        "search the catalogue and browse it by category",
+        "Cari scraper",
+        "cari di katalog dan telusuri per kategori",
+      ),
+      feature(
+        "Know what it takes",
+        "read what each scraper needs and what it returns",
+        "Pahami cara pakainya",
+        "baca apa yang dibutuhkan dan dikembalikan tiap scraper",
+      ),
+      feature(
+        "Run it",
+        "get clean JSON back, one call at a time or in bulk",
+        "Jalankan",
+        "dapatkan JSON yang bersih, satu per satu atau sekaligus",
+      ),
+      feature("Watch the quota", "check the account and its usage", "Pantau kuota", "cek akun dan pemakaiannya"),
+    ],
+    tools: names("bulk_status bulk_submit get_account get_scraper_schema get_usage list_categories run_scraper search_scrapers"),
+    added: "2026-11",
+    privacy: "https://zapi.ink/privacy",
     server: { transport: "http", url: "https://mcp.zapi.ink/mcp" },
     secrets: [{ key: "x-api-key", label: { en: "API key", id: "API key" }, in: "header", help: "https://zapi.ink/dashboard/keys" }],
   },
-  // Placeholder: Monveo has no MCP server yet, so this URL answers nothing until the real one replaces it.
   {
     id: "monveo",
     name: "Monveo",
@@ -155,15 +225,46 @@ export const CATALOG: CatalogItem[] = [
     category: "data",
     logo: { src: "/brands/monveo.png", icon: true },
     desc: {
-      en: "Money tracking with voice, receipt scanning and analytics",
-      id: "Pencatatan uang lewat suara, scan struk, dan analitik",
+      en: "Your transactions, budgets, wallets, goals and net worth",
+      id: "Transaksi, anggaran, dompet, tujuan, dan kekayaan bersih kamu",
     },
     about: {
-      en: "Monveo keeps everyday money organized in spaces, with voice capture, receipt scanning and analytics. Its connector is not live yet, so this entry only holds the place.",
-      id: "Monveo merapikan uang harian ke dalam space, dengan pencatatan suara, scan struk, dan analitik. Connector-nya belum aktif, jadi entri ini baru penanda tempat.",
+      en: "Monveo's remote server: agents read your transactions, budgets, wallets, goals and net worth, and can record a new expense or income if you allow it on the connection. They cannot edit or delete anything.",
+      id: "Server remote Monveo: agen membaca transaksi, anggaran, dompet, tujuan, dan kekayaan bersih kamu, dan bisa mencatat pengeluaran atau pemasukan baru kalau kamu mengizinkannya di koneksi itu. Mereka tidak bisa mengubah atau menghapus apa pun.",
     },
+    features: [
+      feature(
+        "Where you stand",
+        "a snapshot of the month, your budgets, wallets, goals and net worth",
+        "Kondisi keuangan",
+        "ringkasan bulan ini, anggaran, dompet, tujuan, dan kekayaan bersih",
+      ),
+      feature(
+        "Where the money went",
+        "spending by category, and why it changed between periods",
+        "Ke mana uangnya",
+        "pengeluaran per kategori, dan kenapa berubah antar periode",
+      ),
+      feature(
+        "Purchases and bills",
+        "find specific purchases, subscriptions and recurring bills",
+        "Belanja dan tagihan",
+        "cari belanja tertentu, langganan, dan tagihan rutin",
+      ),
+      feature(
+        "Record a transaction",
+        "add an expense or income, only when you turned that on",
+        "Catat transaksi",
+        "tambah pengeluaran atau pemasukan, hanya kalau kamu mengaktifkannya",
+      ),
+    ],
+    tools: names(`
+      add_transaction compare_spending get_context get_financial_snapshot get_spending_by_category list_recurring_transactions
+      search_transactions
+    `),
+    added: "2026-11",
+    privacy: "https://monveo.app/privacy",
     server: { transport: "http", url: "https://mcp.monveo.app/mcp" },
-    note: { en: "Not available yet", id: "Belum tersedia" },
   },
 ];
 
@@ -189,7 +290,7 @@ const freeName = (id: string, taken: McpServer[]) => {
 };
 
 // Builds the server a catalog entry installs, with the pasted secrets in place.
-export function toServer(item: CatalogItem, values: Record<string, string>, id: string, taken: McpServer[] = []): McpServer {
+export function toServer(item: CatalogItem, values: Record<string, string>, id: string, taken: McpServer[] = [], url?: string): McpServer {
   const filled = Object.fromEntries(
     (item.secrets ?? []).flatMap((s) => {
       const value = values[s.key]?.trim();
@@ -200,6 +301,6 @@ export function toServer(item: CatalogItem, values: Record<string, string>, id: 
     Object.fromEntries(Object.entries(filled).filter(([k]) => item.secrets?.find((s) => s.key === k)?.in === where));
   const base = { id, name: freeName(item.id, taken), catalogId: item.id, enabled: true };
   return item.server.transport === "http"
-    ? { ...base, transport: "http", url: item.server.url, headers: pick("header") }
+    ? { ...base, transport: "http", url: url ?? item.server.url, headers: pick("header") }
     : { ...base, transport: "stdio", command: item.server.command, args: item.server.args, env: pick("env") };
 }

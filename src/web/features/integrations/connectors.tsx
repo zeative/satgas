@@ -1,20 +1,31 @@
-import { Check, ExternalLink, Info, MoreHorizontal, Pencil, Plus, Server, Trash2 } from "lucide-react";
-import { useId, useState } from "react";
+import { Check, ExternalLink, LogIn, MoreHorizontal, Pencil, Plus, Server, Trash2 } from "lucide-react";
+import { useEffect, useId, useState } from "react";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { LogoTile as Tile } from "@/components/logo-tile";
-import { OutboundLink } from "@/components/outbound-link";
+import { OutboundLink, openExternal } from "@/components/outbound-link";
 import { RichText } from "@/components/rich-text";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { newId } from "@/features/board/context";
 import { lang, t } from "@/i18n";
+import { copyText } from "@/lib/clipboard";
 import { cn } from "@/lib/utils";
+import {
+  type AuthSupport,
+  detectSignIn,
+  type LoginStart,
+  loadLogins,
+  signInStatus,
+  startSignIn,
+  useLogins,
+} from "@/stores/connector-logins";
 import { saveSettings } from "@/stores/settings";
-import { byId, CATALOG, type CatalogItem, type Category, catalogOf, type Text, toServer } from "../../../shared/catalog";
+import { byId, CATALOG, type CatalogItem, type Category, catalogOf, type Secret, type Text, toServer } from "../../../shared/catalog";
 import type { McpServer, Settings } from "../../../shared/settings";
 import { DetailPage, DetailSection, ExternalText, Fact } from "./detail";
 import { describe, ServerDialog } from "./server-dialog";
@@ -30,11 +41,6 @@ const matches = (q: string, ...fields: (string | undefined)[]) => {
 
 function LogoTile({ item }: { item?: CatalogItem }) {
   return <Tile logo={item?.logo} fallback={<Server className="size-5 text-muted-foreground" aria-hidden="true" />} />;
-}
-
-// Under a connector only a note it cannot work without; keys and limits live on its page.
-function Meta({ item }: { item: CatalogItem }) {
-  return item.note ? <p className="text-xs text-muted-foreground">{say(item.note)}</p> : null;
 }
 
 export type Setup = "all" | "nokey" | "key" | "every" | "claude";
@@ -65,26 +71,23 @@ interface DiscoverProps {
   onOpen: (id: string) => void;
 }
 
-// Adds a catalog connector: straight away when it needs nothing, through the key dialog when it does.
+// Adding always goes through the dialog: it finds out how the server signs in and offers what it supports.
 export function useAddConnector(settings: Settings) {
   const [connecting, setConnecting] = useState<CatalogItem | null>(null);
-  const add = async (item: CatalogItem) => {
-    // Only a required key needs asking for; an optional one can be added later from Edit.
-    if (needsKey(item)) return setConnecting(item);
-    const servers = settings.mcpServers;
-    if (await update({ ...settings, mcpServers: [...servers, toServer(item, {}, newId(), servers)] }))
-      toast.success(ti.addedToast(item.name), { description: ti.addedHint });
+  const add = (item: CatalogItem) => setConnecting(item);
+  const added = async (next: McpServer) => {
+    const problem = await saveSettings({ ...settings, mcpServers: [...settings.mcpServers, next] });
+    if (problem) return problem;
+    if (connecting) toast.success(ti.addedToast(connecting.name), { description: ti.addedHint });
+    void loadLogins();
+    return null;
   };
   const dialog = connecting && (
     <ConnectDialog
-      item={connecting}
+      target={targetOf(connecting)}
       onClose={() => setConnecting(null)}
-      onSave={async (values) => {
-        const servers = settings.mcpServers;
-        const problem = await saveSettings({ ...settings, mcpServers: [...servers, toServer(connecting, values, newId(), servers)] });
-        if (!problem) toast.success(ti.addedToast(connecting.name), { description: ti.addedHint });
-        return problem;
-      }}
+      onSignedIn={(id, url) => added(toServer(connecting, {}, id, settings.mcpServers, url))}
+      onKey={(id, values) => added(toServer(connecting, values, id, settings.mcpServers))}
     />
   );
   return { add, dialog };
@@ -125,7 +128,6 @@ export function Discover({ settings, query, filter, onClearFilter, onCustom, onO
                       </button>
                     </h3>
                     <p className="text-sm text-muted-foreground">{say(item.desc)}</p>
-                    <Meta item={item} />
                   </div>
                   {isOn ? (
                     <span
@@ -150,7 +152,7 @@ export function Discover({ settings, query, filter, onClearFilter, onCustom, onO
                       className="relative z-10 size-8 shrink-0 rounded-lg bg-background"
                       aria-label={ti.addConnector(item.name)}
                       title={ti.addConnector(item.name)}
-                      onClick={() => void add(item)}
+                      onClick={() => add(item)}
                     >
                       <Plus />
                     </Button>
@@ -192,6 +194,9 @@ interface YoursProps {
 
 export function Yours({ settings, query, onDiscover, onCustom, onEdit, onOpen }: YoursProps) {
   const [removing, setRemoving] = useState<McpServer | null>(null);
+  const [signingIn, setSigningIn] = useState<McpServer | null>(null);
+  const logins = useLogins();
+  useEffect(() => void loadLogins(), []);
   const servers = settings.mcpServers;
   const shown = servers.filter((s) => matches(query, s.name, catalogOf(s)?.name, describe(s)));
   const replace = (next: McpServer[]) => update({ ...settings, mcpServers: next });
@@ -255,7 +260,17 @@ export function Yours({ settings, query, onDiscover, onCustom, onEdit, onOpen }:
                       {describe(s)}
                     </p>
                   )}
-                  <p className="text-xs text-muted-foreground">{s.transport === "http" ? `${ti.remote} · ${ti.claudeOnly}` : ti.local}</p>
+                  {logins[s.id]?.broken ? (
+                    <button
+                      type="button"
+                      onClick={() => setSigningIn(s)}
+                      className="relative z-10 w-fit rounded text-start text-xs text-destructive underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                    >
+                      {ti.signInAgain}
+                    </button>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">{s.transport === "http" ? `${ti.remote} · ${ti.claudeOnly}` : ti.local}</p>
+                  )}
                 </div>
                 <div className="relative z-10 flex shrink-0 items-center gap-1">
                   <Switch
@@ -275,6 +290,12 @@ export function Yours({ settings, query, onDiscover, onCustom, onEdit, onOpen }:
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
+                      {s.transport === "http" && (
+                        <DropdownMenuItem onClick={() => setSigningIn(s)}>
+                          <LogIn />
+                          {ti.tabSignIn}
+                        </DropdownMenuItem>
+                      )}
                       <DropdownMenuItem onClick={() => onEdit(s)}>
                         <Pencil />
                         {ti.edit}
@@ -293,6 +314,26 @@ export function Yours({ settings, query, onDiscover, onCustom, onEdit, onOpen }:
       ) : (
         <p className="rounded-xl bg-muted/50 px-6 py-10 text-center text-sm text-muted-foreground">{ti.noResults(query.trim())}</p>
       )}
+      {signingIn && (
+        <ConnectDialog
+          target={{
+            name: catalogOf(signingIn)?.name ?? signingIn.name,
+            by: catalogOf(signingIn)?.by ?? signingIn.name,
+            logo: catalogOf(signingIn)?.logo,
+            keyUrl: signingIn.url ?? "",
+            signInUrl: catalogOf(signingIn)?.oauthUrl ?? signingIn.url ?? "",
+            secrets: [],
+            serverId: signingIn.id,
+          }}
+          onClose={() => setSigningIn(null)}
+          onSignedIn={async (_id, url) => {
+            void loadLogins();
+            // A server that signs in on its own address moves there, or the token would go to the wrong one.
+            if (url === signingIn.url) return null;
+            return saveSettings({ ...settings, mcpServers: servers.map((x) => (x.id === signingIn.id ? { ...x, url } : x)) });
+          }}
+        />
+      )}
       <ConfirmDialog
         open={!!removing}
         onOpenChange={(open) => !open && setRemoving(null)}
@@ -307,26 +348,121 @@ export function Yours({ settings, query, onDiscover, onCustom, onEdit, onOpen }:
   );
 }
 
-interface ConnectProps {
-  item: CatalogItem;
-  onClose: () => void;
-  onSave: (values: Record<string, string>) => Promise<string | null>;
+// What the dialog needs to know: a catalog entry, or a server someone added by hand.
+interface Target {
+  name: string;
+  by: string;
+  desc?: string;
+  logo?: CatalogItem["logo"];
+  // Where a key goes, and where to sign in; they differ on servers that keep sign-ins on their own address.
+  keyUrl: string;
+  signInUrl: string;
+  secrets: Secret[];
+  preferSignIn?: boolean;
+  serverId?: string;
 }
 
-// Asks only for the keys a connector needs, links to where they are made, and shows exactly what will run.
-function ConnectDialog({ item, onClose, onSave }: ConnectProps) {
+const urlOf = (item: CatalogItem) => (item.server.transport === "http" ? item.server.url : "");
+const targetOf = (item: CatalogItem): Target => ({
+  name: item.name,
+  by: item.by,
+  desc: say(item.desc),
+  logo: item.logo,
+  keyUrl: urlOf(item),
+  signInUrl: item.oauthUrl ?? urlOf(item),
+  secrets: item.secrets ?? [],
+  preferSignIn: item.preferSignIn,
+});
+
+function useSupport(url: string, attempt = 0) {
+  const [support, setSupport] = useState<AuthSupport | null>(null);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: a new attempt asks again.
+  useEffect(() => {
+    let live = true;
+    setSupport(null);
+    if (!url) return;
+    void detectSignIn(url)
+      .catch((): AuthSupport => ({ open: false, oauth: false, failed: true }))
+      .then((found) => {
+        if (live) setSupport(found);
+      });
+    return () => {
+      live = false;
+    };
+  }, [url, attempt]);
+  return support;
+}
+
+interface ConnectProps {
+  target: Target;
+  onClose: () => void;
+  onSignedIn: (serverId: string, url: string) => Promise<string | null>;
+  onKey?: (serverId: string, values: Record<string, string>) => Promise<string | null>;
+}
+
+// Finds out how a server signs in and offers that: its own sign-in page, an API key, or the choice when it has both.
+function ConnectDialog({ target, onClose, onSignedIn, onKey }: ConnectProps) {
+  const [attempt, setAttempt] = useState(0);
+  const support = useSupport(target.signInUrl, attempt);
+  const [tab, setTab] = useState<"signin" | "key">("signin");
   const [values, setValues] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
+  const [login, setLogin] = useState<LoginStart | null>(null);
+  const [serverId] = useState(() => target.serverId ?? newId());
   const uid = useId();
-  const secrets = item.secrets ?? [];
-  const missing = secrets.some((s) => !s.optional && !values[s.key]?.trim());
-  const runs = item.server.transport === "http" ? item.server.url : [item.server.command, ...item.server.args].join(" ");
+  const canKey = !!onKey && target.secrets.length > 0 && !(support?.oauth && target.preferSignIn);
+  const signingIn = !!support?.oauth && (tab === "signin" || !canKey);
+  const missing = target.secrets.some((s) => !s.optional && !values[s.key]?.trim());
+  const nothing = !!support && !support.failed && !support.oauth && !canKey;
+  const note = !support
+    ? ti.checkingSignIn(target.name)
+    : support.failed
+      ? ti.checkFailedServer
+      : nothing
+        ? ti.noSignIn
+        : login
+          ? ti.waitingSignIn
+          : signingIn
+            ? ti.signInHint(target.by)
+            : ti.keyStored;
+
+  // The page opened in another tab, so the answer is fetched rather than waited for.
+  useEffect(() => {
+    if (!login) return;
+    const timer = setInterval(() => {
+      void signInStatus(login.state).then(async ({ status, error }) => {
+        if (status === "waiting") return;
+        clearInterval(timer);
+        setLogin(null);
+        if (status !== "done") return setProblem(error ?? ti.signInFailed);
+        const failed = await onSignedIn(serverId, target.signInUrl);
+        if (failed) setProblem(failed);
+        else onClose();
+      });
+    }, 1500);
+    return () => clearInterval(timer);
+  }, [login, onClose, onSignedIn, serverId, target.signInUrl]);
+
+  const begin = async () => {
+    setProblem(null);
+    setSaving(true);
+    try {
+      const started = await startSignIn(serverId, target.signInUrl);
+      // A browser may block a tab opened after the wait; the waiting state keeps a link to it.
+      if (started.flow === "redirect") openExternal(started.open);
+      setLogin(started);
+    } catch (e) {
+      setProblem((e as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const submit = async () => {
-    if (missing) return;
+    if (missing || !onKey) return;
     setSaving(true);
-    const result = await onSave(values);
+    const result = await onKey(serverId, values);
     setSaving(false);
     if (result) setProblem(result);
     else onClose();
@@ -334,81 +470,158 @@ function ConnectDialog({ item, onClose, onSave }: ConnectProps) {
 
   return (
     <Dialog open onOpenChange={(open) => !open && !saving && onClose()}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader className="flex-row items-center gap-4 text-start">
-          <LogoTile item={item} />
-          <div className="flex min-w-0 flex-col gap-1">
-            <DialogTitle>{ti.connect(item.name)}</DialogTitle>
-            <DialogDescription>{say(item.desc)}</DialogDescription>
+      <DialogContent className="gap-4 p-5 sm:max-w-md">
+        <DialogHeader className="min-w-0 flex-row items-center gap-3 pe-3 text-start">
+          <Tile size="xs" logo={target.logo} fallback={<Server className="size-5 text-muted-foreground" aria-hidden="true" />} />
+          <div className="flex min-w-0 flex-col gap-0.5">
+            <DialogTitle className="text-base font-medium">{ti.connect(target.name)}</DialogTitle>
+            {target.desc && (
+              <DialogDescription className="truncate text-xs" title={target.desc}>
+                {target.desc}
+              </DialogDescription>
+            )}
           </div>
         </DialogHeader>
-        <form
-          id={`${uid}-form`}
-          className="flex flex-col gap-4"
-          onSubmit={(e) => {
-            e.preventDefault();
-            void submit();
-          }}
-        >
-          {secrets.map((s) => (
-            <div key={s.key} className="flex flex-col gap-1.5">
-              <div className="flex items-center justify-between gap-3">
-                <label htmlFor={`${uid}-${s.key}`} className="text-sm font-medium">
-                  {say(s.label)}
-                </label>
-                <OutboundLink
-                  href={s.help}
-                  className="inline-flex items-center gap-1 rounded text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-                >
-                  {ti.getKey}
-                  <ExternalLink className="size-3" aria-hidden="true" />
-                </OutboundLink>
-              </div>
-              <Input
-                id={`${uid}-${s.key}`}
-                type="password"
-                autoComplete="off"
-                spellCheck={false}
-                className="font-mono text-xs"
-                value={values[s.key] ?? ""}
-                onChange={(e) => setValues((v) => ({ ...v, [s.key]: e.target.value }))}
-                required={!s.optional}
-              />
-            </div>
-          ))}
-          <p className="text-xs text-muted-foreground">{ti.keyStored}</p>
-          <div className="flex flex-col gap-1 rounded-lg bg-muted/60 px-3 py-2">
-            <span className="text-xs text-muted-foreground">
-              {ti.runs}
-              {item.server.transport === "http" && ` · ${ti.claudeOnly}`}
-            </span>
-            <code className="font-mono text-xs [overflow-wrap:anywhere]">{runs}</code>
+
+        {support?.oauth && canKey && !login && (
+          <Tabs value={tab} onValueChange={(v) => setTab(v as "signin" | "key")}>
+            <TabsList>
+              <TabsTrigger value="signin">{ti.tabSignIn}</TabsTrigger>
+              <TabsTrigger value="key">{ti.tabKey}</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        )}
+
+        {login?.flow === "device" && (
+          <div className="flex h-10 items-center justify-between gap-3 rounded-lg bg-muted/60 px-3">
+            <code className="font-mono text-sm tracking-widest">{login.code}</code>
+            <span className="text-xs text-muted-foreground">{ti.deviceHint}</span>
           </div>
-          {item.note && <p className="text-xs text-muted-foreground">{say(item.note)}</p>}
-          {problem && (
-            <p role="alert" className="text-sm text-destructive">
-              <RichText text={problem} />
-            </p>
+        )}
+
+        {support && !support.failed && !signingIn && canKey && (
+          <form
+            id={`${uid}-form`}
+            className="flex flex-col gap-3"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void submit();
+            }}
+          >
+            {target.secrets.map((s) => (
+              <div key={s.key} className="flex flex-col gap-1.5">
+                <div className="flex items-center justify-between gap-3">
+                  <label htmlFor={`${uid}-${s.key}`} className="text-sm font-medium">
+                    {say(s.label)}
+                  </label>
+                  <OutboundLink
+                    href={s.help}
+                    className="inline-flex items-center gap-1 rounded text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                  >
+                    {ti.getKey}
+                    <ExternalLink className="size-3" aria-hidden="true" />
+                  </OutboundLink>
+                </div>
+                <Input
+                  id={`${uid}-${s.key}`}
+                  type="password"
+                  autoComplete="off"
+                  spellCheck={false}
+                  className="font-mono text-xs"
+                  value={values[s.key] ?? ""}
+                  onChange={(e) => setValues((v) => ({ ...v, [s.key]: e.target.value }))}
+                  required={!s.optional}
+                />
+              </div>
+            ))}
+          </form>
+        )}
+
+        {problem && (
+          <p role="alert" className="text-xs text-destructive">
+            <RichText text={problem} />
+          </p>
+        )}
+
+        <DialogFooter className="min-h-8 flex-row items-center justify-between gap-3 sm:justify-between">
+          <p role="status" className={cn("min-w-0 text-xs text-muted-foreground", (!support || login) && "satgas-shimmer")}>
+            {note}
+          </p>
+          {support?.failed ? (
+            <Button className="shrink-0" onClick={() => setAttempt((n) => n + 1)}>
+              {ti.tryAgain}
+            </Button>
+          ) : login?.flow === "device" ? (
+            <Button
+              className="shrink-0"
+              onClick={() => {
+                void copyText(login.code);
+                openExternal(login.open);
+              }}
+            >
+              <ExternalLink />
+              {ti.copyAndOpen}
+            </Button>
+          ) : login ? (
+            <ExternalText href={login.open}>
+              <span className="text-xs whitespace-nowrap">{ti.openAgain}</span>
+            </ExternalText>
+          ) : signingIn ? (
+            <Button className="shrink-0" onClick={() => void begin()} disabled={saving}>
+              <ExternalLink />
+              {ti.continueWith(target.name)}
+            </Button>
+          ) : (
+            support &&
+            canKey && (
+              <Button className="shrink-0" type="submit" form={`${uid}-form`} disabled={saving || missing}>
+                {saving ? ti.saving : ti.connectBtn}
+              </Button>
+            )
           )}
-        </form>
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={saving}>
-            {ti.cancel}
-          </Button>
-          <Button type="submit" form={`${uid}-form`} disabled={saving || missing}>
-            {saving ? ti.saving : ti.connectBtn}
-          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
 
-// A connector's own page: what it does, exactly what runs, the keys it needs and who makes it.
+const TOOLS_SHOWN = 18;
+const monthOf = (added: string) =>
+  new Intl.DateTimeFormat(lang, { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(`${added}-01T00:00:00Z`));
+
+// A long list stays three columns and six rows until someone asks for the rest.
+function ToolChips({ tools }: { tools: string[] }) {
+  const [all, setAll] = useState(false);
+  const sorted = [...tools].sort();
+  return (
+    <>
+      <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        {(all ? sorted : sorted.slice(0, TOOLS_SHOWN)).map((name) => (
+          <li key={name} className="min-w-0">
+            <code
+              title={name}
+              className="block h-7 w-fit max-w-full truncate rounded-full border px-2.5 font-mono text-xs leading-[26px] text-muted-foreground"
+            >
+              {name}
+            </code>
+          </li>
+        ))}
+      </ul>
+      {!all && sorted.length > TOOLS_SHOWN && (
+        <Button variant="ghost" size="sm" className="-ms-2.5 w-fit text-muted-foreground" onClick={() => setAll(true)}>
+          {t.showAll(sorted.length)}
+        </Button>
+      )}
+    </>
+  );
+}
+
+// A connector's own page: what it does, what it offers, exactly what runs, the keys it needs and who makes it.
 export function ConnectorDetail({ settings, id, onBack }: { settings: Settings; id: string; onBack: () => void }) {
   const { add, dialog } = useAddConnector(settings);
   const [removing, setRemoving] = useState(false);
   const item = byId.get(id);
+  const support = useSupport(item ? (item.oauthUrl ?? urlOf(item)) : "");
   if (!item)
     return (
       <div className="flex flex-col items-start gap-3">
@@ -426,6 +639,19 @@ export function ConnectorDetail({ settings, id, onBack }: { settings: Settings; 
       ? item.server.url
       : [item.server.command, ...item.server.args].join(" ");
   const keys = item.secrets ?? [];
+  const signInFact = !support
+    ? "…"
+    : support.failed
+      ? "—"
+      : support.oauth
+        ? keys.length && !item.preferSignIn
+          ? ti.keyEither
+          : ti.keyAccount
+        : needsKey(item)
+          ? ti.keyRequired
+          : keys.length
+            ? ti.keyOptional
+            : ti.keyNone;
   const replace = (next: McpServer[]) => update({ ...settings, mcpServers: next });
   const remove = async () => {
     if (!server) return null;
@@ -459,9 +685,9 @@ export function ConnectorDetail({ settings, id, onBack }: { settings: Settings; 
               </Button>
             </>
           ) : (
-            <Button onClick={() => void add(item)}>
+            <Button onClick={() => add(item)}>
               <Plus />
-              {needsKey(item) ? ti.connectBtn : ti.add}
+              {ti.connectBtn}
             </Button>
           )
         }
@@ -473,27 +699,31 @@ export function ConnectorDetail({ settings, id, onBack }: { settings: Settings; 
             <Fact label={ti.categoryLabel}>
               <span className="inline-flex h-6 items-center rounded-md bg-muted px-2 text-xs">{ti.category[item.category]}</span>
             </Fact>
-            <Fact label={ti.keyLabel}>{needsKey(item) ? ti.keyRequired : keys.length ? ti.keyOptional : ti.keyNone}</Fact>
-            <Fact label={ti.worksWith}>{item.server.transport === "http" ? ti.worksClaude : ti.worksEvery}</Fact>
-            <Fact label={ti.transport}>
-              <RichText text={item.server.transport === "http" ? ti.remote : ti.localNpx} />
+            <Fact label={ti.signIn}>{signInFact}</Fact>
+            <Fact label={item.server.transport === "http" ? ti.connectorUrl : ti.command}>
+              <code className="font-mono text-xs">{runs}</code>
             </Fact>
+            <Fact label={ti.addedOn}>{monthOf(item.added)}</Fact>
+            <Fact label={ti.worksWith}>{item.server.transport === "http" ? ti.worksClaude : ti.worksEvery}</Fact>
             <Fact label={ti.moreInfo}>
-              <ExternalText href={item.docs}>{ti.documentation}</ExternalText>
+              <span className="flex flex-col items-start gap-1">
+                <ExternalText href={item.docs}>{ti.documentation}</ExternalText>
+                {item.support && <ExternalText href={item.support}>{ti.support}</ExternalText>}
+                {item.privacy && <ExternalText href={item.privacy}>{ti.privacyPolicy}</ExternalText>}
+              </span>
             </Fact>
           </>
         }
       >
         <p className="max-w-prose text-sm leading-6">{say(item.about)}</p>
-        {item.note && (
-          <p className="flex items-start gap-2 rounded-lg border px-3 py-2 text-xs text-muted-foreground">
-            <Info className="mt-px size-3.5 shrink-0" aria-hidden="true" />
-            {say(item.note)}
-          </p>
-        )}
-        <DetailSection title={ti.whatRuns}>
-          <code className="rounded-lg bg-muted/60 px-3 py-2 font-mono text-xs [overflow-wrap:anywhere]">{runs}</code>
-          <p className="text-xs text-muted-foreground">{item.server.transport === "http" ? ti.whatRunsRemote : ti.whatRunsLocal}</p>
+        <DetailSection title={ti.keyFeatures}>
+          <ul className="flex max-w-prose list-disc flex-col gap-1.5 ps-4 text-sm leading-6 marker:text-muted-foreground">
+            {item.features.map((f) => (
+              <li key={f.title.en}>
+                <span className="font-medium">{say(f.title)}:</span> <span className="text-muted-foreground">{say(f.text)}</span>
+              </li>
+            ))}
+          </ul>
         </DetailSection>
         {keys.length > 0 && (
           <DetailSection title={ti.keys}>
@@ -512,6 +742,9 @@ export function ConnectorDetail({ settings, id, onBack }: { settings: Settings; 
             </ul>
           </DetailSection>
         )}
+        <DetailSection title={ti.toolsLabel} count={item.tools.length}>
+          <ToolChips tools={item.tools} />
+        </DetailSection>
       </DetailPage>
       {dialog}
       <ConfirmDialog

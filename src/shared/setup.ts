@@ -89,7 +89,8 @@ export function applyToSettings(s: Settings, c: SetupCommand, newId: () => strin
     const have = s.mcpServers.find((m) => catalogOf(m)?.id === item.id);
     if (have)
       return have.enabled ? `${item.name} is already connected` : applyToSettings(s, { op: "connector", name: have.name, on: true }, newId);
-    if (item.secrets?.some((x) => !x.optional)) return { settings: s, undo: [], needsKey: item.id };
+    // An entry with no key signs in, and only a person can do that.
+    if (!item.secrets?.length || item.secrets.some((x) => !x.optional)) return { settings: s, undo: [], needsKey: item.id };
     const server = toServer(item, {}, newId(), s.mcpServers);
     return { settings: { ...s, mcpServers: [...s.mcpServers, server] }, undo: [{ op: "connector", name: server.name, on: false }] };
   }

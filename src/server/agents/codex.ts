@@ -1,6 +1,7 @@
 import { codexKeyVar, codexProviderArgs } from "../../shared/providers";
 import type { McpServer } from "../../shared/settings";
 import { config } from "../config";
+import { withLogins } from "../oauth";
 import { getSettings } from "../settings";
 import { teamServer } from "../team";
 import { codexHookArgs, prepareToolHooks, removeToolHooks, type ToolHooks } from "../tools";
@@ -111,7 +112,12 @@ export async function runCodex(req: AgentRequest, { bare = false } = {}): Promis
   let sandboxRefused = false;
   const usage = { input: 0, cached: 0, output: 0 };
   const mcp = codexMcp(
-    bare ? [] : [...getSettings().mcpServers, ...(req.teamToken ? [teamServer(req.teamToken, config.port, true, !!req.teamTalk)] : [])],
+    bare
+      ? []
+      : await withLogins([
+          ...getSettings().mcpServers,
+          ...(req.teamToken ? [teamServer(req.teamToken, config.port, true, !!req.teamTalk)] : []),
+        ]),
   );
   const tools = bare ? null : await prepareToolHooks("codex");
   try {

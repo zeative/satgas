@@ -76,10 +76,13 @@ export function ExternalText({ href, children }: { href: string; children: React
   );
 }
 
-export function DetailSection({ title, children }: { title: string; children: React.ReactNode }) {
+export function DetailSection({ title, count, children }: { title: string; count?: number; children: React.ReactNode }) {
   return (
     <section className="flex flex-col gap-3">
-      <h2 className="text-sm font-medium">{title}</h2>
+      <h2 className="flex items-center gap-2 text-sm font-medium">
+        {title}
+        {count != null && <span className="font-mono text-xs font-normal text-muted-foreground tabular-nums">{count}</span>}
+      </h2>
       {children}
     </section>
   );

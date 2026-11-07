@@ -7,6 +7,7 @@ import type { ModelUsage, Usage } from "../../shared/types";
 import { learnClaudeModel } from "../claude-models";
 import { config } from "../config";
 import { noteLimits } from "../limits";
+import { withLogins } from "../oauth";
 import { getSettings } from "../settings";
 import { enabledSkills, pluginRoot } from "../skills";
 import { teamServer } from "../team";
@@ -157,7 +158,7 @@ export async function runClaude(req: AgentRequest, opts: ClaudeOptions = {}): Pr
       ? clip(readableError(String(result.result || result.subtype || "Claude failed.")), 400)
       : undefined;
   const servers = [...getSettings().mcpServers, ...(req.teamToken ? [teamServer(req.teamToken, config.port, false, !!req.teamTalk)] : [])];
-  const mcp = opts.tools === undefined ? await writeMcpFile(servers) : null;
+  const mcp = opts.tools === undefined ? await writeMcpFile(await withLogins(servers)) : null;
   const tools = opts.tools === undefined ? await prepareToolHooks("claude") : null;
   const model = claudeModel(opts.model);
   // Only workers take messages mid-task; the planner answers in one go.

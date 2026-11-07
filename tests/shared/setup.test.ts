@@ -23,7 +23,7 @@ const id = () => `id${++n}`;
 
 test("only setup Satgas can make passes; the rest is reported back", () => {
   const { commands, skipped } = cleanSetup([
-    { op: "connect", id: "playwright" },
+    { op: "connect", id: "context7" },
     { op: "connect", id: "not-in-catalog" },
     { op: "tool", id: "check", on: true },
     { op: "install-skills", repo: "vercel-labs/agent-skills" },
@@ -38,9 +38,9 @@ test("only setup Satgas can make passes; the rest is reported back", () => {
 });
 
 test("each change comes with the way back", () => {
-  const added = applyToSettings(base, { op: "connect", id: "playwright" }, id);
+  const added = applyToSettings(base, { op: "connect", id: "context7" }, id);
   if (typeof added === "string") throw new Error(added);
-  expect(added.settings.mcpServers.map((m) => m.catalogId)).toEqual(["playwright"]);
+  expect(added.settings.mcpServers.map((m) => m.catalogId)).toEqual(["context7"]);
   const undone = applyToSettings(added.settings, added.undo[0] as never, id);
   if (typeof undone === "string") throw new Error(undone);
   expect(undone.settings.mcpServers[0]?.enabled).toBe(false);
@@ -54,6 +54,10 @@ test("each change comes with the way back", () => {
   expect(agent.settings.agents.codex.tasks).toBe(true);
   expect(agent.settings.agents.claude.tasks).toBe(false);
   expect(agent.undo).toEqual([{ op: "agent", agent: "codex", tasks: false }]);
+});
+
+test("a connector that signs in adds nothing until the person does", () => {
+  expect(applyToSettings(base, { op: "connect", id: "monveo" }, id)).toMatchObject({ needsKey: "monveo", undo: [] });
 });
 
 test("a connector that needs a key adds nothing until the person types it", () => {

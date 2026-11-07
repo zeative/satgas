@@ -6,11 +6,11 @@ export interface Logo {
   icon?: boolean;
 }
 
-const SIZE = { sm: "size-12 rounded-xl", lg: "size-16 rounded-2xl" } as const;
-const MARK = { sm: "size-6", lg: "size-9" } as const;
+const SIZE = { xs: "size-10 rounded-xl", sm: "size-12 rounded-xl", lg: "size-16 rounded-2xl" } as const;
+const MARK = { xs: "size-5", sm: "size-6", lg: "size-9" } as const;
 
 // Bare marks sit on a quiet bordered tile; app icons are the tile itself, full bleed, the way an OS shows them.
-export function LogoTile({ logo, size = "sm", fallback }: { logo?: Logo; size?: "sm" | "lg"; fallback?: React.ReactNode }) {
+export function LogoTile({ logo, size = "sm", fallback }: { logo?: Logo; size?: keyof typeof SIZE; fallback?: React.ReactNode }) {
   if (logo?.icon) return <img src={logo.src} alt="" draggable={false} className={cn("shrink-0 border object-cover", SIZE[size])} />;
   return (
     <span className={cn("flex shrink-0 items-center justify-center border bg-background", SIZE[size])}>

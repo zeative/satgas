@@ -25,6 +25,7 @@ import { fileAt, patchBetween, removeHistory, revertTask } from "./history";
 import { cleanBoard, storageReport } from "./housekeeping";
 import { limitsReport } from "./limits";
 import { deleteEntry, getMemory, loadMemory, putEntry, setAuto, undoMemory } from "./memory";
+import { detectAuth, finishLogin, loginList, loginStatus, pruneLogins, startLogin } from "./oauth";
 import {
   answerRun,
   approveTask,
@@ -264,7 +265,42 @@ const server: Server<SocketData> = Bun.serve({
         const restored = restoreSecrets(await req.json().catch(() => null), getSettings());
         if (typeof restored === "string") return error(400, restored);
         const saved = await saveSettings(restored.input);
-        return typeof saved === "string" ? error(400, saved) : Response.json(maskSettings(saved));
+        if (typeof saved === "string") return error(400, saved);
+        await pruneLogins(saved.mcpServers.map((m) => m.id));
+        return Response.json(maskSettings(saved));
+      }),
+    },
+    // What a connector's server supports, asked without credentials.
+    "/api/connectors/detect": {
+      POST: api(async (req) => {
+        if (!isTrusted(req)) return forbidden();
+        const body = (await req.json().catch(() => ({}))) as { url?: unknown };
+        return typeof body.url === "string"
+          ? Response.json(await detectAuth(body.url.slice(0, 2000)))
+          : error(400, "Say which server to check.");
+      }),
+    },
+    "/api/connectors/logins": { GET: api(async () => Response.json(await loginList())) },
+    "/api/connectors/login": {
+      POST: api(async (req) => {
+        if (!isTrusted(req)) return forbidden();
+        const body = (await req.json().catch(() => ({}))) as { serverId?: unknown; url?: unknown };
+        if (typeof body.serverId !== "string" || typeof body.url !== "string") return error(400, "Say which server to sign in to.");
+        const origin = req.headers.get("origin") ?? config.publicUrl ?? `http://localhost:${server.port}`;
+        const started = await startLogin(body.serverId.slice(0, 64), body.url.slice(0, 2000), origin);
+        return "error" in started ? error(400, started.error) : Response.json(started);
+      }),
+    },
+    "/api/connectors/login/:state": { GET: api(async (req) => Response.json(await loginStatus(req.params.state))) },
+    // The sign-in page sends the person back here; its random state is the check, since a cookie may not come along.
+    "/api/connectors/callback": {
+      GET: open(async (req) => {
+        const problem = await finishLogin(new URL(req.url).searchParams);
+        const text = problem ? `Could not sign in: ${Bun.escapeHTML(problem)}` : "Signed in. You can close this tab.";
+        return new Response(
+          `<!doctype html><meta charset="utf-8"><title>Satgas</title><body style="font:14px system-ui;padding:32px">${text}${problem ? "" : "<script>window.close()</script>"}`,
+          { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store", "referrer-policy": "no-referrer" } },
+        );
       }),
     },
     // ?refresh=1 re-runs every check instead of answering from the minute-long cache; only Satgas's own pages may ask,
