@@ -1164,6 +1164,18 @@ a.u:hover {
 .diff .ctx::before {
   content: "  ";
 }
+.diff .k {
+  color: #c792ea;
+}
+.diff .s {
+  color: #9ecf8f;
+}
+.diff .a {
+  color: #e6b86a;
+}
+.diff .n {
+  color: #8cc4e8;
+}
 .graph {
   width: 100%;
   max-height: 220px;
@@ -1238,9 +1250,6 @@ a.u:hover {
 .pr-time .ok .i {
   color: var(--green);
 }
-.sched {
-  border-top: 1px solid var(--line);
-}
 .sched-row {
   display: flex;
   align-items: center;
@@ -1258,14 +1267,6 @@ a.u:hover {
   font: 12px var(--mono);
   color: var(--t3);
   white-space: nowrap;
-}
-.channel-logos {
-  display: flex;
-  gap: 12px;
-}
-.channel-logos img {
-  width: 24px;
-  height: 24px;
 }
 .term2 {
   background: var(--s1);
@@ -1972,7 +1973,7 @@ footer .sponsor img {
   font-size: 15px;
   font-weight: 500;
 }
-/* The diff fills its card edge to edge: the file name is the card's header, long lines wrap under their own text. */
+/* The diff fills its card edge to edge, with the file name as the card's header. */
 .file .diff {
   flex: 1;
   border: 0;
@@ -1991,7 +1992,7 @@ footer .sponsor img {
   width: auto;
   min-width: 0;
   padding: 1px 16px 1px 32px;
-  white-space: pre-wrap;
+  white-space: pre;
 }
 .file .diff div.l::before {
   position: absolute;
@@ -2071,16 +2072,40 @@ footer .sponsor img {
   grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
   gap: 48px;
 }
-.pair .sched {
-  border-top: 0;
+/* Schedules and channels share one panel: a header bar, then rows edge to edge. */
+.file .nd.lane {
+  display: block;
+  height: auto;
+  min-height: 0;
+  padding: 0;
 }
-.pair .sched-row:last-child {
+.lane-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 40px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--line);
+  font: 12px var(--mono);
+  color: var(--t2);
+}
+.lane-head span + span {
+  color: var(--t3);
+}
+.lane .sched-row {
+  padding: 0 16px;
+}
+.lane .sched-row:last-child {
   border-bottom: 0;
 }
-.nd.phone {
-  display: grid;
-  gap: 12px;
-  align-content: start;
+.lane .sched-row img {
+  flex: none;
+}
+.lane .what {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Self-host: the terminal card, with the other ways to run it beside it. */

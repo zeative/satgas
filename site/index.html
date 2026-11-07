@@ -367,14 +367,16 @@
             <p>The agents are the real Claude Code and Codex CLIs, running where you run Satgas. What they make is ordinary files you own.</p>
           </div>
           <div class="files">
-            <div class="file"><div class="nd"><span class="by"><img width="14" height="14" src="assets/faces/raka.svg" alt="" style="background: oklch(0.88 0.05 240)" />Raka · launch-email.md</span><div class="diff">
-                <div class="fname"><span>launch-email.md</span><span><span class="plus">+3</span> <span class="minus">−2</span></span></div>
-                <div class="l ctx">Subject: Your first bag ships Friday</div>
-                <div class="l del">We are excited to announce our new subscription.</div>
-                <div class="l add">Coffee roasted on Tuesday reaches you by Friday.</div>
-                <div class="l del">Plans start at a great price.</div>
-                <div class="l add">Plans start at Rp 89.000 for 200 g a month,</div>
-                <div class="l add">and you can skip any month for free.</div></div></div><h3>See every change, take back any</h3><p>Every task's changes are kept, with a diff and an undo. This history never touches your git.</p></div>
+            <div class="file"><div class="nd"><span class="by"><img width="14" height="14" src="assets/faces/sinta.svg" alt="" style="background: oklch(0.88 0.05 330)" />Sinta · plans.ts</span><div class="diff">
+                <div class="fname"><span>src/plans.ts</span><span><span class="plus">+3</span> <span class="minus">−2</span></span></div>
+                <div class="l ctx"><span class="k">export const</span> plans = {</div>
+                <div class="l del">  pagi: { <span class="a">grams</span>: <span class="n">250</span>, <span class="a">price</span>: <span class="n">99_000</span> },</div>
+                <div class="l add">  pagi: { <span class="a">grams</span>: <span class="n">200</span>, <span class="a">price</span>: <span class="n">89_000</span> },</div>
+                <div class="l ctx">  senja: { <span class="a">grams</span>: <span class="n">500</span>, <span class="a">price</span>: <span class="n">159_000</span> },</div>
+                <div class="l add">  malam: { <span class="a">grams</span>: <span class="n">1000</span>, <span class="a">price</span>: <span class="n">279_000</span> },</div>
+                <div class="l ctx">};</div>
+                <div class="l del"><span class="k">export const</span> canSkip = <span class="k">false</span>;</div>
+                <div class="l add"><span class="k">export const</span> canSkip = <span class="k">true</span>;</div></div></div><h3>See every change, take back any</h3><p>Every task's changes are kept, with a diff and an undo. This history never touches your git.</p></div>
             <div class="file"><div class="nd"><span class="by"><img width="14" height="14" src="assets/faces/lead.svg" alt="" style="background: oklch(0.88 0.05 95)" />Lead · worktrees</span><svg class="graph" viewBox="0 0 420 150" role="img" aria-label="Two task branches leaving main and merging back">
                 <path class="g-main" d="M20 75 H400" />
                 <path class="g-br" d="M70 75 C110 75 110 30 150 30 H250 C290 30 290 75 330 75" />
@@ -404,17 +406,25 @@
             <div class="col"><div class="nd lg" id="lg4"><img width="20" height="20" src="assets/brands/supabase.png" alt="" />Supabase</div><div class="nd lg" id="lg5"><img width="20" height="20" src="assets/brands/sentry.png" alt="" />Sentry</div><div class="nd lg" id="lg6"><img width="20" height="20" src="assets/brands/zapier.png" alt="" />Zapier</div><div class="nd lg" id="lg7"><img width="20" height="20" src="assets/brands/posthog.png" alt="" />PostHog</div></div>
           </div>
           <div class="pair">
-            <div class="nd">
-              <span class="by"><img width="14" height="14" src="assets/faces/lead.svg" alt="" style="background: oklch(0.88 0.05 95)" />Lead · Schedules</span>
-              <div class="sched">
-                <div class="sched-row"><svg class="i" aria-hidden="true"><use href="#i-clock" /></svg>Summarise yesterday's waitlist signups<span class="when">Weekdays 09:00</span></div>
-                <div class="sched-row"><svg class="i" aria-hidden="true"><use href="#i-hook" /></svg>Look into the new error and open a fix<span class="when">When Sentry calls</span></div>
+            <div class="file">
+              <div class="nd lane">
+                <span class="by"><img width="14" height="14" src="assets/faces/lead.svg" alt="" style="background: oklch(0.88 0.05 95)" />Lead · Schedules</span>
+                <div class="lane-head"><span>Schedules</span><span>2 active</span></div>
+                <div class="sched-row"><svg class="i" aria-hidden="true"><use href="#i-clock" /></svg><span class="what">Summarise yesterday's waitlist signups</span><span class="when">Weekdays 09:00</span></div>
+                <div class="sched-row"><svg class="i" aria-hidden="true"><use href="#i-hook" /></svg><span class="what">Look into the new error and open a fix</span><span class="when">When Sentry calls</span></div>
               </div>
+              <h3>Work that starts on its own</h3>
+              <p>Give the lead a time or a webhook, and the task runs without you asking.</p>
             </div>
-            <div class="nd phone">
-              <span class="by"><img width="14" height="14" src="assets/faces/lead.svg" alt="" style="background: oklch(0.88 0.05 95)" />Lead · Channels</span>
-              <div class="channel-logos"><img width="24" height="24" src="assets/brands/telegram.svg" alt="Telegram" /><img width="24" height="24" src="assets/brands/whatsapp.svg" alt="WhatsApp" /></div>
-              <p>Message the team from Telegram or WhatsApp and the lead picks it up like any request. Experimental.</p>
+            <div class="file">
+              <div class="nd lane">
+                <span class="by"><img width="14" height="14" src="assets/faces/lead.svg" alt="" style="background: oklch(0.88 0.05 95)" />Lead · Channels</span>
+                <div class="lane-head"><span>Channels</span><span>Experimental</span></div>
+                <div class="sched-row"><img width="18" height="18" src="assets/brands/telegram.svg" alt="" /><span class="what">Add a gift option to checkout</span><span class="when">Telegram</span></div>
+                <div class="sched-row"><img width="18" height="18" src="assets/brands/whatsapp.svg" alt="" /><span class="what">Is the pricing page live yet?</span><span class="when">WhatsApp</span></div>
+              </div>
+              <h3>Ask from your phone</h3>
+              <p>Message the team from Telegram or WhatsApp and the lead picks it up like any request.</p>
             </div>
           </div>
         </div>
