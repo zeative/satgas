@@ -47,6 +47,7 @@ beforeAll(async () => {
     async fetch(req) {
       const path = new URL(req.url).pathname;
       if (path === "/open") return Response.json({ result: {} });
+      if (path === "/page") return new Response("<html></html>", { headers: { "content-type": "text/html" } });
       if (path === "/keyonly") return new Response("no", { status: 401 });
       if (path === "/mcp")
         return new Response("no", {
@@ -117,6 +118,7 @@ test("tells a server that signs in, one that needs a key, one that needs nothing
   expect(await detectAuth(`${base}/mcp`)).toEqual({ open: false, oauth: true });
   expect(await detectAuth(`${base}/keyonly`)).toEqual({ open: false, oauth: false });
   expect(await detectAuth(`${base}/open`)).toEqual({ open: true, oauth: false });
+  expect(await detectAuth(`${base}/page`)).toEqual({ open: false, oauth: false });
   expect((await detectAuth("http://localhost:1/nothing")).failed).toBe(true);
   expect((await detectAuth("http://example.com/mcp")).failed).toBe(true);
 });

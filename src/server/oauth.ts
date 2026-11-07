@@ -163,7 +163,8 @@ async function discover(url: string): Promise<{ open: boolean; auth: AuthServer 
     signal: AbortSignal.timeout(TIMEOUT),
   });
   await probe.body?.cancel().catch(() => {});
-  if (probe.ok) return { open: true, auth: null };
+  // A web page answers 200 too, and only a JSON or stream reply is a server that spoke back.
+  if (probe.ok) return { open: /json|event-stream/i.test(probe.headers.get("content-type") ?? ""), auth: null };
   const challenge = probe.headers.get("www-authenticate") ?? "";
   const { origin, pathname } = new URL(url);
   const hinted = usable(/resource_metadata="([^"]+)"/.exec(challenge)?.[1]);
