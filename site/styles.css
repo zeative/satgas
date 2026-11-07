@@ -1589,6 +1589,9 @@ footer .sponsor img {
   .task {
     transition: none;
   }
+  [data-pulse] .edges path.pulse {
+    display: none;
+  }
 }
 .f-points span,
 .kinds {
@@ -1724,6 +1727,29 @@ footer .sponsor img {
   stroke: var(--amber);
   stroke-dasharray: 4 6;
   animation: edge-run 1.2s linear infinite;
+}
+[data-pulse] .edges path {
+  stroke: rgb(237 237 240 / 0.14);
+}
+[data-pulse] .edges path.pulse {
+  stroke: var(--amber);
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-dasharray: 8 92;
+  opacity: 0;
+  transition: opacity 0.4s;
+  animation: pulse-run 2.8s linear infinite;
+}
+.flowing .edges path.pulse {
+  opacity: 1;
+}
+@keyframes pulse-run {
+  from {
+    stroke-dashoffset: 100;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
 }
 .edges circle {
   fill: var(--bg);
@@ -2019,6 +2045,7 @@ footer .sponsor img {
   grid-template-columns: 1fr 1.2fr 1fr;
   gap: 120px;
   align-items: center;
+  padding-bottom: 40px;
 }
 .hubgrid .col {
   display: grid;
@@ -2040,25 +2067,35 @@ footer .sponsor img {
   border-radius: 5px;
   object-fit: contain;
 }
-.nd.hub {
+/* The team sits bare in the middle: just the mark, with the wires running into it. */
+.hub {
+  position: relative;
+  justify-self: center;
+}
+.hub-mark {
+  padding: 20px;
+  color: var(--t1);
+}
+.hub-mark svg {
+  display: block;
+  width: 80px;
+  height: 80px;
+}
+.hub-label {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  translate: -50% 0;
   display: grid;
   justify-items: center;
-  gap: 6px;
-  padding: 28px;
-  border-color: rgb(255 185 14 / 0.35);
-  text-align: center;
+  gap: 4px;
+  white-space: nowrap;
 }
-.nd.hub img {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  margin-bottom: 6px;
-}
-.nd.hub b {
+.hub-label b {
   font-size: 15px;
   font-weight: 500;
 }
-.nd.hub span {
+.hub-label span {
   font: 12px var(--mono);
   color: var(--t3);
 }
@@ -2190,9 +2227,21 @@ footer .sponsor img {
   .hubgrid {
     grid-template-columns: 1fr;
     gap: 32px;
+    padding-bottom: 0;
   }
   .hubgrid .col {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .hub-mark svg {
+    width: 64px;
+    height: 64px;
+  }
+  /* Wires leave the mark from top and bottom here, so the label moves beside it. */
+  .hub-label {
+    top: 50%;
+    left: 100%;
+    translate: 0 -50%;
+    justify-items: start;
   }
   .watch-grid {
     gap: 48px;

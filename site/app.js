@@ -169,7 +169,7 @@ if (gsap && ST && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
       start: "top 70%",
       once: true,
       onEnter: () => {
-        const paths = [...box.querySelectorAll(".edges path")];
+        const paths = [...box.querySelectorAll(".edges path:not(.pulse)")];
         for (const p of paths) {
           const len = p.getTotalLength();
           gsap.fromTo(
@@ -184,6 +184,7 @@ if (gsap && ST && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
                 p.style.strokeDasharray = "";
                 p.style.strokeDashoffset = "";
                 p.classList.toggle("live", p.dataset.live !== undefined);
+                if (p === paths.at(-1)) box.classList.add("flowing");
               },
             },
           );
@@ -299,6 +300,14 @@ for (const box of document.querySelectorAll("[data-edges]")) {
       path.setAttribute("d", d);
       if (live) path.dataset.live = "";
       svg.append(path);
+      // A short bright run travels each wire, staggered so the team never looks idle.
+      if (box.hasAttribute("data-pulse")) {
+        const run = path.cloneNode();
+        run.classList.add("pulse");
+        run.setAttribute("pathLength", "100");
+        run.style.animationDelay = `${-0.7 * svg.querySelectorAll(".pulse").length}s`;
+        svg.append(run);
+      }
       for (const [cx, cy] of [
         [x1, y1],
         [x2, y2],
@@ -314,6 +323,7 @@ for (const box of document.querySelectorAll("[data-edges]")) {
   };
   new ResizeObserver(draw).observe(box);
   draw();
+  if (!window.gsap) box.classList.add("flowing");
   box.drawEdges = draw;
 }
 
