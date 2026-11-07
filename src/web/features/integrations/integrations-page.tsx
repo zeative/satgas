@@ -137,26 +137,18 @@ export function IntegrationsPage() {
                 {current === "connectors" && (
                   <>
                     <span aria-hidden="true" className="mx-1 h-4 w-px bg-border max-sm:hidden" />
-                    <fieldset className="flex h-7 items-center rounded-lg bg-muted/50">
-                      <legend className="sr-only">{ti.connectors}</legend>
-                      {(["yours", "discover"] as const).map((v) => (
-                        <button
-                          key={v}
-                          type="button"
-                          aria-pressed={view === v}
-                          onClick={() => go({ view: v === "yours" ? "yours" : undefined })}
-                          className={cn(
-                            "flex h-full items-center gap-1.5 rounded-lg border border-transparent px-2.5 text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
-                            view === v && "border-border bg-muted text-foreground",
-                          )}
-                        >
-                          {v === "yours" ? ti.yours : ti.discover}
-                          {v === "yours" && settings && settings.mcpServers.length > 0 && (
-                            <span className="font-mono text-xs text-muted-foreground tabular-nums">{settings.mcpServers.length}</span>
-                          )}
-                        </button>
-                      ))}
-                    </fieldset>
+                    <Tabs value={view} onValueChange={(v) => go({ view: v === "yours" ? "yours" : undefined })}>
+                      <TabsList aria-label={ti.connectors} className="gap-0 rounded-lg bg-muted/50" markClassName="border border-border">
+                        {(["yours", "discover"] as const).map((v) => (
+                          <TabsTrigger key={v} value={v}>
+                            {v === "yours" ? ti.yours : ti.discover}
+                            {v === "yours" && settings && settings.mcpServers.length > 0 && (
+                              <span className="font-mono text-xs text-muted-foreground tabular-nums">{settings.mcpServers.length}</span>
+                            )}
+                          </TabsTrigger>
+                        ))}
+                      </TabsList>
+                    </Tabs>
                     <div className="ms-auto flex items-center gap-2 max-sm:ms-0 max-sm:w-full">
                       <div className="relative max-sm:flex-1">
                         <Search
