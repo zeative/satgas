@@ -12,7 +12,7 @@ import { lang, t } from "@/i18n";
 import { cn } from "@/lib/utils";
 import { loadProviders, useProviders } from "@/stores/providers";
 import { saveSettings } from "@/stores/settings";
-import { PROVIDERS, type ProviderDef, type Runtime, type Text } from "../../../shared/providers";
+import { DEFAULT_PROVIDER, PROVIDERS, type ProviderDef, type Runtime, type Text } from "../../../shared/providers";
 import { activeAgent, SECRET_MASK, type Settings } from "../../../shared/settings";
 import type { ProviderStatus } from "../../../shared/types";
 
@@ -187,10 +187,10 @@ export function ProviderDialog({
   const uid = useId();
   const inUse = settings.agents.claude.provider === def.kind || settings.agents.codex.provider === def.kind;
 
-  const persist = async (next: Settings["providers"]) => {
+  const persist = async (next: Settings["providers"], agents = settings.agents) => {
     setBusy(true);
     setProblem(null);
-    const refused = await saveSettings({ ...settings, providers: next });
+    const refused = await saveSettings({ ...settings, agents, providers: next });
     if (refused) {
       setBusy(false);
       return setProblem(refused);
@@ -234,9 +234,15 @@ export function ProviderDialog({
     void persist({ ...settings.providers, [def.kind]: entry });
   };
 
+  // An agent still pointed at this provider goes back to its own CLI sign-in, so it is never left on a missing key.
   const disconnect = () => {
     const { [def.kind]: _gone, ...rest } = settings.providers;
-    void persist(rest);
+    const { claude, codex } = settings.agents;
+    const agents = {
+      claude: claude.provider === def.kind ? { ...claude, provider: DEFAULT_PROVIDER.claude, model: "", effort: "" as const } : claude,
+      codex: codex.provider === def.kind ? { ...codex, provider: DEFAULT_PROVIDER.codex, model: "", effort: "" } : codex,
+    };
+    void persist(rest, agents);
   };
 
   const missing = def.auth === "key" && !key.trim() && !hasKey;
@@ -351,12 +357,7 @@ export function ProviderDialog({
               </Button>
             )}
             {cfg && def.auth !== "cli" && (
-              <Button
-                variant="ghost"
-                className="text-destructive hover:text-destructive"
-                disabled={busy || testing || inUse}
-                onClick={disconnect}
-              >
+              <Button variant="ghost" className="text-destructive hover:text-destructive" disabled={busy || testing} onClick={disconnect}>
                 {ti.disconnect}
               </Button>
             )}
