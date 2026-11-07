@@ -343,6 +343,58 @@ for (const box of document.querySelectorAll("[data-edges]")) {
   box.drawEdges = draw;
 }
 
+// Cards can be picked up and moved like on the real board, and their wires follow. Touch keeps scrolling the page.
+if (matchMedia("(pointer: fine)").matches)
+  for (const box of document.querySelectorAll(".cv-in")) {
+    let top = 4;
+    let frame = 0;
+    const redraw = () => {
+      if (frame) return;
+      frame = requestAnimationFrame(() => {
+        frame = 0;
+        box.drawEdges?.();
+      });
+    };
+    for (const card of box.querySelectorAll(".nd, .hub")) {
+      if (card.parentElement?.closest(".nd")) continue;
+      card.classList.add("movable");
+      let hold = null;
+      card.addEventListener("pointerdown", (e) => {
+        if (e.button !== 0 || e.target.closest("a, button, input, textarea, summary, [contenteditable]")) return;
+        e.preventDefault();
+        const [tx = 0, ty = 0] = (card.style.translate || "0px 0px").split(" ").map((v) => parseFloat(v) || 0);
+        const r = card.getBoundingClientRect();
+        const b = box.getBoundingClientRect();
+        // A card stays on its own board, so nothing can be dragged off the page.
+        const lim = { x0: b.left - r.left + tx, x1: b.right - r.right + tx, y0: b.top - r.top + ty, y1: b.bottom - r.bottom + ty };
+        hold = { x: e.clientX, y: e.clientY, tx, ty, lim, moved: false };
+        card.setPointerCapture(e.pointerId);
+      });
+      card.addEventListener("pointermove", (e) => {
+        if (!hold) return;
+        const dx = e.clientX - hold.x;
+        const dy = e.clientY - hold.y;
+        if (!hold.moved && Math.hypot(dx, dy) < 4) return;
+        if (!hold.moved) {
+          hold.moved = true;
+          card.classList.add("dragging");
+          card.style.zIndex = String(++top);
+        }
+        const { x0, x1, y0, y1 } = hold.lim;
+        const nx = Math.min(Math.max(hold.tx + dx, x0), x1);
+        const ny = Math.min(Math.max(hold.ty + dy, y0), y1);
+        card.style.translate = `${nx}px ${ny}px`;
+        redraw();
+      });
+      const drop = () => {
+        if (hold?.moved) card.classList.remove("dragging");
+        hold = null;
+      };
+      card.addEventListener("pointerup", drop);
+      card.addEventListener("pointercancel", drop);
+    }
+  }
+
 // Each wire sends one comet at a time, speeding up into the mark, which flares as it lands.
 if (gsap && !matchMedia("(prefers-reduced-motion: reduce)").matches)
   for (const box of document.querySelectorAll("[data-pulse]")) {

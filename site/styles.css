@@ -1722,6 +1722,25 @@ footer .sponsor img {
   line-height: 1.45;
 }
 
+/* Cards you can pick up: a small lift while held, nothing on hover but the hand. */
+.movable {
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+  transition:
+    scale 180ms var(--ease),
+    box-shadow 180ms var(--ease);
+}
+.movable img {
+  -webkit-user-drag: none;
+}
+.movable.dragging {
+  cursor: grabbing;
+  scale: 1.02;
+}
+.nd.movable.dragging {
+  box-shadow: 0 28px 64px rgb(0 0 0 / 0.5);
+}
 /* Connectors drawn between cards, and the cursors that travel them. */
 .edges {
   position: absolute;
