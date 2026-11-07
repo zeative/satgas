@@ -116,37 +116,38 @@ export function ProvidersSection({ settings }: { settings: Settings }) {
                   <li key={def.kind} className="relative flex gap-4 rounded-xl bg-muted/50 p-4 transition-colors hover:bg-muted/80">
                     <LogoTile logo={def.logo} />
                     <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                      <h4 className="text-sm font-medium">
+                      <h4 className="flex min-w-0 items-center gap-1.5 text-sm font-medium">
                         {/* The whole card opens the provider; the name is the accessible target. */}
                         <button
                           type="button"
                           onClick={() => setOpen(def)}
-                          className="text-start after:absolute after:inset-0 after:rounded-xl focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-ring"
+                          className="truncate text-start after:absolute after:inset-0 after:rounded-xl focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-ring"
                         >
                           {def.name}
                         </button>
+                        {on && inUse && <span className="shrink-0 text-xs font-normal text-muted-foreground">· {ti.inUse}</span>}
                       </h4>
-                      <p className="text-sm text-muted-foreground">
-                        <RichText text={say(def.desc)} />
-                      </p>
-                      <p className="mt-auto flex min-w-0 items-center gap-1.5 pt-2 text-xs text-muted-foreground">
-                        <StatusText status={status} />
-                        {inUse && on && (
-                          <>
-                            <span aria-hidden="true">·</span>
-                            <span className="shrink-0 text-foreground">{ti.inUse}</span>
-                          </>
-                        )}
-                      </p>
+                      {status?.state === "failed" ? (
+                        <p className="flex min-w-0 text-sm">
+                          <StatusText status={status} />
+                        </p>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">
+                          <RichText text={say(def.desc)} />
+                        </p>
+                      )}
                     </div>
                     <span
-                      aria-hidden="true"
+                      role="img"
+                      aria-label={`${def.name}: ${!status ? ti.checkingShort : on ? ti.connected : ti.notConnected}`}
                       className={cn(
                         "flex size-8 shrink-0 items-center justify-center rounded-lg",
-                        on ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400" : "border bg-background text-foreground",
+                        on
+                          ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                          : cn("border bg-background", status ? "text-foreground" : "text-muted-foreground/40"),
                       )}
                     >
-                      {on ? <Check className="size-4" /> : <Plus className="size-4" />}
+                      {on ? <Check className="size-4" aria-hidden="true" /> : <Plus className="size-4" aria-hidden="true" />}
                     </span>
                   </li>
                 );

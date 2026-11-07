@@ -92,42 +92,11 @@ export function AddSkillMenu({ onPick }: { onPick: (d: SkillDialog) => void }) {
   );
 }
 
-// Where a skill came from, in one quiet line; a GitHub skill links to its folder.
-function SourceLine({ skill }: { skill: Skill }) {
-  // A switchable built-in credits the repo it was vendored from, like a skill installed from GitHub.
-  const s = skill.repo ? { kind: "github" as const, repo: skill.repo } : skill.source;
-  const files = ts.files(skill.files);
-  if (s.kind === "github") {
-    const href = `https://github.com/${s.repo}${"path" in s && s.path ? `/tree/${s.ref ?? "HEAD"}/${s.path}` : ""}`;
-    return (
-      <p className="mt-1.5 flex min-w-0 items-center gap-1.5 text-xs leading-4 text-muted-foreground">
-        <img src={GITHUB_LOGO} alt="" className="size-3.5 shrink-0 rounded-[3px]" />
-        <OutboundLink
-          href={href}
-          className="relative z-10 truncate rounded hover:text-foreground hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-        >
-          {s.repo}
-        </OutboundLink>
-        <span aria-hidden="true">·</span>
-        <span className="shrink-0">{files}</span>
-      </p>
-    );
-  }
-  // The Satgas tile already says where a built-in skill came from.
-  if (s.kind === "builtin") return null;
-  const where = s.kind === "own" ? ts.own : s.kind === "import" ? ts.imported(s.from) : ts.uploaded(s.file);
-  return (
-    <p className="mt-1.5 truncate text-xs leading-4 text-muted-foreground" title={where}>
-      {where} · {files}
-    </p>
-  );
-}
-
 // Built-in skills cannot be turned off, so they state it instead of showing a switch; optional ones get the switch.
 function SkillToggle({ skill }: { skill: Skill }) {
   if (skill.source.kind === "builtin" && !skill.optional)
     return (
-      <span className="px-1 text-xs text-muted-foreground" title={ts.builtinNote}>
+      <span className="text-xs leading-5 text-muted-foreground" title={ts.builtinNote}>
         {ts.alwaysOn}
       </span>
     );
@@ -289,7 +258,7 @@ function SkillCard({
   onRemove: () => void;
 }) {
   return (
-    <li className="relative flex items-start gap-4 rounded-xl bg-muted/50 p-4">
+    <li className="relative flex items-start gap-4 rounded-xl bg-muted/50 p-4 transition-colors hover:bg-muted/80">
       <SkillTile skill={s} />
       <div className={cn("flex min-w-0 flex-1 flex-col gap-0.5", !s.enabled && "opacity-60")}>
         <h3 className="truncate font-mono text-sm font-medium">
@@ -302,10 +271,9 @@ function SkillCard({
             {s.name}
           </button>
         </h3>
-        <p className="line-clamp-2 text-sm text-muted-foreground" title={s.description}>
+        <p className="truncate text-sm text-muted-foreground" title={s.description}>
           {s.description}
         </p>
-        <SourceLine skill={s} />
       </div>
       <div className="relative z-10 flex shrink-0 items-center gap-1">
         <SkillToggle skill={s} />
@@ -339,27 +307,25 @@ const packTile = (size?: "lg") => (
 // A built-in bundle is one entry in the list; its skills live on its own page.
 function PackCard({ id, total, onOpen }: { id: PackId; total: number; onOpen: () => void }) {
   return (
-    <li className="relative flex items-start gap-4 rounded-xl bg-muted/50 p-4">
+    <li className="relative flex items-start gap-4 rounded-xl bg-muted/50 p-4 transition-colors hover:bg-muted/80">
       {packTile()}
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <h3 className="truncate font-mono text-sm font-medium">
+        <h3 className="flex min-w-0 items-center gap-1.5 text-sm font-medium">
           <button
             type="button"
             onClick={onOpen}
             aria-label={ts.open(id)}
-            className="text-start after:absolute after:inset-0 after:rounded-xl focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-ring"
+            className="truncate text-start font-mono after:absolute after:inset-0 after:rounded-xl focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-ring"
           >
             {id}
           </button>
+          <span className="shrink-0 text-xs font-normal text-muted-foreground tabular-nums">· {ts.packCount(total)}</span>
         </h3>
-        <p className="line-clamp-2 text-sm text-muted-foreground" title={ts.packDesc[id]}>
+        <p className="truncate text-sm text-muted-foreground" title={ts.packDesc[id]}>
           {ts.packDesc[id]}
         </p>
-        <p className="mt-1.5 flex min-w-0 text-xs leading-4 text-muted-foreground">
-          <PackSource id={id} total={total} />
-        </p>
       </div>
-      <span className="shrink-0 px-1 text-xs text-muted-foreground" title={ts.builtinNote}>
+      <span className="shrink-0 text-xs leading-5 text-muted-foreground" title={ts.builtinNote}>
         {ts.alwaysOn}
       </span>
     </li>

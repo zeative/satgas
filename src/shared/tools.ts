@@ -64,8 +64,8 @@ export const TOOL_CATALOG: ToolDef[] = [
     by: "rtk-ai",
     when: "command",
     desc: {
-      en: "Compacts command output, so agents read 60–90% fewer tokens",
-      id: "Memadatkan output perintah, jadi agen membaca 60–90% lebih sedikit token",
+      en: "Compact command output, 60–90% fewer tokens",
+      id: "Output perintah ringkas, 60–90% lebih hemat token",
     },
     about: {
       en: "Every shell command an agent runs goes through `rtk rewrite` first. Commands RTK knows (git, test runners, ls, grep, builds) come back as their compact version: failures only for tests, a grouped stat for git status. The agent reads the short output and stays on track for longer. Commands RTK does not know run unchanged, and so do commands that pipe or redirect, because a file or another program needs the real output.",
@@ -86,8 +86,8 @@ export const TOOL_CATALOG: ToolDef[] = [
     when: "command",
     builtin: "guard",
     desc: {
-      en: "Blocks commands that destroy work, like rm -rf outside the project or force pushes",
-      id: "Memblokir perintah yang merusak pekerjaan, seperti rm -rf di luar proyek atau force push",
+      en: "Blocks commands that destroy work",
+      id: "Memblokir perintah yang merusak pekerjaan",
     },
     about: {
       en: "Agents run without asking you first, so one wrong command can wipe uncommitted work. The guard reads every shell command before it runs and stops the ones that cannot be undone: deleting outside the project, `git push --force`, `git reset --hard`, `git clean -f`, dropping a database or table, sudo, and disk tools. The agent is told why and picks a safer way, or names it in its report for you.",
@@ -101,8 +101,8 @@ export const TOOL_CATALOG: ToolDef[] = [
     when: "edit",
     builtin: "format",
     desc: {
-      en: "Formats every edited file with the project's own formatter",
-      id: "Merapikan setiap file yang diedit dengan formatter milik proyek",
+      en: "Formats edits with the project's formatter",
+      id: "Merapikan file dengan formatter proyek",
     },
     about: {
       en: "After an agent writes a file, Satgas finds the formatter the project already uses (a Biome or Prettier config with the package installed, Ruff for Python, gofmt for Go, rustfmt for Rust) and formats just that file. Code lands in house style without a review round. Projects without a formatter are left alone, and nothing is downloaded.",
@@ -116,8 +116,8 @@ export const TOOL_CATALOG: ToolDef[] = [
     when: "finish",
     builtin: "check",
     desc: {
-      en: "Runs the typecheck before an agent finishes and sends back what broke",
-      id: "Menjalankan typecheck sebelum agen selesai dan mengembalikan yang rusak",
+      en: "Typechecks before an agent finishes",
+      id: "Typecheck sebelum agen selesai",
     },
     about: {
       en: "When an agent that changed files is about to finish, Satgas runs the project's typecheck: a `typecheck` script, `tsc --noEmit`, `go build` or `cargo check`. If it fails, the agent gets the errors and keeps working, once, so a broken build never reaches you as done. Errors that were already there before are named in its report instead.",
@@ -130,8 +130,8 @@ export const TOOL_CATALOG: ToolDef[] = [
     by: "Gitleaks",
     when: "edit",
     desc: {
-      en: "Catches API keys and passwords the moment an agent writes them",
-      id: "Menangkap API key dan password begitu agen menuliskannya",
+      en: "Catches keys and passwords as they are written",
+      id: "Menangkap key dan password saat ditulis",
     },
     about: {
       en: "Every file an agent writes is scanned with gitleaks' 150+ secret rules. When it finds a key, the agent is told which line and moves it into an environment variable before anything is committed. The scan shows the finding redacted, so the secret itself never lands in the log.",
@@ -149,8 +149,8 @@ export const TOOL_CATALOG: ToolDef[] = [
     by: "Vercel Labs",
     when: "available",
     desc: {
-      en: "The agents' browser: compact page snapshots and batched steps, light enough for a VPS",
-      id: "Browser untuk agen: snapshot halaman yang ringkas dan langkah yang digabung, cukup ringan untuk VPS",
+      en: "A light browser for agents, even on a VPS",
+      id: "Browser ringan untuk agen, juga di VPS",
     },
     about: {
       en: "Agents drive a headless browser from the shell instead of through a connector. A snapshot lists the page's elements with short refs (`@e1`), the agent acts on a ref, and several steps go in one `batch`, so a page check takes a few calls instead of dozens. It runs on macOS, Linux and Windows, which makes it the browser for Satgas on a VPS, and it can switch to the lighter Lightpanda engine.",
@@ -168,8 +168,8 @@ export const TOOL_CATALOG: ToolDef[] = [
     by: "ast-grep",
     when: "available",
     desc: {
-      en: "Lets agents search and rewrite code by its structure, not its text",
-      id: "Agen bisa mencari dan mengubah kode berdasarkan strukturnya, bukan teks",
+      en: "Search and rewrite code by its structure",
+      id: "Cari dan ubah kode menurut strukturnya",
     },
     about: {
       en: "Agents are told ast-grep is installed and when to reach for it: renaming a function across a codebase, changing every call of an API, finding a pattern regardless of formatting. It matches syntax trees, so comments and strings with the same word are left alone, which sed cannot promise.",

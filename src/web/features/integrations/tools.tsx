@@ -83,31 +83,18 @@ function CopyCommand({ command }: { command: string }) {
   );
 }
 
-// The one line under a tool: what it needs and whether this machine has it; RTK also says what it has saved so far.
-function Status({ def, needs, status }: { def?: ToolDef; needs?: string; status: ToolStatus | null }) {
-  if (def?.builtin) return <p className="text-xs text-muted-foreground/70">{tt.builtIn}</p>;
-  if (!needs) return <p className="text-xs text-muted-foreground/70">{tt.custom}</p>;
-  const version = status?.programs[needs];
-  if (status && version === null)
-    return (
-      <p className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground/70">
-        <span className="shrink-0">{tt.notInstalled}</span>
-        {def?.install && (
-          <>
-            <span aria-hidden="true">·</span>
-            <CopyCommand command={def.install} />
-          </>
-        )}
-      </p>
-    );
-  if (!version) return <p className="text-xs text-muted-foreground/70">{def ? " " : tt.custom}</p>;
+// Beside a tool's name, only what changes how it works; the rest is on its page.
+function ToolMeta({ def, needs, status }: { def?: ToolDef; needs?: string; status: ToolStatus | null }) {
+  if (!needs) return null;
+  if (status?.programs[needs] === null)
+    return <span className="shrink-0 text-xs font-normal text-muted-foreground">· {tt.notInstalled}</span>;
   if (def?.id === "rtk" && status?.rtk && status.rtk.saved > 0)
     return (
-      <p className="text-xs text-emerald-600 tabular-nums dark:text-emerald-400">
-        {tt.saved(compact.format(status.rtk.saved), status.rtk.pct)}
-      </p>
+      <span className="truncate text-xs font-normal text-emerald-600 tabular-nums dark:text-emerald-400">
+        · {tt.saved(compact.format(status.rtk.saved), status.rtk.pct)}
+      </span>
     );
-  return <p className="text-xs text-muted-foreground/70">{ti.installed(version)}</p>;
+  return null;
 }
 
 // Catalog tools are switched on and off where they stand; switching one on the first time stores it.
@@ -148,21 +135,17 @@ export function ToolsTab({ settings, onOpen, onEdit }: TabProps) {
                 <li key={def.id} className="relative flex items-start gap-4 rounded-xl bg-muted/50 p-4 transition-colors hover:bg-muted/80">
                   <ToolLogo def={def} />
                   <div className={cn("flex min-w-0 flex-1 flex-col gap-0.5", !enabled(def) && "opacity-60")}>
-                    <h3 className="text-sm font-medium">
+                    <h3 className="flex min-w-0 items-center gap-1.5 text-sm font-medium">
                       <button
                         type="button"
                         onClick={() => onOpen(def.id)}
-                        className="text-start after:absolute after:inset-0 after:rounded-xl focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-ring"
+                        className="shrink-0 text-start after:absolute after:inset-0 after:rounded-xl focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-ring"
                       >
                         {def.name}
                       </button>
+                      <ToolMeta def={def} needs={def.needs} status={status} />
                     </h3>
-                    <p className="line-clamp-2 text-sm text-muted-foreground" title={def.desc[lang]}>
-                      {def.desc[lang]}
-                    </p>
-                    <div className="mt-1.5">
-                      <Status def={def} needs={def.needs} status={status} />
-                    </div>
+                    <p className="text-sm text-muted-foreground">{def.desc[lang]}</p>
                   </div>
                   <Switch
                     className="relative z-10 mt-0.5"
@@ -176,13 +159,13 @@ export function ToolsTab({ settings, onOpen, onEdit }: TabProps) {
                 <li key={x.id} className="relative flex items-start gap-4 rounded-xl bg-muted/50 p-4">
                   <ToolLogo />
                   <div className={cn("flex min-w-0 flex-1 flex-col gap-0.5", !x.enabled && "opacity-60")}>
-                    <h3 className="truncate text-sm font-medium">{x.name}</h3>
-                    <p className="truncate font-mono text-xs text-muted-foreground" title={x.command || x.note}>
+                    <h3 className="flex min-w-0 items-center gap-1.5 text-sm font-medium">
+                      <span className="truncate">{x.name}</span>
+                      <ToolMeta needs={x.needs} status={status} />
+                    </h3>
+                    <p className="truncate font-mono text-xs leading-5 text-muted-foreground" title={x.command || x.note}>
                       {x.command || x.note || x.needs}
                     </p>
-                    <div className="mt-1.5">
-                      <Status needs={x.needs} status={status} />
-                    </div>
                   </div>
                   <div className="relative z-10 flex shrink-0 items-center gap-1">
                     <Switch
