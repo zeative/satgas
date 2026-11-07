@@ -207,18 +207,62 @@ export const ChatPanel = memo(function ChatPanel({ run, onOpenTask, onOpenReport
   // Questions waiting on the person take over the composer until they are answered or set aside.
   const asking = here && run.status === "asking" && last?.asked && !last.asked.answers ? last.asked : undefined;
 
-  // Follow the conversation as it grows, the way a chat does.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: scroll when rounds, tasks or the report change.
+  // The thread sticks to its end while it grows, streamed text included, until the person scrolls up to read; sending
+  // or the button sticks it again. A smooth scroll down passes through "not at the end", so it is not read as leaving.
+  const content = useRef<HTMLDivElement>(null);
+  const pinned = useRef(true);
+  const gliding = useRef(false);
+  const [away, setAway] = useState(false);
+  const toBottom = useCallback((smooth = true) => {
+    const el = scroller.current;
+    if (!el) return;
+    pinned.current = true;
+    gliding.current = smooth;
+    setAway(false);
+    el.scrollTo({ top: el.scrollHeight, behavior: smooth ? "smooth" : "auto" });
+  }, []);
   useEffect(() => {
     const el = scroller.current;
-    if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
-  }, [rounds.length, last?.tasks.length, last?.report.length, run.status, run.queue?.length, active]);
-
-  // Sending always brings the newest message into view, even when the person had scrolled up to read.
-  const toBottom = useCallback(() => {
-    const el = scroller.current;
-    if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+    const inner = content.current;
+    if (!el || !inner) return;
+    const gap = () => el.scrollHeight - el.scrollTop - el.clientHeight;
+    // Only moving up lets go: the view shrinking under the composer also opens a gap, without anyone scrolling.
+    let lastTop = el.scrollTop;
+    const onScroll = () => {
+      const up = el.scrollTop < lastTop - 1;
+      lastTop = el.scrollTop;
+      if (gliding.current) {
+        if (gap() < 2) gliding.current = false;
+        return;
+      }
+      if (gap() < 48) pinned.current = true;
+      else if (up) pinned.current = false;
+      setAway(!pinned.current && gap() > 240);
+    };
+    // A wheel or a touch is the person taking over, even in the middle of a glide.
+    const takeOver = () => {
+      gliding.current = false;
+    };
+    const grown = new ResizeObserver(() => {
+      if (pinned.current) el.scrollTop = el.scrollHeight;
+      else setAway(gap() > 240);
+    });
+    el.addEventListener("scroll", onScroll, { passive: true });
+    el.addEventListener("wheel", takeOver, { passive: true });
+    el.addEventListener("touchstart", takeOver, { passive: true });
+    grown.observe(inner);
+    // The composer growing or a panel resizing shrinks the view without any scroll, so that counts too.
+    grown.observe(el);
+    return () => {
+      el.removeEventListener("scroll", onScroll);
+      el.removeEventListener("wheel", takeOver);
+      el.removeEventListener("touchstart", takeOver);
+      grown.disconnect();
+    };
   }, []);
+  // Another session is another thread, so it opens at its end.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: jump only when the session changes.
+  useEffect(() => toBottom(false), [active]);
 
   return (
     <aside
@@ -266,45 +310,60 @@ export const ChatPanel = memo(function ChatPanel({ run, onOpenTask, onOpenReport
       )}
       {!page && <SessionBar run={run} />}
 
-      <div
-        ref={scroller}
-        data-cite
-        // Both gutters kept, so the column lines up with the composer whether or not the thread scrolls.
-        className={cn(
-          "flex min-h-0 flex-1 flex-col overflow-y-auto",
-          page ? "items-center px-6 pt-8 pb-8 [scrollbar-gutter:stable_both-edges]" : "px-3.5 py-4",
-        )}
-      >
-        <div className={cn("flex w-full flex-col", page ? "max-w-3xl gap-10" : "gap-6")}>
-          {!page && <p className="text-center text-xs text-muted-foreground">{t.chat.disclaimer}</p>}
-          {/* Screen readers hear where the work stands, not every streamed line. */}
-          <p role="status" className="sr-only">
-            {liveStatus(run, last)}
-          </p>
-          {shown.length === 0 && <SessionEmpty />}
-          {shown.map((r) => (
-            <RoundView
-              key={r.index}
-              run={run}
-              round={r}
-              latest={r === last}
-              onOpenTask={onOpenTask}
-              onOpenReport={onOpenReport}
-              onOpenCanvas={page ? onOpenCanvas : undefined}
-              page={page}
-            />
-          ))}
-          {working && (
-            <p role="status" className="flex items-center gap-2 text-xs text-muted-foreground">
-              <span aria-hidden="true" className="size-1.5 shrink-0 rounded-full bg-signal" />
-              {t.session.busyElsewhere(sessionTitle(working))}
+      <div className="relative flex min-h-0 flex-1 flex-col">
+        <div
+          ref={scroller}
+          data-cite
+          // Both gutters kept, so the column lines up with the composer whether or not the thread scrolls.
+          className={cn(
+            "flex min-h-0 flex-1 flex-col overflow-y-auto",
+            page ? "items-center px-6 pt-8 pb-8 [scrollbar-gutter:stable_both-edges]" : "px-3.5 py-4",
+          )}
+        >
+          <div ref={content} className={cn("flex w-full flex-col", page ? "max-w-3xl gap-10" : "gap-6")}>
+            {!page && <p className="text-center text-xs text-muted-foreground">{t.chat.disclaimer}</p>}
+            {/* Screen readers hear where the work stands, not every streamed line. */}
+            <p role="status" className="sr-only">
+              {liveStatus(run, last)}
             </p>
-          )}
-          {queued.length ? <QueuedBubble runId={run.id} items={queued} known={knownFromRefs(undefined, run.board?.cards)} /> : null}
-          {queuedElsewhere > 0 && (
-            <p className="text-end text-[11px] text-muted-foreground">{t.session.waitingElsewhere(queuedElsewhere)}</p>
-          )}
+            {shown.length === 0 && <SessionEmpty />}
+            {shown.map((r) => (
+              <RoundView
+                key={r.index}
+                run={run}
+                round={r}
+                latest={r === last}
+                onOpenTask={onOpenTask}
+                onOpenReport={onOpenReport}
+                onOpenCanvas={page ? onOpenCanvas : undefined}
+                page={page}
+              />
+            ))}
+            {working && (
+              <p role="status" className="flex items-center gap-2 text-xs text-muted-foreground">
+                <span aria-hidden="true" className="size-1.5 shrink-0 rounded-full bg-signal" />
+                {t.session.busyElsewhere(sessionTitle(working))}
+              </p>
+            )}
+            {queued.length ? <QueuedBubble runId={run.id} items={queued} known={knownFromRefs(undefined, run.board?.cards)} /> : null}
+            {queuedElsewhere > 0 && (
+              <p className="text-end text-[11px] text-muted-foreground">{t.session.waitingElsewhere(queuedElsewhere)}</p>
+            )}
+          </div>
         </div>
+        <button
+          type="button"
+          onClick={() => toBottom()}
+          tabIndex={away ? 0 : -1}
+          aria-hidden={!away}
+          className={cn(
+            "absolute bottom-3 left-1/2 flex h-7 -translate-x-1/2 items-center gap-1.5 rounded-full border bg-background px-3 text-xs shadow-sm transition-[opacity,transform] duration-150 hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+            away ? "opacity-100" : "pointer-events-none translate-y-1 opacity-0",
+          )}
+        >
+          <ChevronDown className="size-3.5" aria-hidden="true" />
+          {t.chat.scrollEnd}
+        </button>
       </div>
 
       <div className={cn(page && "px-6 pb-3 [scrollbar-gutter:stable_both-edges]")}>
@@ -369,7 +428,8 @@ function RoundView({
           round.tasks.length > 0 && (
             <>
               <LeadActions run={run} round={round.index} />
-              <p className="flex items-center gap-2 text-xs text-muted-foreground tabular-nums">
+              {/* One line for the plan: how big it is, how far along, and who joined for it. */}
+              <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground tabular-nums">
                 <span>{t.chat.planned(round.tasks.length)}</span>
                 {latest && isLiveRun(run) && (
                   <>
@@ -379,20 +439,19 @@ function RoundView({
                     <span>{fmtElapsed(now - started)}</span>
                   </>
                 )}
-              </p>
-              {hired.length > 0 && (
-                <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
-                  <span>{t.chat.hired}</span>
-                  {hired.map((m) => (
-                    <span key={m.id} className="inline-flex items-center gap-1.5">
-                      <MiniFace seed={m.id} className="size-4" />
-                      <span>
-                        <span className="text-foreground">{m.name}</span> · {m.role}
+                {hired.length > 0 && (
+                  <>
+                    <span aria-hidden="true">·</span>
+                    <span>{t.chat.hired}</span>
+                    {hired.map((m) => (
+                      <span key={m.id} className="inline-flex items-center gap-1.5" title={`${m.name} · ${m.role}`}>
+                        <MiniFace seed={m.id} className="size-4" />
+                        <span className="text-foreground">{m.name}</span>
                       </span>
-                    </span>
-                  ))}
-                </p>
-              )}
+                    ))}
+                  </>
+                )}
+              </p>
               <TaskList round={round} people={people} onOpenTask={onOpenTask} cwd={run.cwd} />
             </>
           )
@@ -990,16 +1049,18 @@ function TaskRow({
             <span className={cn("block truncate text-[13px]", live && "satgas-shimmer")}>{task.title}</span>
             {!open && summary && <span className="block truncate text-[11px] text-muted-foreground">{summary}</span>}
           </span>
-          {member && (
-            <span
-              className="flex max-w-24 shrink-0 items-center gap-1.5 text-xs text-muted-foreground"
-              title={`${member.name} · ${member.role}`}
-            >
-              <MiniFace seed={member.id} className="size-4" />
-              <span className="truncate">{member.name}</span>
-            </span>
-          )}
-          <Mark className="size-3.5 shrink-0" />
+          {/* Who does it, with the agent that runs them as a badge, so the row carries one mark instead of a name and two logos. */}
+          <span
+            className="relative shrink-0"
+            title={member ? `${member.name} · ${member.role} · ${AGENT_NAME[task.agent]}` : AGENT_NAME[task.agent]}
+          >
+            {member ? <MiniFace seed={member.id} className="size-5" /> : <Mark className="size-4" />}
+            {member && (
+              <span className="absolute -end-1 -bottom-1 flex size-3 items-center justify-center rounded-full bg-background">
+                <Mark className="size-2.5" />
+              </span>
+            )}
+          </span>
           <ChevronRight className={cn("size-3.5 shrink-0 text-muted-foreground transition-transform", open && "rotate-90")} />
         </button>
         <button
