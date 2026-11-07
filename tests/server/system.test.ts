@@ -50,3 +50,26 @@ test("describes the agents, puts installed connectors first with what they cover
   expect(text).not.toMatch(/Local command-line tools on PATH[^\n]*\bgh\b/);
   expect(text).not.toContain("secret");
 });
+
+test("the lead knows Satgas itself: its version, where it runs, its pages and where the guide is", async () => {
+  const { describeSatgas } = await import("../../src/server/system");
+  const pkg = (await import("../../package.json")).default;
+  const about = describeSatgas();
+  expect(about).toContain(`Satgas ${pkg.version}`);
+  expect(about).toContain("AGPL-3.0");
+  for (const page of ["Home", "Pipeline", "Schedules", "Memory", "Integrations", "Configurations"]) expect(about).toContain(page);
+  for (const tab of ["Connectors", "Providers", "Skills", "Tools"]) expect(about).toContain(tab);
+  expect(about).toContain("reference/satgas-guide.md");
+  expect(about).toContain("never by searching the web");
+  expect(describeSystem().indexOf("<satgas_about>")).toBe(0);
+});
+
+test("the satgas skill carries the README as its guide, so a binary or a container has it too", async () => {
+  const { BUILTIN, guideOf } = await import("../../src/server/builtin-skills");
+  const readme = await Bun.file(new URL("../../README.md", import.meta.url)).text();
+  const guide = BUILTIN.satgas?.["reference/satgas-guide.md"] ?? "";
+  expect(guide).toBe(guideOf(readme));
+  expect(guide).toContain("## Self-hosting");
+  expect(guide).toContain("](https://github.com/zeative/satgas/blob/main/CONTRIBUTING.md)");
+  expect(guide).not.toMatch(/\]\((?![a-z]+:|#)[\w./-]+\)/);
+});

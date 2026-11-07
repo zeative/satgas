@@ -1,3 +1,4 @@
+import guide from "../../../README.md" with { type: "text" };
 import type { PackId } from "../../shared/skills";
 import { AGENT_SKILLS } from "./agent-skills.gen";
 import { HALLMARK } from "./hallmark.gen";
@@ -7,6 +8,10 @@ import verify from "./satgas/reference/verify.md" with { type: "text" };
 import satgas from "./satgas/SKILL.md" with { type: "text" };
 import { SECURITY_AUDIT } from "./security-audit.gen";
 
+// The README links its neighbours by relative path, which point nowhere inside the skill, so they go to the repository.
+export const guideOf = (readme: string) =>
+  readme.replace(/\]\((?![a-z]+:|#|\/)([^)\s]+)\)/gi, (_, path: string) => `](https://github.com/zeative/satgas/blob/main/${path})`);
+
 // Skills that ship with Satgas. They can't be removed or replaced, and are written out fresh at every start, so an update
 // to Satgas updates them too. Most are always on; the ones in OPTIONAL start on and can be switched off.
 export const BUILTIN: Record<string, Record<string, string>> = {
@@ -15,6 +20,8 @@ export const BUILTIN: Record<string, Record<string, string>> = {
     "reference/board.md": board,
     "reference/verify.md": verify,
     "reference/reports.md": reports,
+    // The README itself, so the steps agents give about Satgas are the ones its docs give, in any install.
+    "reference/satgas-guide.md": guideOf(guide),
   },
   // Addy Osmani's agent-skills (MIT): the engineering workflow every task follows, from spec to ship.
   ...AGENT_SKILLS,

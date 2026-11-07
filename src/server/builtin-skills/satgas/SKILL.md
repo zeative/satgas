@@ -53,7 +53,7 @@ Pick tools in this order:
 | A web page as people see it | a browser connector, when installed | `agent-browser` (open, `snapshot -i`, click, screenshot, then `close`), `curl -sL` |
 | The project | none needed | README, `package.json` or `pyproject.toml`, `git log --oneline -20`, the test command |
 
-When a connector that is in the catalog but not installed would clearly have helped, recommend it in your report. Questions about Satgas itself (which agents, models or connectors it has) are answered from `<satgas_system>`. Never print a key or token, even when a tool shows one.
+When a connector that is in the catalog but not installed would clearly have helped, recommend it in your report. The person connects it with one click, from the chat or under Integrations → Connectors, and signs in there; never ask them for a key or token. Questions about Satgas itself, like which agents, models or connectors it has, what it can do, or how to self-host or update it, are answered from `<satgas_about>` and `<satgas_system>`, with the steps from `reference/satgas-guide.md` (its README). Never search the web for Satgas: the results are other projects. Never print a key or token, even when a tool shows one.
 
 ## Read the intent
 

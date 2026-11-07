@@ -1,3 +1,4 @@
+import pkg from "../../package.json";
 import { CATALOG, catalogOf } from "../shared/catalog";
 import { DEFAULT_PROVIDER, PROVIDERS } from "../shared/providers";
 import { TOOL_CATALOG } from "../shared/tools";
@@ -59,6 +60,29 @@ const firstSentence = (s: string) => {
   return one.length > 140 ? `${one.slice(0, 139)}…` : one;
 };
 
+// What Satgas itself is, so the lead answers questions about it directly instead of searching: on the web "satgas" is
+// mostly other projects. The version and where it runs come from this instance; the full steps are in the README.
+export function describeSatgas(): string {
+  const repo = `https://github.com/${config.repo}`;
+  const where = config.container
+    ? "in a Docker container"
+    : config.publicUrl
+      ? `on a server, at ${config.publicUrl}`
+      : "on the person's own computer";
+  return [
+    "<satgas_about>",
+    `Satgas ${pkg.version}, running ${where}. Open source under AGPL-3.0: ${repo}. Its README is the full guide (setup, self-hosting, updating, configuration, security), and agents can read it as reference/satgas-guide.md in the satgas skill.`,
+    "What it is: a self-hosted workspace where a lead hires a team of agents (the Claude Code or Codex CLI on the model the person picks), splits the work and puts results on a shared canvas as cards.",
+    "Where things are: Home starts a board. Pipeline shows every board by status. Schedules runs a prompt on a clock or when a webhook is called. Memory holds the person's rules and what Satgas remembers. Integrations has Connectors, Providers, Skills and Tools. Configurations has Settings, Usage and About. On a board: chat sessions, Chat Only (⌘J or Ctrl J), forking a board, watching a pull request, and the command palette (⌘K or Ctrl K).",
+    `Run it yourself: \`git clone ${repo}\`, then \`bun install\` and \`bun run dev\` on a computer; \`bun run build\` gives one binary, \`dist/satgas\`; or \`docker compose up -d\` from the repo, with the image ghcr.io/zeative/satgas. On a server it sits behind an HTTPS proxy with \`SATGAS_HOST=0.0.0.0\`, \`SATGAS_PUBLIC_URL\` and \`SATGAS_TOKEN\` set. The repo also has a Dokploy template.`,
+    "Updating: the Update available button in the sidebar. In Docker, pulling a newer image is what brings newer bundled programs.",
+    "Channels: Telegram and WhatsApp, experimental, turned on with `SATGAS_CHANNELS=1`.",
+    "Not possible yet: Google, Slack, Jira or other services that need their own sign-in app, connectors that move money, and Discord.",
+    "Questions about Satgas itself are answered from this block and the README, never by searching the web.",
+    "</satgas_about>",
+  ].join("\n");
+}
+
 export function describeSystem(): string {
   const { agents, mcpServers } = getSettings();
   const claude = agents.claude;
@@ -83,6 +107,7 @@ export function describeSystem(): string {
   const tools = clis();
 
   return [
+    describeSatgas(),
     "<satgas_system>",
     "The Satgas you run in, as the person set it up in Integrations (Connectors, Providers, Skills and Tools tabs):",
     `Agents:\n- ${claudeLine}\n- ${codexLine}`,
