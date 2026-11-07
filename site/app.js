@@ -262,14 +262,18 @@ if (gsap && ST && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
 
 // The board's connectors: each container lists "from>to" card ids; a trailing * marks the edge where work is flowing now.
 const SVG = "http://www.w3.org/2000/svg";
+const GLOW =
+  '<defs><filter id="pulse-glow" filterUnits="userSpaceOnUse" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="3" result="b" /><feMerge><feMergeNode in="b" /><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge></filter></defs>';
 for (const box of document.querySelectorAll("[data-edges]")) {
   const svg = document.createElementNS(SVG, "svg");
   svg.classList.add("edges");
   svg.setAttribute("aria-hidden", "true");
   box.prepend(svg);
+  const to = box.dataset.pulse;
   const pairs = box.dataset.edges.split(/\s+/).map((s) => ({ live: s.endsWith("*"), ids: s.replace("*", "").split(">") }));
   const draw = () => {
     svg.replaceChildren();
+    if (to) svg.insertAdjacentHTML("beforeend", GLOW);
     const o = box.getBoundingClientRect();
     for (const { live, ids } of pairs) {
       const a = document.getElementById(ids[0])?.getBoundingClientRect();
@@ -300,18 +304,21 @@ for (const box of document.querySelectorAll("[data-edges]")) {
       path.setAttribute("d", d);
       if (live) path.dataset.live = "";
       svg.append(path);
-      // A short bright run travels each wire, staggered so the team never looks idle.
-      if (box.hasAttribute("data-pulse")) {
+      // A short glowing run travels each wire toward the pulse target, staggered so the team never looks idle.
+      if (to) {
         const run = path.cloneNode();
         run.classList.add("pulse");
+        if (ids[0] === to) run.classList.add("rev");
+        run.setAttribute("filter", "url(#pulse-glow)");
         run.setAttribute("pathLength", "100");
         run.style.animationDelay = `${-0.7 * svg.querySelectorAll(".pulse").length}s`;
         svg.append(run);
       }
-      for (const [cx, cy] of [
-        [x1, y1],
-        [x2, y2],
+      for (const [cx, cy, id] of [
+        [x1, y1, ids[0]],
+        [x2, y2, ids[1]],
       ]) {
+        if (id === to) continue;
         const dot = document.createElementNS(SVG, "circle");
         dot.setAttribute("cx", String(cx));
         dot.setAttribute("cy", String(cy));

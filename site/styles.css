@@ -1733,15 +1733,18 @@ footer .sponsor img {
 }
 [data-pulse] .edges path.pulse {
   stroke: var(--amber);
-  stroke-width: 1.75;
+  stroke-width: 2;
   stroke-linecap: round;
-  stroke-dasharray: 8 92;
+  stroke-dasharray: 10 90;
   opacity: 0;
   transition: opacity 0.4s;
   animation: pulse-run 2.8s linear infinite;
 }
 .flowing .edges path.pulse {
   opacity: 1;
+}
+[data-pulse] .edges path.pulse.rev {
+  animation-direction: reverse;
 }
 @keyframes pulse-run {
   from {
@@ -2073,7 +2076,7 @@ footer .sponsor img {
   justify-self: center;
 }
 .hub-mark {
-  padding: 20px;
+  padding: 4px;
   color: var(--t1);
 }
 .hub-mark svg {
