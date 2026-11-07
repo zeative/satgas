@@ -83,6 +83,23 @@ a {
 pre {
   font: inherit;
 }
+/* One syntax palette for every snippet: keywords and commands, attributes and flags, strings, numbers, prompts and output. */
+:is(pre, code, .diff) .k {
+  color: #c792ea;
+}
+:is(pre, code, .diff) .a {
+  color: #e6b86a;
+}
+:is(pre, code, .diff) .s {
+  color: #9ecf8f;
+}
+:is(pre, code, .diff) .n {
+  color: #8cc4e8;
+}
+:is(pre, code) .p,
+:is(pre, code) .c {
+  color: var(--t3);
+}
 code,
 kbd,
 .mono {
@@ -1040,15 +1057,6 @@ a.u:hover {
   color: var(--t2);
   overflow: hidden;
 }
-.code .k {
-  color: #c792ea;
-}
-.code .s {
-  color: #9ecf8f;
-}
-.code .a {
-  color: #e6b86a;
-}
 .check-list {
   list-style: none;
   margin: 0;
@@ -1163,18 +1171,6 @@ a.u:hover {
 }
 .diff .ctx::before {
   content: "  ";
-}
-.diff .k {
-  color: #c792ea;
-}
-.diff .s {
-  color: #9ecf8f;
-}
-.diff .a {
-  color: #e6b86a;
-}
-.diff .n {
-  color: #8cc4e8;
 }
 .graph {
   width: 100%;
@@ -2135,7 +2131,7 @@ footer .sponsor img {
   font-size: 14px;
   font-weight: 500;
 }
-.ways3 span {
+.ways3 .nd > span {
   font-size: 13px;
   color: var(--t3);
 }

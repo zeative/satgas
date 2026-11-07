@@ -181,15 +181,15 @@
                     <div class="gh-row"><span class="spin on" aria-hidden="true"></span>Add the waitlist form<span class="who"><img width="18" height="18" src="assets/faces/sinta.svg" alt="" />Sinta</span></div>
                     <div class="rows">
                       <div class="rowi land" data-at="1200"><svg class="i"><use href="#i-eye" /></svg>Read <code>index.html</code></div>
-                      <div class="rowi land" data-at="1900"><svg class="i"><use href="#i-term" /></svg><code>rg -n 'id="plans"' index.html</code></div>
-                      <div class="rowi land" data-at="2500"><svg class="i"><use href="#i-term" /></svg><code>bun x prettier --write index.html</code></div>
-                      <div class="rowi land" data-at="3100"><svg class="i"><use href="#i-term" /></svg><code>git diff --stat</code></div>
+                      <div class="rowi land" data-at="1900"><svg class="i"><use href="#i-term" /></svg><code><span class="k">rg</span> <span class="a">-n</span> <span class="s">'id="plans"'</span> index.html</code></div>
+                      <div class="rowi land" data-at="2500"><svg class="i"><use href="#i-term" /></svg><code><span class="k">bun</span> x prettier <span class="a">--write</span> index.html</code></div>
+                      <div class="rowi land" data-at="3100"><svg class="i"><use href="#i-term" /></svg><code><span class="k">git</span> diff <span class="a">--stat</span></code></div>
                     </div>
                   </div>
                   <div class="group">
                     <div class="gh-row"><span class="check"><svg class="i"><use href="#i-check" /></svg></span>Find rival prices<span class="who"><img width="18" height="18" src="assets/faces/dewi.svg" alt="" />Dewi</span></div>
                     <div class="rows">
-                      <div class="rowi"><svg class="i"><use href="#i-term" /></svg><code>agent-browser open kopipagi.example</code></div>
+                      <div class="rowi"><svg class="i"><use href="#i-term" /></svg><code><span class="k">agent-browser</span> open kopipagi.example</code></div>
                       <div class="rowi"><svg class="i"><use href="#i-grid" /></svg>Put <code>Competitor pricing</code> on the board</div>
                     </div>
                   </div>
@@ -262,8 +262,8 @@
                 <div class="rowi" data-line><svg class="i"><use href="#i-corner" /></svg>Read the result of <code>Find rival prices</code></div>
                 <div class="rowi" data-line><svg class="i"><use href="#i-eye" /></svg>Read <code>brief.md</code></div>
                 <div class="rowi" data-line><svg class="i"><use href="#i-pen" /></svg>Wrote <code>index.html</code></div>
-                <div class="rowi" data-line><svg class="i"><use href="#i-term" /></svg><code>agent-browser open index.html --viewport 1280</code></div>
-                <div class="rowi" data-line><svg class="i"><use href="#i-term" /></svg><code>satgas design check index.html</code></div>
+                <div class="rowi" data-line><svg class="i"><use href="#i-term" /></svg><code><span class="k">agent-browser</span> open index.html <span class="a">--viewport</span> <span class="n">1280</span></code></div>
+                <div class="rowi" data-line><svg class="i"><use href="#i-term" /></svg><code><span class="k">satgas</span> design check index.html</code></div>
                 <div class="rowi" data-line><svg class="i"><use href="#i-pen" /></svg>Edited <code>index.html</code></div>
                 <div class="rowi" data-line><svg class="i"><use href="#i-grid" /></svg>Put <code>index.html</code> on the board</div>
               </div>
@@ -437,14 +437,14 @@
             <p>Open source under AGPL-3.0. It runs on your laptop or your server, with your own model sign-in or keys, and everything stays on that machine.</p>
           </div>
           <div class="selfgrid">
-            <div class="nd term2"><span class="by"><img width="14" height="14" src="assets/faces/lead.svg" alt="" style="background: oklch(0.88 0.05 95)" />You · ~/satgas</span><div class="bar"><i></i><i></i><i></i><span>~/satgas</span><button class="copy-btn" type="button" data-copy="git clone https://github.com/zeative/satgas.git&#10;cd satgas&#10;bun install&#10;bun run dev"><svg class="i" aria-hidden="true"><use href="#i-copy" /></svg><span>Copy</span></button></div><pre><span data-type><span class="p">$ </span>git clone https://github.com/zeative/satgas.git</span>
-<span data-type><span class="p">$ </span>cd satgas &amp;&amp; bun install</span>
-<span data-type><span class="p">$ </span>bun run dev</span>
+            <div class="nd term2"><span class="by"><img width="14" height="14" src="assets/faces/lead.svg" alt="" style="background: oklch(0.88 0.05 95)" />You · ~/satgas</span><div class="bar"><i></i><i></i><i></i><span>~/satgas</span><button class="copy-btn" type="button" data-copy="git clone https://github.com/zeative/satgas.git&#10;cd satgas&#10;bun install&#10;bun run dev"><svg class="i" aria-hidden="true"><use href="#i-copy" /></svg><span>Copy</span></button></div><pre><span data-type><span class="p">$ </span><span class="k">git</span> clone <span class="s">https://github.com/zeative/satgas.git</span></span>
+<span data-type><span class="p">$ </span><span class="k">cd</span> satgas <span class="p">&amp;&amp;</span> <span class="k">bun</span> install</span>
+<span data-type><span class="p">$ </span><span class="k">bun</span> run dev</span>
 <span data-type class="c">  Satgas is running. Open the sign-in link it printed, once.</span></pre></div>
             <div class="ways3">
-              <div class="nd"><b>Docker</b><span><code>docker compose up -d</code>, with Claude Code, Codex and a browser inside</span></div>
+              <div class="nd"><b>Docker</b><span><code><span class="k">docker</span> compose up <span class="a">-d</span></code>, with Claude Code, Codex and a browser inside</span></div>
               <div class="nd"><b>Dokploy</b><span>A template that sets up the service and its sign-in</span></div>
-              <div class="nd"><b>One binary</b><span><code>bun run build</code>, then run <code>dist/satgas</code></span></div>
+              <div class="nd"><b>One binary</b><span><code><span class="k">bun</span> run build</code>, then run <code>dist/satgas</code></span></div>
             </div>
           </div>
         </div>
