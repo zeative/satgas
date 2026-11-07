@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useAddConnector } from "@/features/integrations/connectors";
 import { t } from "@/i18n";
 import { cn } from "@/lib/utils";
-import { decideSetup, undoSetup } from "@/stores/runs";
+import { decideSetup, setupConnected, undoSetup } from "@/stores/runs";
 import { loadSettings, useSettings } from "@/stores/settings";
 import { byId, catalogOf } from "../../../shared/catalog";
 import type { SetupCommand, SetupRecord } from "../../../shared/setup";
@@ -136,19 +136,33 @@ export function SetupLine({ runId, round, rec }: { runId: string; round: number;
           )}
         </div>
       ))}
-      {settings && rec.keys.length > 0 && <KeyRows ids={rec.keys} />}
+      {settings && rec.keys.length > 0 && <KeyRows ids={rec.keys} runId={runId} round={round} />}
     </div>
   );
 }
 
-function KeyRows({ ids }: { ids: string[] }) {
+function KeyRows({ ids, runId, round }: { ids: string[]; runId: string; round: number }) {
   const settings = useSettings((s) => s.settings);
   if (!settings) return null;
-  return <KeyRowsFor ids={ids} settings={settings} />;
+  return (
+    <KeyRowsFor
+      ids={ids}
+      settings={settings}
+      onConnected={() => void setupConnected(runId, round).catch((e: Error) => toast.error(e.message))}
+    />
+  );
 }
 
-function KeyRowsFor({ ids, settings }: { ids: string[]; settings: NonNullable<ReturnType<typeof useSettings.getState>["settings"]> }) {
-  const { add, dialog } = useAddConnector(settings);
+function KeyRowsFor({
+  ids,
+  settings,
+  onConnected,
+}: {
+  ids: string[];
+  settings: NonNullable<ReturnType<typeof useSettings.getState>["settings"]>;
+  onConnected: () => void;
+}) {
+  const { add, dialog } = useAddConnector(settings, onConnected);
   const connected = new Set(settings.mcpServers.map((m) => catalogOf(m)?.id));
   return (
     <>

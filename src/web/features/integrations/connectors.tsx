@@ -70,7 +70,7 @@ interface DiscoverProps {
 }
 
 // Adding always goes through the dialog: it finds out how the server signs in and offers what it supports.
-export function useAddConnector(settings: Settings) {
+export function useAddConnector(settings: Settings, onConnected?: () => void) {
   const [connecting, setConnecting] = useState<CatalogItem | null>(null);
   const add = (item: CatalogItem) => setConnecting(item);
   const added = async (next: McpServer) => {
@@ -78,6 +78,7 @@ export function useAddConnector(settings: Settings) {
     if (problem) return problem;
     if (connecting) toast.success(ti.addedToast(connecting.name), { description: ti.addedHint });
     void loadLogins();
+    onConnected?.();
     return null;
   };
   const dialog = connecting && (

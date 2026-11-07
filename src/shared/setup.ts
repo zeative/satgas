@@ -173,4 +173,6 @@ export interface SetupRecord {
   keys: string[];
   // Commands that could not apply, in words, for the log and the lead.
   failed: string[];
+  // The request already ran again once its connectors were there.
+  resumed?: boolean;
 }

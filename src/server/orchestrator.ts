@@ -27,7 +27,7 @@ import { schedule } from "./scheduler";
 import { planSchedules } from "./schedules";
 import { closeSecrets, savedSecrets } from "./secrets";
 import { getSettings, taskAgents } from "./settings";
-import { applySetup } from "./setup";
+import { applySetup, requestAfterConnect } from "./setup";
 import { enabledSkills } from "./skills";
 import { appendLog, boardOps, createRun, getLogs, getRun, patchNode, patchRun } from "./store";
 import { describeSystem } from "./system";
@@ -287,11 +287,19 @@ export const isLive = (id: string) => live.has(id);
 
 // A message from something other than the person (a watched PR, a schedule, a webhook): a new round now, or the next one
 // when the team is still working.
-export function followUp(id: string, prompt: string, origin?: RoundOrigin, cards: string[] = []): "ok" | "missing" {
+export function followUp(id: string, prompt: string, origin?: RoundOrigin, cards: string[] = [], files: string[] = []): "ok" | "missing" {
   if (!getRun(id)) return "missing";
-  if (live.has(id)) return queuePrompt(id, prompt, [], undefined, origin, cards);
-  const result = continueRun(id, prompt, [], undefined, [], origin, cards);
-  return result === "busy" ? queuePrompt(id, prompt, [], undefined, origin, cards) : result;
+  if (live.has(id)) return queuePrompt(id, prompt, files, undefined, origin, cards);
+  const result = continueRun(id, prompt, files, undefined, [], origin, cards);
+  return result === "busy" ? queuePrompt(id, prompt, files, undefined, origin, cards) : result;
+}
+
+// The person just connected what a round was waiting for, so its request runs without them sending it again.
+export function resumeAfterConnect(id: string, round: number): boolean {
+  const next = requestAfterConnect(id, round);
+  if (!next) return false;
+  followUp(id, next.prompt, { kind: "connect", label: next.label }, next.cards, next.files);
+  return true;
 }
 
 const CONTINUE_DEFAULT =

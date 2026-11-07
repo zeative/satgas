@@ -37,6 +37,7 @@ import {
   isLive,
   moveQueued,
   queuePrompt,
+  resumeAfterConnect,
   shutdown,
   startRun,
   stopRun,
@@ -961,6 +962,15 @@ const server: Server<SocketData> = Bun.serve({
         if (result === "busy") return error(409, "Agents are still working on this board.");
         if (result === "running") return error(409, "This task is still running.");
         return Response.json({ ok: true }, { status: 202 });
+      }),
+    },
+    "/api/runs/:id/setup/:round/connected": {
+      POST: api(async (req) => {
+        if (!isTrusted(req)) return forbidden();
+        const round = Number(req.params.round);
+        if (!Number.isInteger(round) || round < 0) return error(400, "Unknown round.");
+        resumeAfterConnect(req.params.id, round);
+        return new Response(null, { status: 204 });
       }),
     },
     "/api/runs/:id/setup/:round/undo": {

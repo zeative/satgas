@@ -257,7 +257,7 @@ export interface ForkOf {
 }
 
 export interface RoundOrigin {
-  kind: "pull" | "schedule" | "webhook" | "channel";
+  kind: "pull" | "schedule" | "webhook" | "channel" | "connect";
   // What started it, for the chat: "PR #12", or the schedule's title.
   label: string;
 }

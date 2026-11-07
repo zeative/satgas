@@ -1512,7 +1512,7 @@ function QueuedItem({
   );
 }
 
-const ORIGIN_ICON = { channel: MessageCircle, pull: GitPullRequest, schedule: CalendarClock, webhook: Webhook } as const;
+const ORIGIN_ICON = { channel: MessageCircle, connect: Plug, pull: GitPullRequest, schedule: CalendarClock, webhook: Webhook } as const;
 
 // A round nobody typed says what started it: a watched pull request, a schedule or a webhook.
 function OriginLine({ origin }: { origin: RoundOrigin }) {

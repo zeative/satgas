@@ -12,10 +12,11 @@ import {
   continueTask,
   isLive,
   queuePrompt,
+  resumeAfterConnect,
   startRun,
   unqueuePrompt,
 } from "../../src/server/orchestrator";
-import { getSettings } from "../../src/server/settings";
+import { getSettings, saveSettings } from "../../src/server/settings";
 import { decideSetup, undoSetup } from "../../src/server/setup";
 import { boardOps, flushAll, getRun, patchRun } from "../../src/server/store";
 import { jsonl, makeFakeCli, setFake } from "../helpers/fake-cli";
@@ -326,6 +327,39 @@ test("a task the provider refuses is not retried on another agent, and the reaso
   const node = getRun(id)?.nodes.find((n) => n.id === "map");
   expect(node).toMatchObject({ status: "failed", agent: "claude", recovery: { kind: "refused", from: "claude" } });
   expect(node?.recovery?.to).toBeUndefined();
+});
+
+test("a request that waited for a connector runs by itself once it is connected, and only once", async () => {
+  const g = globalThis as { __satgasSettings?: unknown };
+  const before = g.__satgasSettings;
+  const leadOnly = { title: "Canva", summary: "", reply: "Connect it first.", questions: [], hires: [], nodes: [], board: [] };
+  setFake({ FAKE_CLI_OUTPUT: planned({ ...leadOnly, setup: [{ op: "connect", id: "github" }] }) });
+  try {
+    const { id } = startRun("cek github saya", dir);
+    await until(() => getRun(id)?.status === "done" || getRun(id)?.status === "failed");
+    expect(getRun(id)?.setups?.[0]?.keys).toEqual(["github"]);
+    expect(resumeAfterConnect(id, 0)).toBe(false);
+
+    const server = {
+      id: "g",
+      name: "github",
+      catalogId: "github",
+      enabled: true,
+      transport: "http" as const,
+      url: "https://example.com/mcp",
+      headers: {},
+    };
+    await saveSettings({ ...getSettings(), mcpServers: [...getSettings().mcpServers, server] });
+    setFake({ FAKE_CLI_OUTPUT: planned(leadOnly) });
+    expect(resumeAfterConnect(id, 0)).toBe(true);
+    expect(getRun(id)?.rounds).toEqual(["cek github saya"]);
+    expect(getRun(id)?.origins?.[1]).toEqual({ kind: "connect", label: "GitHub" });
+    await until(() => getRun(id)?.status === "done" || getRun(id)?.status === "failed");
+    expect(resumeAfterConnect(id, 0)).toBe(false);
+    expect(getRun(id)?.rounds).toHaveLength(1);
+  } finally {
+    g.__satgasSettings = before;
+  }
 });
 
 test("the lead changes setup from a message: known changes apply with Undo, outside code waits for Allow", async () => {

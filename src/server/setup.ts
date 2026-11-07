@@ -1,4 +1,5 @@
 // Applies the setup the lead changes from a person's message, keeps how to undo it, and runs what waits for an Allow.
+import { byId, catalogOf } from "../shared/catalog";
 import { applyToSettings, cleanSetup, needsApproval, type SetupCommand, type SetupRecord } from "../shared/setup";
 import { getSettings, saveSettings } from "./settings";
 import { deleteSkill, findOnGithub, installFound, listSkills, setSkillEnabled } from "./skills";
@@ -111,4 +112,28 @@ export async function decideSetup(runId: string, round: number, index: number, a
   }
   mark({ state: "allowed", ...(out.note ? { note: out.note } : {}) }, out.undo);
   return null;
+}
+
+// Once every connector a round waited for is there, what the person asked can finally run. Only once, and never
+// when the round already planned work, since that work ran without them and has its results.
+export function requestAfterConnect(runId: string, round: number) {
+  const run = getRun(runId);
+  const rec = run?.setups?.[round];
+  if (!run || !rec?.keys.length || rec.resumed || rec.undone) return null;
+  if (run.nodes.some((n) => (n.round ?? 0) === round)) return null;
+  const on = new Set(
+    getSettings()
+      .mcpServers.filter((s) => s.enabled)
+      .map((s) => catalogOf(s)?.id),
+  );
+  if (!rec.keys.every((id) => on.has(id))) return null;
+  const prompt = round === 0 ? run.prompt : run.rounds?.[round - 1];
+  if (!prompt) return null;
+  save(runId, round, { ...rec, resumed: true });
+  return {
+    prompt,
+    files: run.files?.[round] ?? [],
+    cards: run.selected?.[round] ?? [],
+    label: rec.keys.map((id) => byId.get(id)?.name ?? id).join(", "),
+  };
 }

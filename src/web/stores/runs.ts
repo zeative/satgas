@@ -308,6 +308,7 @@ export const unqueuePrompt = (id: string, item: string) => request("DELETE", `/a
 // Puts back everything the lead and agents changed on the canvas in one round.
 export const undoBoardEdit = (id: string, round: number) => request("POST", `/api/runs/${id}/edits/${round}/undo`, {});
 export const undoSetup = (id: string, round: number) => request("POST", `/api/runs/${id}/setup/${round}/undo`, {});
+export const setupConnected = (id: string, round: number) => request("POST", `/api/runs/${id}/setup/${round}/connected`, {});
 export const decideSetup = (id: string, round: number, index: number, allow: boolean) =>
   request("POST", `/api/runs/${id}/setup/${round}/${index}`, { allow });
 export const deleteRun = (id: string) => request("DELETE", `/api/runs/${id}`);

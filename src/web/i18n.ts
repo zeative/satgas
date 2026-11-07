@@ -1198,6 +1198,7 @@ const en = {
     schedule: (label: string) => `From the schedule ${label}`,
     webhook: (label: string) => `From the webhook ${label}`,
     channel: (label: string) => `From ${label}`,
+    connect: (label: string) => `${label} connected, picking up your request`,
   },
   fork: {
     fork: "Fork board",
@@ -2760,6 +2761,7 @@ const id: typeof en = {
     schedule: (label) => `Dari jadwal ${label}`,
     webhook: (label) => `Dari webhook ${label}`,
     channel: (label) => `Dari ${label}`,
+    connect: (label) => `${label} tersambung, melanjutkan permintaanmu`,
   },
   fork: {
     fork: "Fork board",
