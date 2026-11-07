@@ -20,10 +20,11 @@ export const config = {
   channels: env.SATGAS_CHANNELS === "1",
   // Telegram lets people run their own Bot API server.
   telegramApi: env.SATGAS_TELEGRAM_API ?? "https://api.telegram.org",
-  // Apps to sign in through on servers with no client registration, by issuer. A client id is public; without GitHub's the connector takes a token.
-  oauthClients: (env.SATGAS_GITHUB_CLIENT_ID?.trim()
-    ? { "https://github.com/login/oauth": env.SATGAS_GITHUB_CLIENT_ID.trim() }
-    : {}) as Record<string, string>,
+  // Apps to sign in through on servers with no client registration, by issuer. A client id is public; a fork can name its own.
+  oauthClients: { "https://github.com/login/oauth": env.SATGAS_GITHUB_CLIENT_ID?.trim() || "Ov23li2HUqNidLE6pAfl" } as Record<
+    string,
+    string
+  >,
   dataDir: env.SATGAS_DATA_DIR ?? join(homedir(), ".satgas"),
   defaultCwd: env.SATGAS_DEFAULT_CWD ?? process.cwd(),
   // Kept low on purpose: every agent is a full CLI process.

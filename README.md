@@ -224,6 +224,7 @@ Most settings live in the app under **Configurations** and **Integrations**. Env
 | `SATGAS_CLAUDE_BIN` / `SATGAS_CODEX_BIN` | `claude` / `codex`                                  | Paths to the CLIs                                                          |
 | `SATGAS_CHANNELS`                        | off                                                 | Set to `1` to turn on the experimental chat channels                       |
 | `SATGAS_TELEGRAM_API`                    | `https://api.telegram.org`                          | Your own Telegram Bot API server                                           |
+| `SATGAS_GITHUB_CLIENT_ID`                | Satgas's own OAuth App                              | Your own GitHub OAuth App with Device Flow on, for forks                   |
 | `SATGAS_REPO`                            | `zeative/satgas`                                    | Repository shown on the home page, for forks                               |
 | `SATGAS_UPDATE_API`                      | `https://api.github.com`                            | Where releases are read from, for forks                                    |
 
