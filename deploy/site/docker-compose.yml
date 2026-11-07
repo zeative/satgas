@@ -1,0 +1,8 @@
+# The satgas.app landing page, for Dokploy. Route the domain to this service on port 80.
+services:
+  site:
+    build:
+      context: ../..
+      dockerfile: deploy/site/Dockerfile
+    restart: unless-stopped
+    mem_limit: 64m
