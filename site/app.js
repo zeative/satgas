@@ -395,6 +395,17 @@ for (const btn of document.querySelectorAll("[data-copy]")) {
   });
 }
 
+// The hero names the latest release, so the page never needs an edit when a new one ships.
+const release = document.querySelector("[data-release]");
+if (release) {
+  fetch("https://api.github.com/repos/zeative/satgas/releases/latest", { headers: { accept: "application/vnd.github+json" } })
+    .then((r) => (r.ok ? r.json() : null))
+    .then((rel) => {
+      if (typeof rel?.tag_name === "string" && /^v\d+(\.\d+)*$/.test(rel.tag_name)) release.textContent = rel.tag_name;
+    })
+    .catch(() => {});
+}
+
 // Only a number GitHub actually gave is shown.
 const stars = document.querySelector("[data-stars]");
 if (stars) {
