@@ -12,3 +12,9 @@ test("a malformed escape in the path is a 404, not a crash", async () => {
   expect(decodePath("/%E0%A4%A")).toBeNull();
   expect((await serveWeb("/%E0%A4%A")).status).toBe(404);
 });
+
+test("a missing file, like a chunk of an older build, is a 404 and never the app shell", async () => {
+  const res = await serveWeb("/assets/index-from-an-older-build.js");
+  expect(res.status).toBe(404);
+  expect(res.headers.get("content-type") ?? "").not.toContain("text/html");
+});

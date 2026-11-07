@@ -29,7 +29,9 @@ export async function serveWeb(pathname: string): Promise<Response> {
   const decoded = decodePath(pathname);
   if (decoded === null) return new Response("Not found.", { status: 404, headers: NO_FRAMING });
   const file = await lookup(decoded);
-  // Unknown paths are client-side routes, so they get the app shell.
+  // A file that is not there, like a chunk of an older build, is a 404: answering it with the app shell makes the
+  // browser read HTML as a script. Paths without an extension are client-side routes and get the shell.
+  if (!file && extname(decoded)) return new Response("Not found.", { status: 404, headers: NO_FRAMING });
   const target = file ?? (await lookup("/index.html"));
   if (!target) {
     const devUrl = `http://localhost:${config.webPort}`;
