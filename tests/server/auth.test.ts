@@ -88,7 +88,8 @@ test("file keys open one board only", async () => {
   expect(key).toHaveLength(22);
   expect(validFileKey("run1", key)).toBe(true);
   expect(validFileKey("run2", key)).toBe(false);
-  expect(validFileKey("run1", `${key.slice(0, -1)}x`)).toBe(false);
+  // One key in 64 already ends in x, which would make this the same key.
+  expect(validFileKey("run1", `${key.slice(0, -1)}${key.endsWith("x") ? "y" : "x"}`)).toBe(false);
 });
 
 describe("changing the token", () => {
