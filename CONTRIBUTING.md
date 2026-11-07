@@ -2,6 +2,16 @@
 
 Thanks for helping. Satgas aims to stay small, fast and carefully made; contributions are held to that bar.
 
+## License and the CLA
+
+Satgas is licensed under the [AGPL-3.0](LICENSE). Before your first pull request can merge, read the
+[Contributor License Agreement](CLA.md) and comment on the pull request with:
+
+> I have read the Satgas CLA and I agree to it.
+
+You keep the copyright in your work. The agreement lets the maintainer also offer Satgas under other terms, such as
+the hosted version, which keeps the project sustainable. A check on the pull request turns green once you have agreed.
+
 ## Setup
 
 ```sh

@@ -10,7 +10,7 @@ A self-hosted workspace where AI coding agents work as a team on a shared canvas
 
 [![CI](https://github.com/zeative/satgas/actions/workflows/ci.yml/badge.svg)](https://github.com/zeative/satgas/actions/workflows/ci.yml)
 [![Version](https://img.shields.io/github/package-json/v/zeative/satgas?label=version)](package.json)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](LICENSE)
 [![Runs on Bun](https://img.shields.io/badge/runs%20on-Bun-black?logo=bun)](https://bun.sh)
 [![GitHub stars](https://img.shields.io/github/stars/zeative/satgas?style=flat)](https://github.com/zeative/satgas/stargazers)
 
@@ -249,7 +249,7 @@ Please report vulnerabilities through a [private security advisory](https://gith
 
 ## Contributing
 
-Contributions are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) first, then:
+Contributions are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) first, and agree to the [Contributor License Agreement](CLA.md) on your first pull request. Then:
 
 ```sh
 bun run dev        # API on :4317 and UI on :5317, both with hot reload
@@ -284,4 +284,8 @@ Team avatars are [DiceBear Notionists](https://www.dicebear.com/styles/notionist
 
 ## License
 
-[MIT](LICENSE). Third-party code keeps its own license, listed in [THIRD_PARTY_NOTICES](THIRD_PARTY_NOTICES).
+Copyright 2026 zeative. Satgas is licensed under the [GNU Affero General Public License v3.0](LICENSE). Third-party code keeps its own license, listed in [THIRD_PARTY_NOTICES](THIRD_PARTY_NOTICES).
+
+You can use, change and self-host Satgas freely, for yourself or your company. If you offer a changed version to other people over a network, the license asks you to give them its source code as well; set `SATGAS_REPO` to your public repository so the app links there.
+
+Versions up to 0.1.6 were released under the MIT License, and those releases stay MIT.

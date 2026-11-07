@@ -1,0 +1,56 @@
+name: CLA
+
+# A pull request can merge once its author has agreed to CLA.md in a comment. The comment is the record, and nothing
+# from the pull request is checked out or run here, which keeps pull_request_target safe.
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize]
+  issue_comment:
+    types: [created, edited]
+
+permissions:
+  pull-requests: write
+  statuses: write
+
+jobs:
+  cla:
+    if: github.event_name == 'pull_request_target' || github.event.issue.pull_request
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const AGREE = "I have read the Satgas CLA and I agree to it.";
+            const MAINTAINERS = ["zeative"];
+            const { owner, repo } = context.repo;
+            const number = context.payload.pull_request?.number ?? context.payload.issue.number;
+            const { data: pr } = await github.rest.pulls.get({ owner, repo, pull_number: number });
+            const author = pr.user.login;
+            const comments = await github.paginate(github.rest.issues.listComments, { owner, repo, issue_number: number });
+            const signed =
+              MAINTAINERS.includes(author) ||
+              pr.user.type === "Bot" ||
+              comments.some((c) => c.user.login === author && c.body.trim().includes(AGREE));
+            await github.rest.repos.createCommitStatus({
+              owner,
+              repo,
+              sha: pr.head.sha,
+              state: signed ? "success" : "pending",
+              context: "CLA",
+              description: signed ? `${author} agreed to the CLA` : `Waiting for ${author} to agree to the CLA`,
+              target_url: `https://github.com/${owner}/${repo}/blob/main/CLA.md`,
+            });
+            const asked = comments.some((c) => c.user.type === "Bot" && c.body.includes("<!-- satgas-cla -->"));
+            if (!signed && !asked) {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: number,
+                body: [
+                  "<!-- satgas-cla -->",
+                  `Thanks for the pull request, @${author}. Before it can merge, please read the [Contributor License Agreement](https://github.com/${owner}/${repo}/blob/main/CLA.md) and comment with this sentence:`,
+                  "",
+                  `> ${AGREE}`,
+                ].join("\n"),
+              });
+            }
