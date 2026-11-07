@@ -153,9 +153,18 @@ export function ModelPicker() {
                   const failed = statusOf(p.kind)?.state === "failed";
                   const prev = shown[i - 1];
                   return (
-                    <li key={p.kind} className="flex flex-col items-center">
-                      {/* A hairline between the Claude Code providers and the Codex ones. */}
-                      {prev && prev.runtime !== p.runtime && <span aria-hidden="true" className="mb-1 h-px w-5 bg-border" />}
+                    <li key={p.kind} className="flex w-full flex-col items-center">
+                      {/* Each agent's providers sit under its name, which only labels them. */}
+                      {prev?.runtime !== p.runtime && (
+                        <span
+                          className={cn(
+                            "mb-1 w-full px-1 text-center text-[11px] leading-3.5 text-muted-foreground select-none",
+                            prev && "mt-2 border-t pt-2",
+                          )}
+                        >
+                          {t.agent[p.runtime]}
+                        </span>
+                      )}
                       <button
                         type="button"
                         aria-pressed={current === p.kind}
