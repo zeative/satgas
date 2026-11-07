@@ -1178,7 +1178,7 @@ a.u:hover {
 }
 .graph {
   width: 100%;
-  max-height: 220px;
+  max-height: 160px;
   border-radius: 12px;
   background: var(--s1);
   border: 1px solid var(--line);
@@ -1202,8 +1202,9 @@ a.u:hover {
 .g-dot.main {
   stroke: rgb(237 237 240 / 0.55);
 }
+/* Sized in viewBox units: the graph renders at about 0.8x, so 14 lands near 11px on a phone. */
 .graph text {
-  font: 9px var(--mono);
+  font: 14px var(--mono);
   fill: var(--t3);
 }
 .pr-time {
@@ -1504,6 +1505,9 @@ footer .sponsor img {
   .nav-links {
     display: none;
   }
+  .nav-end {
+    margin-inline-start: auto;
+  }
   .scene {
     grid-template-columns: minmax(0, 1fr);
     height: auto;
@@ -1545,6 +1549,14 @@ footer .sponsor img {
   }
   footer .wrap {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+/* A tablet still fits the team board, shrunk whole above the chat; a phone keeps only the chat. */
+@media (min-width: 561px) and (max-width: 960px) {
+  .canvas {
+    display: block;
+    aspect-ratio: 860 / 640;
+    border-bottom: 1px solid var(--line);
   }
 }
 @media (max-width: 560px) {
@@ -2231,6 +2243,10 @@ footer .sponsor img {
     width: auto;
     justify-self: stretch;
   }
+  /* Cards stack here, so a travelling cursor would sit on top of the text it passes. */
+  .motion .cur {
+    display: none;
+  }
   .hubgrid {
     grid-template-columns: 1fr;
     gap: 32px;
@@ -2249,6 +2265,8 @@ footer .sponsor img {
     left: 100%;
     translate: 0 -50%;
     justify-items: start;
+    width: 120px;
+    white-space: normal;
   }
   .watch-grid {
     gap: 48px;
