@@ -50,6 +50,7 @@ if (scene && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
 
 // How it works: one step open at a time. It moves on by itself while in view, until someone picks a step.
 const flow = document.querySelector("[data-flow]");
+let flowCtl = null;
 if (flow) {
   const tabs = [...flow.querySelectorAll('[role="tab"]')];
   const panels = tabs.map((t) => document.getElementById(t.getAttribute("aria-controls")));
@@ -99,8 +100,112 @@ if (flow) {
     t.addEventListener("pointerdown", () => {
       picked = true;
     });
-  new IntersectionObserver(([e]) => (e?.isIntersecting && !picked ? run() : stop()), { threshold: 0.4 }).observe(flow);
+  // Scroll takes over on wide screens, so the timer only runs while nothing else drives the steps.
+  flowCtl = { show, stop, count: tabs.length, scrolled: false };
+  new IntersectionObserver(([e]) => (e?.isIntersecting && !picked && !flowCtl.scrolled ? run() : stop()), {
+    threshold: 0.4,
+  }).observe(flow);
   show(0);
+}
+
+// Scroll motion. Everything here is extra: without GSAP, or with reduced motion, the page reads complete as it is.
+const gsap = window.gsap;
+const ST = window.ScrollTrigger;
+if (gsap && ST && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
+  gsap.registerPlugin(ST);
+  document.documentElement.classList.add("motion");
+
+  // The manifesto lights word by word, so it gets split once into spans.
+  for (const p of document.querySelectorAll("[data-words]")) {
+    const words = p.textContent.trim().split(/\s+/);
+    p.textContent = "";
+    for (const [i, w] of words.entries()) {
+      const s = document.createElement("span");
+      s.className = /^(team|watch|canvas\.)$/.test(w) ? "w hl" : "w";
+      s.textContent = w;
+      p.append(s, i < words.length - 1 ? " " : "");
+    }
+    gsap.to(p.querySelectorAll(".w"), {
+      opacity: 1,
+      stagger: 0.1,
+      ease: "none",
+      scrollTrigger: { trigger: p, start: "top 80%", end: "bottom 45%", scrub: true },
+    });
+  }
+
+  gsap.to(".aura", { yPercent: 18, ease: "none", scrollTrigger: { trigger: ".hero", start: "top top", end: "bottom top", scrub: true } });
+
+  for (const el of document.querySelectorAll("[data-reveal]"))
+    gsap.from(el, { y: 32, opacity: 0, duration: 0.9, ease: "power3.out", scrollTrigger: { trigger: el, start: "top 88%", once: true } });
+
+  for (const [sel, each] of [
+    ["[data-line]", 0.12],
+    ["[data-type]", 0.45],
+  ]) {
+    const items = gsap.utils.toArray(sel);
+    if (!items.length) continue;
+    gsap.from(items, {
+      opacity: 0,
+      x: -8,
+      duration: 0.4,
+      stagger: each,
+      ease: "power2.out",
+      scrollTrigger: { trigger: items[0].parentElement, start: "top 75%", once: true },
+    });
+  }
+
+  const finalBg = document.querySelector(".final-bg");
+  if (finalBg)
+    gsap.fromTo(
+      finalBg,
+      { scale: 1.15 },
+      { scale: 1, ease: "none", scrollTrigger: { trigger: ".final-panel", start: "top bottom", end: "bottom bottom", scrub: true } },
+    );
+
+  const mm = gsap.matchMedia();
+  mm.add("(min-width: 961px)", () => {
+    // Cards drift at their own depth, so the board reads as layers under the scroll.
+    for (const card of document.querySelectorAll(".board .card[data-depth]"))
+      gsap.to(card, {
+        y: Number(card.dataset.depth) * -60,
+        ease: "none",
+        scrollTrigger: { trigger: ".board", start: "top bottom", end: "bottom top", scrub: true },
+      });
+
+    // The rings turn; --spin turns each logo back so it stays upright.
+    for (const [sel, deg] of [
+      [".ring.r1", 90],
+      [".ring.r2", -60],
+    ])
+      gsap.fromTo(
+        sel,
+        { rotation: 0, "--spin": "0deg" },
+        {
+          rotation: deg,
+          "--spin": `${deg}deg`,
+          ease: "none",
+          scrollTrigger: { trigger: ".orbit", start: "top bottom", end: "bottom top", scrub: true },
+        },
+      );
+
+    // How it works pins and the scroll walks the four steps, but only when the whole section fits the screen.
+    const how = document.getElementById("how");
+    if (how && flowCtl && how.offsetHeight < innerHeight) {
+      flowCtl.stop();
+      flowCtl.scrolled = true;
+      const st = ST.create({
+        trigger: how,
+        start: "center center",
+        end: `+=${flowCtl.count * 600}`,
+        pin: true,
+        onUpdate: (self) => flowCtl.show(Math.min(flowCtl.count - 1, Math.floor(self.progress * flowCtl.count))),
+      });
+      return () => {
+        st.kill();
+        flowCtl.scrolled = false;
+      };
+    }
+  });
 }
 
 const nav = document.querySelector(".nav");
