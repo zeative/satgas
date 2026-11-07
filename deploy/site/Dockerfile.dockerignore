@@ -2,3 +2,4 @@
 *
 !site
 !deploy/site/nginx.conf
+!deploy/site/headers.inc
