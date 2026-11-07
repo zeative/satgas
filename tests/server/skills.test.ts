@@ -253,6 +253,23 @@ test("Hallmark ships on for every interface, can be switched off, and carries it
   expect(await setSkillEnabled("hallmark", true)).toBe("ok");
 });
 
+test("Satgas's design skill ships on, can be switched off, carries its references, and its link into Hallmark lands", async () => {
+  await prepareSkills();
+  const design = () => listSkills().then((all) => all.find((s) => s.name === "satgas-design"));
+  expect(await design()).toMatchObject({ enabled: true, optional: true, repo: "zeative/satgas", source: { kind: "builtin" } });
+  expect(await setSkillEnabled("satgas-design", false)).toBe("ok");
+  expect(enabledSkills().some((s) => s.name === "satgas-design")).toBe(false);
+  expect(await setSkillEnabled("satgas-design", true)).toBe("ok");
+  const root = join(config.dataDir, "skills-builtin");
+  const skill = await Bun.file(join(root, "satgas-design", "SKILL.md")).text();
+  for (const ref of ["reference/craft.md", "reference/sources.md", "reference/review.md"]) {
+    expect(skill).toContain(ref);
+    expect(await Bun.file(join(root, "satgas-design", ref)).exists()).toBe(true);
+  }
+  const link = skill.match(/\]\((\.\.\/hallmark\/[^)]+)\)/)?.[1] ?? "";
+  expect(await Bun.file(join(root, "satgas-design", link)).exists()).toBe(true);
+});
+
 test("shows a skill's files one by one and hands the folder over as a zip", async () => {
   await prepareSkills();
   expect((await skillFiles("satgas"))?.map((f) => f.path).sort()).toEqual([

@@ -50,3 +50,13 @@ test("a watched pull request keeps the GitHub CLI and its sign-in, and nothing e
   expect(run("command -v gh", set).out).not.toContain("account-guard");
   expect(run("vercel whoami", set).code).toBe(1);
 });
+
+test("agents get Satgas's design tools as `satgas`, and nothing else of the binary", async () => {
+  const { set } = await accountGuardEnv(false, "/usr/bin:/bin");
+  const refused = run("satgas", set);
+  expect(refused.code).toBe(2);
+  expect(refused.err).toContain("satgas design");
+  const usage = run("satgas design", set);
+  expect(usage.code).toBe(0);
+  expect(usage.out).toContain("satgas design check");
+}, 60_000);

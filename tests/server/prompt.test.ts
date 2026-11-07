@@ -37,7 +37,7 @@ test("the shared working rules carry the system overview, and point at the satga
   expect(workingRules(true, "<satgas_system>\nConnectors: none installed.\n</satgas_system>")).toContain(
     "</satgas_skill>\n\n<satgas_system>",
   );
-  expect(workingRules(false)).not.toContain("satgas-skills:satgas");
+  expect(workingRules(false)).not.toContain("satgas-skills:satgas in Claude Code");
   expect(workingRules(false)).toContain("use the connector first");
   expect(workingRules(false)).toContain("reached only through connectors");
   expect(workingRules(false)).not.toContain("fallback");
@@ -103,9 +103,19 @@ test("the person's rules outrank the defaults, and what Satgas remembers shapes 
   expect(rules(false)).not.toContain("<person_rules>");
 });
 
-test("every task hears to put interfaces through Hallmark only while it is on", () => {
-  expect(workingRules(true, "", "", "", true)).toContain("loads the hallmark skill");
-  expect(workingRules(true)).not.toContain("hallmark");
+test("interfaces go through Satgas's design loop while it is on, with Hallmark's Floor only while Hallmark is", () => {
+  const both = workingRules(true, "", "", "", true, true);
+  expect(both).toContain("loads the satgas-design skill");
+  expect(both).toContain("satgas design check");
+  expect(both).toContain("hallmark's Floor binds every line");
+  const loop = workingRules(true, "", "", "", false, true);
+  expect(loop).toContain("loads the satgas-design skill");
+  expect(loop).not.toContain("hallmark");
+  // With the loop switched off, the rules are the Hallmark-only ones a bench compares against.
+  const hallmark = workingRules(true, "", "", "", true, false);
+  expect(hallmark).toContain("loads the hallmark skill");
+  expect(hallmark).not.toContain("satgas-design");
+  expect(workingRules(true)).not.toContain("<design>");
 });
 
 test("what a task is handed comes back as log lines, names only and never a secret's value", () => {

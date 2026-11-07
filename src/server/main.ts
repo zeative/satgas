@@ -1,5 +1,6 @@
-// Entry of the compiled binary: `satgas --version` prints its version, `satgas hook <event>` answers one agent hook and
-// `satgas team-mcp` serves a task's team connector, each without loading the server; anything else starts it.
+// Entry of the compiled binary: `satgas --version` prints its version, `satgas hook <event>` answers one agent hook,
+// `satgas team-mcp` serves a task's team connector and `satgas design …` runs the design tools, each without loading the
+// server; anything else starts it.
 if (process.argv[2] === "--version") {
   const { default: pkg } = await import("../../package.json");
   console.log(pkg.version);
@@ -9,6 +10,9 @@ if (process.argv[2] === "--version") {
 } else if (process.argv[2] === "team-mcp") {
   const { runTeamMcp } = await import("./team/mcp");
   await runTeamMcp();
+} else if (process.argv[2] === "design") {
+  const { runDesign } = await import("./design/cli");
+  process.exitCode = await runDesign(process.argv.slice(3));
 } else {
   await import("./index");
 }

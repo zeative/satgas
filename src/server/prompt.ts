@@ -61,14 +61,23 @@ ${BOARD_CARDS}
 const GUIDE =
   "\n\n<satgas_skill>The satgas skill (named satgas-skills:satgas in Claude Code) holds the full board reference with a worked example of every layout, and the checklists for verifying and reporting. Load it before your first satgas:board block and before writing a final report.</satgas_skill>";
 
-const DESIGN =
-  "\n\n<design>Any task that designs, builds or changes an interface (a page, an app screen, a component, a dashboard, an HTML preview for the board, a deck, a mockup) loads the hallmark skill (named satgas-skills:hallmark in Claude Code) before writing the first line of markup, and follows it, whatever the brief says about style. Something new gets its full flow. A change to an existing interface keeps that design's own language and holds everything you touch to hallmark's Floor, without redesigning what the task did not ask about.</design>";
+// Every interface goes through Satgas's design loop while satgas-design is on, with hallmark's Floor while hallmark is.
+const design = (hallmark: boolean, loop: boolean) => {
+  if (!loop && !hallmark) return "";
+  const scope =
+    "Any task that designs, builds or changes an interface (a page, an app screen, a component, a dashboard, an HTML preview for the board, a deck, a mockup)";
+  const keep =
+    "A change to an existing interface keeps that design's own language and holds everything you touch to the check, without redesigning what the task did not ask about.";
+  if (!loop)
+    return `\n\n<design>${scope} loads the hallmark skill (named satgas-skills:hallmark in Claude Code) before writing the first line of markup, and follows it, whatever the brief says about style. Something new gets its full flow. A change to an existing interface keeps that design's own language and holds everything you touch to hallmark's Floor, without redesigning what the task did not ask about.</design>`;
+  return `\n\n<design>${scope} loads the satgas-design skill (named satgas-skills:satgas-design in Claude Code) before writing the first line of markup, and follows it, whatever the brief says about style: references measured with \`satgas design refs\`, a brief in numbers, \`satgas design check\` until no high finding is left, and the screenshots read and put on the board.${hallmark ? " It works with the hallmark skill (named satgas-skills:hallmark in Claude Code): hallmark's Floor binds every line, and on something new the measured brief is hallmark's direction." : ""} ${keep}</design>`;
+};
 
 // guide: the built-in satgas skill is installed, so the rules can point at it for the details. system: describeSystem().
-// design: the built-in hallmark skill is on, so every interface an agent makes goes through it.
+// hallmark, loop: the built-in hallmark and satgas-design skills are on, so interfaces go through them.
 // rules: the person's own do and don't from the Memory page; they outrank the defaults above.
-export const workingRules = (guide: boolean, system = "", commits = "", rules = "", design = false) =>
-  `${WORKING}${guide ? GUIDE : ""}${design ? DESIGN : ""}${commits ? `\n\n<commits>${commits}</commits>` : ""}${rules ? `\n\n<person_rules>\nThe person's own rules. Follow every one; where one conflicts with a default above, the person's rule wins.\n${rules}\n</person_rules>` : ""}${system ? `\n\n${system}` : ""}`;
+export const workingRules = (guide: boolean, system = "", commits = "", rules = "", hallmark = false, loop = false) =>
+  `${WORKING}${guide ? GUIDE : ""}${design(hallmark, loop)}${commits ? `\n\n<commits>${commits}</commits>` : ""}${rules ? `\n\n<person_rules>\nThe person's own rules. Follow every one; where one conflicts with a default above, the person's rule wins.\n${rules}\n</person_rules>` : ""}${system ? `\n\n${system}` : ""}`;
 
 const FINAL_REPORT =
   "When you are done, reply with the final report for the person, in this order: the outcome in a sentence or two; where things live (files, card titles, URLs); how to use or check it, with the evidence; what you assumed and anything not done; then up to three concrete next steps you recommend, best first. Next steps, summaries and answers stay in this reply, never on a card. It is read in a narrow chat column: short paragraphs, lists only for parallel points, a small table for facts about one thing, `code` only for commands, paths and names, links as [text](url). The person sees the cards on the board, so never walk through what they show; name each card in a few words.";

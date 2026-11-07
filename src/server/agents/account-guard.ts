@@ -45,6 +45,15 @@ echo "${name}: Satgas agents reach outside accounts only through connectors. Tel
 exit 1
 `;
 
+// Satgas's design tools (`satgas design check`) for agents' shells; from source, the entry script under Bun. Only
+// `design` passes: the bare binary starts a server, which an agent must never do.
+const compiled = import.meta.dir.includes("$bunfs") || import.meta.dir.includes("~BUN");
+const shq = (v: string) => `'${v.replace(/'/g, `'\\''`)}'`;
+export const selfScript = () => `#!/bin/sh
+if [ "$1" != "design" ]; then echo 'satgas: agents can run only "satgas design" (check, refs, compare).' >&2; exit 2; fi
+exec ${shq(process.execPath)}${compiled ? "" : ` ${shq(join(import.meta.dir, "..", "main.ts"))}`} "$@"
+`;
+
 const ready = new Map<string, Promise<{ bin: string; empty: string }>>();
 
 function prepare(watchedPull: boolean): Promise<{ bin: string; empty: string }> {
@@ -63,6 +72,8 @@ function prepare(watchedPull: boolean): Promise<{ bin: string; empty: string }> 
           await chmod(file, 0o755);
         }),
       );
+      await writeFile(join(bin, "satgas"), selfScript(), { mode: 0o755 });
+      await chmod(join(bin, "satgas"), 0o755);
       return { bin, empty };
     })();
     ready.set(bin, job);

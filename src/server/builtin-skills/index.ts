@@ -6,6 +6,10 @@ import board from "./satgas/reference/board.md" with { type: "text" };
 import reports from "./satgas/reference/reports.md" with { type: "text" };
 import verify from "./satgas/reference/verify.md" with { type: "text" };
 import satgas from "./satgas/SKILL.md" with { type: "text" };
+import designCraft from "./satgas-design/reference/craft.md" with { type: "text" };
+import designReview from "./satgas-design/reference/review.md" with { type: "text" };
+import designSources from "./satgas-design/reference/sources.md" with { type: "text" };
+import design from "./satgas-design/SKILL.md" with { type: "text" };
 import { SECURITY_AUDIT } from "./security-audit.gen";
 
 // The README links its neighbours by relative path, which point nowhere inside the skill, so they go to the repository.
@@ -23,6 +27,13 @@ export const BUILTIN: Record<string, Record<string, string>> = {
     // The README itself, so the steps agents give about Satgas are the ones its docs give, in any install.
     "reference/satgas-guide.md": guideOf(guide),
   },
+  // Satgas's own design loop: measured references, a brief in numbers, the check tools and a second reviewer.
+  "satgas-design": {
+    "SKILL.md": design,
+    "reference/craft.md": designCraft,
+    "reference/sources.md": designSources,
+    "reference/review.md": designReview,
+  },
   // Addy Osmani's agent-skills (MIT): the engineering workflow every task follows, from spec to ship.
   ...AGENT_SKILLS,
   // Cloudflare's security-audit (MIT): defensive reviews and full audits when a task asks for them.
@@ -35,6 +46,7 @@ export const BUILTIN: Record<string, Record<string, string>> = {
 export const OPTIONAL: Record<string, { repo: string }> = Object.fromEntries([
   ...Object.keys(SECURITY_AUDIT).map((name) => [name, { repo: "cloudflare/security-audit-skill" }]),
   ...Object.keys(HALLMARK).map((name) => [name, { repo: "Nutlope/hallmark" }]),
+  ["satgas-design", { repo: "zeative/satgas" }],
 ]);
 
 // Which bundle a built-in skill belongs to, if any.
