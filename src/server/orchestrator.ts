@@ -21,7 +21,7 @@ import { applyMemory, getMemory } from "./memory";
 import { plan } from "./planner";
 import { buildNodePrompt, contextLines, workingRules } from "./prompt";
 import { detectPulls } from "./pulls";
-import { describeRefs, hasRefs, resolveRefs } from "./refs";
+import { describeRefs, hasRefs, mediaFiles, resolveRefs } from "./refs";
 import { placeRound, sessionContext } from "./rounds";
 import { schedule } from "./scheduler";
 import { planSchedules } from "./schedules";
@@ -366,12 +366,6 @@ async function execute(run: Run, round: number, prompt: string, signal: AbortSig
     // Answers resume the round's planning, so its prompt is already in the log.
     if (round > 0 && !run.asks?.[round]?.answers) appendLog(run.id, "planner", { kind: "info", text: `Follow-up: ${prompt}` });
     const context = sessionContext(run, round, config.upstreamChars);
-    // Tasks see the first prompt's files and this round's, so both get described for a model that cannot see.
-    const images = [...new Set([...(run.files?.[0] ?? []), ...(run.files?.[round] ?? [])])].filter(isPicture);
-    const lead = (l: Parameters<typeof appendLog>[2]) => appendLog(run.id, "planner", { ...l, round });
-    const seen = await seeAttachments(run.cwd, images, run.imageNotes ?? {}, signal, lead);
-    sight = seen.blind;
-    if (Object.keys(seen.notes).length) patchRun(run.id, { imageNotes: { ...run.imageNotes, ...seen.notes } });
     // What the prompt's / and @ words name is looked up once per round; answers resume with the same lookup.
     let refs = run.refs?.[round];
     if (!refs) {
@@ -379,11 +373,25 @@ async function execute(run: Run, round: number, prompt: string, signal: AbortSig
       // Cards selected on the canvas when the message was sent count as pointed at, like an @ mention.
       const picked = getRun(run.id)?.selected?.[round] ?? [];
       if (picked.length) refs = { ...refs, cards: [...new Set([...(refs.cards ?? []), ...picked])] };
+      // Pictures and pages pointed at on the board count as attached, so agents open the file and a blind model gets it described.
+      const media = await mediaFiles(run, refs.cards ?? []);
+      if (Object.keys(media).length) {
+        refs = { ...refs, media };
+        const files = getRun(run.id)?.files;
+        patchRun(run.id, { files: { ...files, [round]: [...new Set([...(files?.[round] ?? []), ...Object.values(media)])] } });
+      }
       if (hasRefs(refs)) patchRun(run.id, { refs: { ...getRun(run.id)?.refs, [round]: refs } });
     }
+    const attached = getRun(run.id)?.files ?? run.files;
+    // Tasks see the first prompt's files and this round's, so both get described for a model that cannot see.
+    const images = [...new Set([...(attached?.[0] ?? []), ...(attached?.[round] ?? [])])].filter(isPicture);
+    const lead = (l: Parameters<typeof appendLog>[2]) => appendLog(run.id, "planner", { ...l, round });
+    const seen = await seeAttachments(run.cwd, images, run.imageNotes ?? {}, signal, lead);
+    sight = seen.blind;
+    if (Object.keys(seen.notes).length) patchRun(run.id, { imageNotes: { ...run.imageNotes, ...seen.notes } });
     const leadSees = contextLines(getRun(run.id) ?? run, round, {
       memory: hasMemoryFor(getMemory().entries, run.cwd),
-      files: run.files?.[round] ?? [],
+      files: attached?.[round] ?? [],
     });
     // Answers resume the round, and what the lead was handed is already on its log.
     if (!run.asks?.[round]?.answers) for (const text of leadSees) lead({ kind: "tool", text });
@@ -393,7 +401,7 @@ async function execute(run: Run, round: number, prompt: string, signal: AbortSig
       mustAsk: refs.ask,
       only: refs.only,
       context,
-      files: run.files?.[round] ?? [],
+      files: attached?.[round] ?? [],
       seen: seen.texts,
       lang: run.lang,
       asked: run.asks?.[round],

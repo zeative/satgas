@@ -15,6 +15,8 @@ export interface Refs {
   files?: string[];
   // Card ids.
   cards?: string[];
+  // Picture and page cards among them, by id, as files in the working directory.
+  media?: Record<string, string>;
   agents?: ("claude" | "codex")[];
   connectors?: string[];
 }
@@ -59,13 +61,37 @@ export function parseTokens(text: string): { slash: string[]; at: string[] } {
 // How the composer writes a mention: bare when it is one word, quoted when it has spaces.
 export const atToken = (name: string) => (/[\s"]/.test(name) ? `@"${name.replace(/"/g, "'")}"` : `@${name}`);
 
-// The words a card is mentioned by: its title, or the first line of a sticky or a text.
-export function cardLabel(card: Pick<Card, "title" | "text" | "kind">): string {
+const fileName = (src = "") => {
+  const last = src.split(/[?#]/)[0]?.split("/").filter(Boolean).pop() ?? "";
+  try {
+    return decodeURIComponent(last);
+  } catch {
+    return last;
+  }
+};
+
+// The words a card is mentioned by: its title, the first line of a sticky or a text, or a picture's or page's file name.
+export function cardLabel(card: Pick<Card, "title" | "text" | "kind" | "src">): string {
   return (
     card.title ||
     (card.kind === "note" || card.kind === "text" || card.kind === "frame" ? card.text?.trim().split("\n")[0] : "") ||
+    (card.kind === "image" || card.kind === "preview" ? fileName(card.src) : "") ||
     ""
   ).slice(0, 80);
+}
+
+// What each card on a board is mentioned by, in board order. Pasted screenshots are all called image.png, so later ones get a number.
+export function cardMentions(cards: Card[]): Map<string, string> {
+  const out = new Map<string, string>();
+  const seen = new Map<string, number>();
+  for (const c of cards) {
+    const label = cardLabel(c);
+    if (!label || c.kind === "drawing") continue;
+    const n = (seen.get(label.toLowerCase()) ?? 0) + 1;
+    seen.set(label.toLowerCase(), n);
+    out.set(c.id, n === 1 ? label : `${label} ${n}`);
+  }
+  return out;
 }
 
 // A card's content as text for a prompt: markdown for notes and docs, a markdown table for tables, a fence for code.

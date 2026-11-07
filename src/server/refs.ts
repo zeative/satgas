@@ -1,7 +1,8 @@
 import { readdir, stat } from "node:fs/promises";
 import { join, relative, resolve, sep } from "node:path";
-import { cardContent, cardLabel, parseTokens, type Refs } from "../shared/refs";
+import { cardContent, cardLabel, cardMentions, parseTokens, type Refs } from "../shared/refs";
 import type { Run } from "../shared/types";
+import { copyAsset } from "./files";
 import { getSettings, taskAgents } from "./settings";
 import { enabledSkills } from "./skills";
 
@@ -11,6 +12,35 @@ async function workspacePath(cwd: string, word: string): Promise<string | null> 
   const rel = relative(cwd, full);
   if (!rel || rel.startsWith("..") || rel.startsWith(sep)) return null;
   return (await stat(full).catch(() => null)) ? rel.split(sep).join("/") : null;
+}
+
+const SRC = /^\/api\/runs\/([\w-]+)\/(assets|files)\/(.+)$/;
+// A card's address can come from an agent, so a broken one must not fail the round.
+const decoded = (s: string) => {
+  try {
+    return decodeURIComponent(s);
+  } catch {
+    return s;
+  }
+};
+
+// Pictures and pages on the board as files agents can open; one on the web keeps its address instead.
+export async function mediaFiles(run: Run, ids: string[]): Promise<Record<string, string>> {
+  const out: Record<string, string> = {};
+  for (const id of ids) {
+    const card = run.board?.cards.find((c) => c.id === id);
+    if (card?.kind !== "image" && card?.kind !== "preview") continue;
+    const [, owner, where, rest] = SRC.exec(card.src ?? "") ?? [];
+    if (!owner || !rest) continue;
+    const path =
+      where === "assets"
+        ? await copyAsset(owner, rest, card.title ?? "", run.cwd)
+        : owner === run.id
+          ? await workspacePath(run.cwd, decoded(rest))
+          : null;
+    if (path) out[id] = path;
+  }
+  return out;
 }
 
 // Looks up what a prompt's `/` and `@` tokens name; a token that names nothing stays plain words.
@@ -32,6 +62,7 @@ export async function resolveRefs(run: Run, text: string): Promise<Refs> {
     .mcpServers.filter((s) => s.enabled)
     .map((s) => s.name);
   const cards = run.board?.cards ?? [];
+  const mentions = cardMentions(cards);
   for (const word of at) {
     const lower = word.toLowerCase();
     if ((lower === "claude" || lower === "codex") && agents.includes(lower)) {
@@ -43,7 +74,7 @@ export async function resolveRefs(run: Run, text: string): Promise<Refs> {
       add("connectors", server);
       continue;
     }
-    const card = cards.find((c) => cardLabel(c).toLowerCase() === lower);
+    const card = cards.find((c) => mentions.get(c.id)?.toLowerCase() === lower);
     if (card) {
       add("cards", card.id);
       continue;
@@ -61,6 +92,8 @@ export function describeRefs(run: Run, refs: Refs | undefined, cardChars = 4000)
   if (!refs) return "";
   const skills = enabledSkills();
   const cards = (refs.cards ?? []).map((id) => run.board?.cards.find((c) => c.id === id)).filter((c) => !!c);
+  const content = (c: (typeof cards)[number]) =>
+    refs.media?.[c.id] ? `In the working directory at ${refs.media[c.id]}; open it to see it.` : cardContent(c, cardChars);
   return [
     refs.only && `The user typed /${refs.only}: every task goes to ${refs.only === "claude" ? "Claude Code" : "Codex"}.`,
     refs.skills?.length &&
@@ -72,7 +105,7 @@ export function describeRefs(run: Run, refs: Refs | undefined, cardChars = 4000)
     refs.connectors?.length && `Connectors (MCP servers) the user wants used: ${refs.connectors.join(", ")}`,
     refs.files?.length && `Files in the working directory the user pointed at:\n${refs.files.map((f) => `- ${f}`).join("\n")}`,
     cards.length &&
-      `Board cards the user pointed at:\n\n${cards.map((c) => `### ${cardLabel(c) || c.kind} (${c.kind})\n${cardContent(c, cardChars)}`).join("\n\n")}`,
+      `Board cards the user pointed at:\n\n${cards.map((c) => `### ${cardLabel(c) || c.kind} (${c.kind})\n${content(c)}`).join("\n\n")}`,
   ]
     .filter(Boolean)
     .join("\n\n");

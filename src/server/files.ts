@@ -35,6 +35,24 @@ export async function serveAsset(runId: string, name: string): Promise<Response>
   return new Response(file, { headers: { ...SANDBOXED, "cache-control": "public, max-age=31536000, immutable" } });
 }
 
+// An upload lives outside the workspace, so agents get their own copy; the same upload always lands on the same file.
+export async function copyAsset(runId: string, name: string, title: string, cwd: string): Promise<string | null> {
+  if (!ASSET_NAME.test(name)) return null;
+  const source = Bun.file(join(assetsDir(runId), name));
+  if (!(await source.exists())) return null;
+  const stem =
+    title
+      .replace(/\.[^.]+$/, "")
+      .replace(/[^\p{L}\p{N}_-]+/gu, "-")
+      .slice(0, 40) || "image";
+  const path = `attachments/${stem}-${name.slice(0, 8)}${name.slice(name.lastIndexOf("."))}`;
+  if (!(await Bun.file(join(cwd, path)).exists())) {
+    await mkdir(join(cwd, "attachments"), { recursive: true });
+    await Bun.write(join(cwd, path), source);
+  }
+  return path;
+}
+
 // Serves a file from the mission's working folder, for previews and images agents wrote; never anything outside it.
 // Both sides are resolved through symlinks, so a link inside the folder cannot point the browser at anything outside it.
 export async function serveWorkFile(cwd: string, relPath: string): Promise<Response> {

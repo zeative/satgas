@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, expect, setDefaultTimeout, test } from "bun:test";
-import { mkdir, mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { config } from "../../src/server/config";
@@ -439,6 +439,33 @@ test("cards selected on the canvas ride along with a message and reach the plan 
   await until(() => !isLive(run.id));
   expect(getRun(run.id)?.selected?.[1]).toEqual(["tbl"]);
   expect(getRun(run.id)?.refs?.[1]?.cards).toEqual(["tbl"]);
+});
+
+test("a picture selected on the canvas reaches the round as an attached file, kept for answers to resume", async () => {
+  setFake({ FAKE_CLI_OUTPUT: planned({ title: "t", summary: "s", reply: "Done", nodes: [] }) });
+  const run = startRun("x", dir);
+  await until(() => !isLive(run.id));
+  await writeFile(join(dir, "shot.png"), "bytes");
+  boardOps(run.id, [
+    {
+      op: "put",
+      card: {
+        id: "pic",
+        kind: "image",
+        x: 0,
+        y: 0,
+        w: 200,
+        h: 100,
+        title: "shot.png",
+        src: `/api/runs/${run.id}/files/shot.png`,
+        createdAt: 1,
+      },
+    },
+  ]);
+  expect(continueRun(run.id, "use this picture", [], undefined, [], undefined, ["pic"])).toBe("ok");
+  await until(() => !isLive(run.id));
+  expect(getRun(run.id)?.refs?.[1]).toMatchObject({ cards: ["pic"], media: { pic: "shot.png" } });
+  expect(getRun(run.id)?.files?.[1]).toEqual(["shot.png"]);
 });
 
 test("a task held for approval waits for the Allow; a No fails it with the reason and skips what builds on it", async () => {

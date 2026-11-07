@@ -26,8 +26,11 @@ import { loadSettings, useSettings } from "@/stores/settings";
 import { loadSkills, useSkills } from "@/stores/skills";
 import type { Card } from "../../../shared/board";
 import { catalogOf } from "../../../shared/catalog";
-import { atToken, cardLabel, type Refs, splitTokens } from "../../../shared/refs";
+import { atToken, cardMentions, type Refs, splitTokens } from "../../../shared/refs";
 import type { Run } from "../../../shared/types";
+import { keyedSrc } from "../board/context";
+
+const isMedia = (c: Card) => c.kind === "image" || c.kind === "preview";
 
 // Each card kind has its own glyph, in the chat and in the @ menu.
 export const KIND_ICON = {
@@ -140,12 +143,13 @@ export function useTokenCatalog(run?: Run) {
           label: path,
           icon: path.endsWith("/") ? <Folder /> : <FileText />,
         });
-    const seen = new Set<string>();
-    for (const c of cards ?? []) {
-      const label = cardLabel(c);
-      if (!label || c.kind === "drawing" || seen.has(label.toLowerCase())) continue;
-      seen.add(label.toLowerCase());
+    const mentions = cardMentions(cards ?? []);
+    // Media first: the group shows five, and a picture has no text to search by if the person does not know its name.
+    for (const c of [...(cards ?? [])].sort((a, b) => Number(isMedia(b)) - Number(isMedia(a)))) {
+      const label = mentions.get(c.id);
+      if (!label) continue;
       const Icon = KIND_ICON[c.kind];
+      const thumb = c.kind === "image" && runId ? keyedSrc(c.src, runId, run?.fileKey) : undefined;
       out.push({
         kind: "@",
         group: "board",
@@ -153,7 +157,7 @@ export function useTokenCatalog(run?: Run) {
         insert: atToken(label),
         label,
         desc: kindName(c),
-        icon: <Icon />,
+        icon: thumb ? <img src={thumb} alt="" className="size-4 rounded-[3px] object-cover" /> : <Icon />,
       });
     }
     for (const a of agents) {
@@ -174,7 +178,7 @@ export function useTokenCatalog(run?: Run) {
       });
     }
     return out;
-  }, [settings, skills, tree, runId, cards]);
+  }, [settings, skills, tree, runId, cards, run?.fileKey]);
 
   const known = useMemo(() => {
     const names = new Set(items.map((i) => `${i.kind}${i.name}`));
@@ -199,7 +203,8 @@ const MARK = "rounded-[4px] bg-signal/20 [box-shadow:0_0_0_2px_color-mix(in_okla
 
 // The tokens a sent prompt resolved to, so the chat marks only the ones that named something.
 export function knownFromRefs(refs: Refs | undefined, cards: Card[] = []) {
-  const labels = new Set((refs?.cards ?? []).map((id) => cardLabel(cards.find((c) => c.id === id) ?? { kind: "note" }).toLowerCase()));
+  const mentions = cardMentions(cards);
+  const labels = new Set((refs?.cards ?? []).map((id) => (mentions.get(id) ?? "").toLowerCase()));
   const lower = (list?: string[]) => new Set((list ?? []).map((x) => x.toLowerCase()));
   const agents = lower(refs?.agents);
   const connectors = lower(refs?.connectors);
