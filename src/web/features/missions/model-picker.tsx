@@ -148,10 +148,9 @@ export function ModelPicker() {
         ) : (
           <>
             <div className="grid grid-cols-[3rem_minmax(0,1fr)] sm:grid-cols-[3rem_minmax(0,1fr)_11rem]">
-              <div
-                role="group"
+              <fieldset
                 aria-label={ti.providers}
-                className="flex flex-col items-center gap-2 border-e py-2 max-sm:max-h-[17.25rem] max-sm:overflow-y-auto"
+                className="m-0 flex min-w-0 flex-col items-center gap-2 border-0 border-e p-0 py-2 max-sm:max-h-[17.25rem] max-sm:overflow-y-auto"
               >
                 {(["claude", "codex"] as const).map((runtime) => {
                   const group = shown.filter((p) => p.runtime === runtime);
@@ -190,7 +189,7 @@ export function ModelPicker() {
                     </ul>
                   );
                 })}
-              </div>
+              </fieldset>
 
               <div className="flex min-w-0 flex-col sm:border-e">
                 {status?.state === "failed" ? (
