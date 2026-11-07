@@ -1,0 +1,573 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Satgas · One request in. A task force out.</title>
+    <meta
+      name="description"
+      content="Satgas is an open-source workspace where a lead hires a team of real Claude Code and Codex agents, splits your request between them, and you watch them build it on a shared canvas."
+    />
+    <meta property="og:title" content="Satgas · One request in. A task force out." />
+    <meta property="og:description" content="Open source. A team of real AI coding agents, working on a canvas you can watch." />
+    <meta property="og:url" content="https://satgas.app/" />
+    <meta name="theme-color" content="#0d0d0e" />
+    <link rel="icon" href="assets/icon.svg" type="image/svg+xml" />
+    <link rel="preload" href="assets/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="assets/fonts/sora-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+      <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.06 12.35a1 1 0 0 1 0-.7 10.75 10.75 0 0 1 19.88 0 1 1 0 0 1 0 .7 10.75 10.75 0 0 1-19.88 0" /><circle cx="12" cy="12" r="3" /></symbol>
+      <symbol id="i-pen" viewBox="0 0 24 24"><path d="M12.5 22H18a2 2 0 0 0 2-2V7l-5-5H6a2 2 0 0 0-2 2v9.5" /><path d="M14 2v4a2 2 0 0 0 2 2h4" /><path d="M13.4 15.6a2 2 0 1 0-2.9-2.9L5 18.2V21h2.8z" /></symbol>
+      <symbol id="i-term" viewBox="0 0 24 24"><path d="m7 11 2-2-2-2" /><path d="M11 13h4" /><rect width="18" height="18" x="3" y="3" rx="2" /></symbol>
+      <symbol id="i-grid" viewBox="0 0 24 24"><rect width="7" height="7" x="3" y="3" rx="1" /><rect width="7" height="7" x="14" y="3" rx="1" /><rect width="7" height="7" x="14" y="14" rx="1" /><rect width="7" height="7" x="3" y="14" rx="1" /></symbol>
+      <symbol id="i-corner" viewBox="0 0 24 24"><path d="m15 10 5 5-5 5" /><path d="M4 4v7a4 4 0 0 0 4 4h12" /></symbol>
+      <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5" /></symbol>
+      <symbol id="i-branch" viewBox="0 0 24 24"><line x1="6" x2="6" y1="3" y2="15" /><circle cx="18" cy="6" r="3" /><circle cx="6" cy="18" r="3" /><path d="M18 9a9 9 0 0 1-9 9" /></symbol>
+      <symbol id="i-pr" viewBox="0 0 24 24"><circle cx="18" cy="18" r="3" /><circle cx="6" cy="6" r="3" /><path d="M13 6h3a2 2 0 0 1 2 2v7" /><line x1="6" x2="6" y1="9" y2="21" /></symbol>
+      <symbol id="i-merge" viewBox="0 0 24 24"><circle cx="18" cy="18" r="3" /><circle cx="6" cy="6" r="3" /><path d="M6 21V9a9 9 0 0 0 9 9" /></symbol>
+      <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></symbol>
+      <symbol id="i-hook" viewBox="0 0 24 24"><path d="M18 17h-6c-1.1 0-1.95.94-2.48 1.9A4 4 0 0 1 2 17c.01-.7.2-1.4.57-2" /><path d="m6 17 3.13-5.78c.53-.97.1-2.18-.5-3.1a4 4 0 1 1 6.89-4.06" /><path d="m12 6 3.13 5.73C15.66 12.7 16.9 13 18 13a4 4 0 0 1 0 8" /></symbol>
+      <symbol id="i-copy" viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2" /><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" /></symbol>
+      <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></symbol>
+      <symbol id="i-plus" viewBox="0 0 24 24"><path d="M5 12h14" /><path d="M12 5v14" /></symbol>
+      <symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5" /><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11" /></symbol>
+      <symbol id="i-chat" viewBox="0 0 24 24"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" /></symbol>
+      <symbol id="i-folder" viewBox="0 0 24 24"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z" /></symbol>
+      <symbol id="i-key" viewBox="0 0 24 24"><path d="m15.5 7.5 2.3 2.3a1 1 0 0 0 1.4 0l2.1-2.1a1 1 0 0 0 0-1.4L19 4" /><path d="m21 2-9.6 9.6" /><circle cx="7.5" cy="15.5" r="5.5" /></symbol>
+      <symbol id="i-server" viewBox="0 0 24 24"><rect width="20" height="8" x="2" y="2" rx="2" /><rect width="20" height="8" x="2" y="14" rx="2" /><line x1="6" x2="6.01" y1="6" y2="6" /><line x1="6" x2="6.01" y1="18" y2="18" /></symbol>
+      <symbol id="i-github" viewBox="0 0 16 16"><path fill="currentColor" stroke="none" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z" /></symbol>
+    </svg>
+
+    <header class="nav" id="top">
+      <div class="wrap">
+        <a class="logo" href="#top" aria-label="Satgas home"><img src="assets/icon.svg" alt="" width="28" height="28" />Satgas</a>
+        <nav class="nav-links" aria-label="Sections">
+          <a href="#how">How it works</a>
+          <a href="#features">Features</a>
+          <a href="#self-host">Self-host</a>
+          <a href="#cloud">Cloud</a>
+        </nav>
+        <div class="nav-end">
+          <a class="gh" href="https://github.com/zeative/satgas" aria-label="Satgas on GitHub"
+            ><svg class="i" aria-hidden="true"><use href="#i-github" /></svg><span class="label">GitHub</span><span class="count" data-stars hidden></span
+          ></a>
+          <a class="btn small primary" href="#self-host">Get started</a>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="aura" aria-hidden="true"></div>
+        <div class="wrap">
+          <a class="kicker" href="https://github.com/zeative/satgas/releases/latest"><span class="live" aria-hidden="true"></span>Open source, v0.1.9 is out</a>
+          <h1 id="hero-title">One request in.<br />A task force out.</h1>
+          <p class="lede">
+            Say what you need. A lead hires the team it takes and splits the work, and real Claude Code and Codex agents build it on a canvas you
+            can watch.
+          </p>
+          <div class="actions">
+            <a class="btn primary" href="#self-host">Get started<svg class="i" aria-hidden="true"><use href="#i-arrow" /></svg></a>
+            <a class="btn" href="https://github.com/zeative/satgas"><svg class="i" aria-hidden="true"><use href="#i-github" /></svg>Star on GitHub</a>
+          </div>
+        </div>
+
+        <div class="wrap hero-stage">
+          <div class="window" id="scene" role="img" aria-label="A Satgas board mid-run: the lead and four team members, three tasks running at once, a competitor table, a finding and the landing page they made, with live activity in the chat">
+            <div class="scene">
+              <div class="canvas">
+                <div class="pill"><span class="spin on" aria-hidden="true"></span>Kopi Senja launch</div>
+                <div class="stage" style="position: absolute; left: 0; top: 0; width: 860px; height: 640px; transform-origin: 0 0">
+                  <svg class="wires land" data-at="200" viewBox="0 0 860 640" aria-hidden="true">
+                    <path class="idle" d="M430 152 V172 H106 V190" />
+                    <path class="work" d="M430 152 V172 H318 V190" />
+                    <path class="work" d="M430 152 V172 H530 V190" />
+                    <path class="idle" d="M430 152 V172 H742 V190" />
+                  </svg>
+                  <div class="person lead" style="left: 346px; top: 36px">
+                    <div class="face working"><img width="60" height="60" src="assets/faces/lead.svg" alt="" style="background: oklch(0.88 0.05 95)" /></div>
+                    <span class="name">Lead</span><span class="role">Leading the team · 36s</span>
+                  </div>
+                  <div class="bubble" style="left: 540px; top: 50px">Landing page, launch email and a waitlist for a coffee subscription</div>
+
+                  <div class="person land" data-at="380" style="left: 22px; top: 190px">
+                    <div class="face"><img width="52" height="52" src="assets/faces/dewi.svg" alt="" style="background: oklch(0.88 0.05 150)" /><span class="badge ok land" data-at="2300"><svg class="i"><use href="#i-check" /></svg></span></div>
+                    <span class="name">Dewi</span><span class="role">Market researcher</span>
+                    <div class="task done"><b>Find rival prices</b><span class="doing">Put a table on the board</span><span class="meta"><span class="count" data-count="9">9 steps</span><span>2m 10s</span></span></div>
+                  </div>
+                  <div class="person land" data-at="500" style="left: 234px; top: 190px">
+                    <div class="face working"><img width="52" height="52" src="assets/faces/raka.svg" alt="" style="background: oklch(0.88 0.05 240)" /><span class="badge" style="background: #1c1c1e"><img width="10" height="10" src="assets/brands/claude.svg" alt="" /></span></div>
+                    <span class="name">Raka</span><span class="role">Copywriter</span>
+                    <div class="task on"><b>Draft the launch email</b><span class="doing">Writing launch-email.md</span><span class="meta"><span class="count" data-count="6">6 steps</span><span>27s</span></span></div>
+                  </div>
+                  <div class="person land" data-at="620" style="left: 446px; top: 190px">
+                    <div class="face working"><img width="52" height="52" src="assets/faces/sinta.svg" alt="" style="background: oklch(0.88 0.05 330)" /><span class="badge" style="background: #1c1c1e"><img width="10" height="10" src="assets/brands/codex.svg" alt="" /></span></div>
+                    <span class="name">Sinta</span><span class="role">Frontend engineer</span>
+                    <div class="task on"><b>Add the waitlist form</b><span class="doing mono">$ git diff --stat</span><span class="meta"><span class="count" data-count="5">5 steps</span><span>23s</span></span></div>
+                  </div>
+                  <div class="person land" data-at="740" style="left: 658px; top: 190px">
+                    <div class="face"><img width="52" height="52" src="assets/faces/bima.svg" alt="" style="background: oklch(0.88 0.05 55); opacity: 0.55; filter: grayscale(1)" /></div>
+                    <span class="name">Bima</span><span class="role">QA reviewer</span>
+                    <div class="task"><b>Check it on a phone</b><span class="doing">Waiting for Sinta</span><span class="meta"><span>Next</span><span></span></span></div>
+                  </div>
+
+                  <div class="card-wrap land" data-at="2300" style="left: 22px; top: 418px; width: 300px">
+                    <div class="card">
+                      <table class="mini">
+                        <thead><tr><th>Brand</th><th>250 g</th><th>500 g</th><th>Skip</th></tr></thead>
+                        <tbody>
+                          <tr><td>Kopi Pagi</td><td>Rp 95k</td><td>Rp 165k</td><td>No</td></tr>
+                          <tr><td>Roast Club</td><td>Rp 110k</td><td>Rp 189k</td><td>Yes</td></tr>
+                          <tr><td>Biji Kita</td><td>Rp 85k</td><td>Rp 149k</td><td>No</td></tr>
+                          <tr><td>Sana Coffee</td><td>Rp 99k</td><td>Rp 159k</td><td>No</td></tr>
+                        </tbody>
+                      </table>
+                    </div>
+                    <span class="by" style="top: -22px"><img width="14" height="14" src="assets/faces/dewi.svg" alt="" />Dewi · Competitor pricing</span>
+                  </div>
+                  <div class="card-wrap land" data-at="3200" style="left: 346px; top: 418px; width: 300px">
+                    <div class="card preview">
+                      <div class="bar">index.html</div>
+                      <div class="site">
+                        <div class="top">Kopi Senja <span>Plans</span><span>This week's roast</span></div>
+                        <div class="hero-s">
+                          <div>
+                            <div class="batch">Batch 044, roasted Tue 3 Nov</div>
+                            <h4>Roasted on Tuesday, at your door by Friday</h4>
+                            <div class="cta"><b>Start with Senja</b>Skip any month, free</div>
+                          </div>
+                          <div class="cup" aria-hidden="true"></div>
+                        </div>
+                        <div class="plans">
+                          <div>Pagi<small>200 g a month</small><em>Rp 89.000</em></div>
+                          <div>Senja<small>500 g a month</small><em>Rp 149.000</em></div>
+                          <div>Malam<small>1 kg a month</small><em>Rp 269.000</em></div>
+                        </div>
+                      </div>
+                    </div>
+                    <span class="by"><img width="14" height="14" src="assets/faces/sinta.svg" alt="" />Sinta · index.html</span>
+                  </div>
+                  <div class="card-wrap land" data-at="2700" style="left: 670px; top: 418px; width: 170px">
+                    <div class="card sticky">Only one rival lets people skip a month. Lead with it.</div>
+                    <span class="by"><img width="14" height="14" src="assets/faces/dewi.svg" alt="" />Dewi</span>
+                  </div>
+                </div>
+              </div>
+
+              <aside class="chat" aria-label="Chat">
+                <div class="head">Kopi Senja launch</div>
+                <div class="feed">
+                  <div class="group">
+                    <div class="gh-row"><span class="spin on" aria-hidden="true"></span>Draft the launch email<span class="who"><img width="18" height="18" src="assets/faces/raka.svg" alt="" />Raka</span></div>
+                    <div class="rows">
+                      <div class="rowi land" data-at="1000"><svg class="i"><use href="#i-grid" /></svg>Read the canvas <code>3 cards</code></div>
+                      <div class="rowi land" data-at="1350"><svg class="i"><use href="#i-corner" /></svg>Read the result of <code>Find rival prices</code></div>
+                      <div class="rowi land" data-at="1700"><svg class="i"><use href="#i-eye" /></svg>Read <code>brief.md</code></div>
+                      <div class="rowi land" data-at="2900"><svg class="i"><use href="#i-pen" /></svg>Wrote <code>launch-email.md</code></div>
+                    </div>
+                  </div>
+                  <div class="group">
+                    <div class="gh-row"><span class="spin on" aria-hidden="true"></span>Add the waitlist form<span class="who"><img width="18" height="18" src="assets/faces/sinta.svg" alt="" />Sinta</span></div>
+                    <div class="rows">
+                      <div class="rowi land" data-at="1200"><svg class="i"><use href="#i-eye" /></svg>Read <code>index.html</code></div>
+                      <div class="rowi land" data-at="1900"><svg class="i"><use href="#i-term" /></svg><code>rg -n 'id="plans"' index.html</code></div>
+                      <div class="rowi land" data-at="2500"><svg class="i"><use href="#i-term" /></svg><code>bun x prettier --write index.html</code></div>
+                      <div class="rowi land" data-at="3100"><svg class="i"><use href="#i-term" /></svg><code>git diff --stat</code></div>
+                    </div>
+                  </div>
+                  <div class="group">
+                    <div class="gh-row"><span class="check"><svg class="i"><use href="#i-check" /></svg></span>Find rival prices<span class="who"><img width="18" height="18" src="assets/faces/dewi.svg" alt="" />Dewi</span></div>
+                    <div class="rows">
+                      <div class="rowi"><svg class="i"><use href="#i-term" /></svg><code>agent-browser open kopipagi.example</code></div>
+                      <div class="rowi"><svg class="i"><use href="#i-grid" /></svg>Put <code>Competitor pricing</code> on the board</div>
+                    </div>
+                  </div>
+                </div>
+                <div class="composer">
+                  <p>Agents are working. Message them anytime</p>
+                  <div class="tools"><svg class="i" aria-hidden="true"><use href="#i-plus" /></svg><img width="14" height="14" src="assets/brands/claude.svg" alt="" />Claude Opus 5.5<span class="stop">Stop</span></div>
+                </div>
+              </aside>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div class="works">
+        <div class="wrap">
+          <span class="label">Runs on the agents and models you already use</span>
+          <span class="brand-row"><img width="20" height="20" src="assets/brands/claude.svg" alt="" />Claude Code</span>
+          <span class="brand-row"><img width="20" height="20" src="assets/brands/codex.svg" alt="" />Codex</span>
+          <span class="brand-row"><img width="20" height="20" src="assets/brands/openai.png" alt="" />OpenAI</span>
+          <span class="brand-row"><img width="20" height="20" src="assets/brands/deepseek.svg" alt="" />DeepSeek</span>
+          <span class="brand-row"><img width="20" height="20" src="assets/brands/qwen-color.svg" alt="" />Qwen</span>
+          <span class="brand-row"><img width="20" height="20" src="assets/brands/openrouter.png" alt="" />OpenRouter</span>
+          <span class="brand-row"><img width="20" height="20" src="assets/brands/ollama.png" alt="" />Ollama</span>
+        </div>
+      </div>
+
+      <section id="how" aria-labelledby="how-title">
+        <div class="wrap">
+          <div class="head-block">
+            <h2 id="how-title">From one sentence to a working team</h2>
+            <p class="lede">A coding agent in a terminal is one long scroll. Satgas gives a whole team of them one place to work, and you a view of all of it.</p>
+          </div>
+          <div class="steps">
+            <span class="line" aria-hidden="true"></span>
+            <div class="step">
+              <span class="n">01</span>
+              <h3>Ask</h3>
+              <p>Write what you want in plain words, and attach files if they help. If a choice would change the work, the lead asks first.</p>
+              <div class="frag">
+                <div class="ask">Launch a coffee subscription: a landing page, a launch email and a waitlist</div>
+                <div class="meta-row"><svg class="i" aria-hidden="true"><use href="#i-plus" /></svg><img width="14" height="14" src="assets/brands/claude.svg" alt="" />Claude Opus 5.5</div>
+              </div>
+            </div>
+            <div class="step">
+              <span class="n">02</span>
+              <h3>Plan</h3>
+              <p>The lead hires only the roles this request needs and plans the tasks: who does what, and what waits for what.</p>
+              <div class="frag">
+                <div class="hire"><img width="24" height="24" src="assets/faces/dewi.svg" alt="" style="background: oklch(0.88 0.05 150)" />Dewi <span>Market researcher</span></div>
+                <div class="hire"><img width="24" height="24" src="assets/faces/raka.svg" alt="" style="background: oklch(0.88 0.05 240)" />Raka <span>Copywriter</span></div>
+                <div class="hire"><img width="24" height="24" src="assets/faces/sinta.svg" alt="" style="background: oklch(0.88 0.05 330)" />Sinta <span>Frontend engineer</span></div>
+                <div class="hire"><img width="24" height="24" src="assets/faces/bima.svg" alt="" style="background: oklch(0.88 0.05 55)" />Bima <span>QA reviewer</span></div>
+              </div>
+            </div>
+            <div class="step">
+              <span class="n">03</span>
+              <h3>Work</h3>
+              <p>Tasks start as soon as what they need is done, several at once. A failed task stops only its own branch.</p>
+              <div class="frag">
+                <div class="mini-task"><span class="check" style="color: var(--green)"><svg class="i"><use href="#i-check" /></svg></span><span class="t">Find rival prices</span><span class="s">9 steps</span></div>
+                <div class="mini-task"><span class="spin on" aria-hidden="true"></span><span class="t">Draft the launch email</span><span class="s">6 steps</span></div>
+                <div class="mini-task"><span class="spin on" aria-hidden="true"></span><span class="t">Add the waitlist form</span><span class="s">5 steps</span></div>
+                <div class="mini-task"><span class="spin" aria-hidden="true" style="border-color: var(--line2)"></span><span class="t muted">Check the page on mobile</span><span class="s">next</span></div>
+              </div>
+            </div>
+            <div class="step">
+              <span class="n">04</span>
+              <h3>Build on it</h3>
+              <p>What they make lands on the board. Send a follow-up, and the same team picks it up with what it already knows.</p>
+              <div class="frag">
+                <span class="muted">Made on the board</span>
+                <div class="chips">
+                  <span class="chip"><svg class="i"><use href="#i-grid" /></svg>Competitor pricing</span>
+                  <span class="chip"><svg class="i"><use href="#i-pen" /></svg>Launch brief</span>
+                  <span class="chip"><svg class="i"><use href="#i-eye" /></svg>index.html</span>
+                </div>
+                <div class="ask" style="flex: none; color: var(--t2)">Make the email shorter, and add a line about skipping a month</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="features" aria-labelledby="watch-title">
+        <div class="wrap split">
+          <div class="copy">
+            <h2 id="watch-title">Nothing happens out of sight</h2>
+            <p class="lede">Every file an agent reads, every command it runs and every card it makes shows up in the chat the moment it happens.</p>
+            <ul class="points">
+              <li><svg class="i" aria-hidden="true"><use href="#i-chat" /></svg><span><b>Talk while they work.</b> Send a message mid-task and the lead answers right away, then passes it to whoever it changes.</span></li>
+              <li><svg class="i" aria-hidden="true"><use href="#i-eye" /></svg><span><b>Watch the page take shape.</b> Live previews sit on the board, at desktop or phone width.</span></li>
+              <li><svg class="i" aria-hidden="true"><use href="#i-undo" /></svg><span><b>Undo any task.</b> See what each one changed and take it back.</span></li>
+            </ul>
+          </div>
+          <div class="frame watch">
+            <div class="rows" style="padding: 8px 0">
+              <div class="rowi"><svg class="i"><use href="#i-grid" /></svg>Read the canvas <code>4 cards</code></div>
+              <div class="rowi"><svg class="i"><use href="#i-corner" /></svg>Read the result of <code>Build the page</code></div>
+              <div class="rowi"><svg class="i"><use href="#i-term" /></svg><code>agent-browser open index.html --viewport 390</code></div>
+              <div class="rowi"><svg class="i"><use href="#i-term" /></svg><code>agent-browser snapshot</code></div>
+              <div class="rowi"><svg class="i"><use href="#i-eye" /></svg>Read <code>index.html</code></div>
+              <div class="rowi"><svg class="i"><use href="#i-pen" /></svg>Edited <code>index.html</code></div>
+              <div class="rowi"><svg class="i"><use href="#i-term" /></svg><code>satgas design check index.html</code></div>
+              <div class="rowi"><svg class="i"><use href="#i-grid" /></svg>Put <code>index.html</code> on the board</div>
+            </div>
+            <div class="site" style="align-self: stretch">
+              <div class="top">Kopi Senja <span>Plans</span><span>This week's roast</span></div>
+              <div class="hero-s" style="grid-template-columns: 1fr; padding-top: 16px">
+                <div class="batch">Batch 044, roasted Tue 3 Nov</div>
+                <h4>Roasted on Tuesday, at your door by Friday</h4>
+                <div class="cta"><b>Start with Senja</b>Skip any month, free</div>
+              </div>
+              <div class="plans">
+                <div>Pagi<small>200 g</small><em>Rp 89.000</em></div>
+                <div>Senja<small>500 g</small><em>Rp 149.000</em></div>
+                <div>Malam<small>1 kg</small><em>Rp 269.000</em></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section aria-labelledby="board-title">
+        <div class="wrap">
+          <div class="head-block">
+            <h2 id="board-title">The work lands where you can use it</h2>
+            <p class="lede">Results are cards on a canvas, not a wall of chat. Move them, edit them, connect them, and ask the team to build on them.</p>
+          </div>
+          <div class="board">
+            <div class="card doc" style="--x: 3%; --y: 48px; --w: 280px">
+              <span class="by"><img width="14" height="14" src="assets/faces/raka.svg" alt="" />Raka · Launch brief</span>
+              <h5>Launch brief</h5>
+              <p><b>Promise.</b> Roasted on Tuesday, at your door by Friday.</p>
+              <p><b>For</b> people who grind at home and are tired of stale bags.</p>
+              <p><b>Plans.</b> Pagi 200 g, Senja 500 g, Malam 1 kg. Skip any month for free.</p>
+            </div>
+            <div class="card code" style="--x: 30%; --y: 48px; --w: 352px">
+              <span class="by"><img width="14" height="14" src="assets/faces/sinta.svg" alt="" />Sinta · index.html</span>
+              <div class="fname">index.html</div>
+              <pre><span class="k">&lt;form</span> <span class="a">id</span>=<span class="s">"waitlist"</span> <span class="a">action</span>=<span class="s">"/join"</span><span class="k">&gt;</span>
+  <span class="k">&lt;label</span> <span class="a">for</span>=<span class="s">"email"</span><span class="k">&gt;</span>Email<span class="k">&lt;/label&gt;</span>
+  <span class="k">&lt;input</span> <span class="a">id</span>=<span class="s">"email"</span> <span class="a">type</span>=<span class="s">"email"</span><span class="k">&gt;</span>
+  <span class="k">&lt;button&gt;</span>Join the waitlist<span class="k">&lt;/button&gt;</span>
+<span class="k">&lt;/form&gt;</span></pre>
+            </div>
+            <div class="card sticky" style="--x: 61.5%; --y: 48px; --w: 196px">Only one rival lets people skip a month. Lead with it.</div>
+            <div class="card" style="--x: 79%; --y: 48px; --w: 18%">
+              <h5>Launch checklist</h5>
+              <ul class="check-list">
+                <li><span class="box on"><svg class="i"><use href="#i-check" /></svg></span><span class="done">Pricing table</span></li>
+                <li><span class="box on"><svg class="i"><use href="#i-check" /></svg></span><span class="done">Landing page</span></li>
+                <li><span class="box"></span>Launch email</li>
+                <li><span class="box"></span>Mobile check</li>
+              </ul>
+            </div>
+            <div class="card clip" style="--x: 3%; --y: 250px; --w: 340px; padding: 0">
+              <table class="mini">
+                <thead><tr><th>Brand</th><th>250 g</th><th>500 g</th><th>Skip</th></tr></thead>
+                <tbody>
+                  <tr><td>Kopi Pagi</td><td>Rp 95k</td><td>Rp 165k</td><td>No</td></tr>
+                  <tr><td>Roast Club</td><td>Rp 110k</td><td>Rp 189k</td><td>Yes</td></tr>
+                  <tr><td>Biji Kita</td><td>Rp 85k</td><td>Rp 149k</td><td>No</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="card pr" style="--x: 36%; --y: 270px; --w: 300px">
+              <span class="t"><svg class="i"><use href="#i-pr" /></svg>#42 Add the waitlist form</span>
+              <span class="state"><span class="ok">checks passing</span><span>2 reviews fixed</span></span>
+            </div>
+            <div class="card" style="--x: 66%; --y: 250px; --w: 31%">
+              <h5>Next round</h5>
+              <p class="quiet" style="font-size: 12px">Send the email to the waitlist when the page is live. <span class="muted">Waits for your Allow</span></p>
+            </div>
+          </div>
+          <div class="kinds"><span>Notes</span><span>Docs</span><span>Tables</span><span>Code</span><span>Images</span><span>Live page previews</span><span>Checklists and buttons</span><span>Pull request status</span><span>Frames, shapes and drawing</span></div>
+        </div>
+      </section>
+
+      <section aria-labelledby="eng-title">
+        <div class="wrap">
+          <div class="head-block">
+            <h2 id="eng-title">Real files, in a real folder</h2>
+            <p class="lede">The agents are the real Claude Code and Codex CLIs, running where you run Satgas. What they make is ordinary files you own.</p>
+          </div>
+          <div class="eng">
+            <div class="tile diff-tile">
+              <h3>See every change, take back any</h3>
+              <p>Every task's changes are kept, with a diff you can read and an undo. This history is Satgas's own and never touches your git.</p>
+              <div class="diff">
+                <div class="fname"><span>launch-email.md</span><span><span class="plus">+3</span> <span class="minus">−2</span></span></div>
+                <div class="l ctx">Subject: Your first bag ships Friday</div>
+                <div class="l ctx"></div>
+                <div class="l del">We are excited to announce our new subscription.</div>
+                <div class="l add">Coffee roasted on Tuesday reaches you by Friday.</div>
+                <div class="l del">Plans start at a great price.</div>
+                <div class="l add">Plans start at Rp 89.000 for 200 g a month,</div>
+                <div class="l add">and you can skip any month for free.</div>
+                <div class="l ctx"></div>
+                <div class="l ctx">Start with Senja →</div>
+              </div>
+            </div>
+            <div class="tile">
+              <h3>Isolated changes</h3>
+              <p>When several tasks write to a clean repository, each gets its own git worktree and merges back as commits.</p>
+              <div class="branch">
+                <div><svg class="i"><use href="#i-branch" /></svg>raka/launch-email<span class="m">merged</span></div>
+                <div><svg class="i"><use href="#i-branch" /></svg>sinta/waitlist-form<span class="m">merged</span></div>
+              </div>
+            </div>
+            <div class="tile">
+              <h3>Pull request watch</h3>
+              <p>Link a pull request and the team fixes what reviewers ask for, up to three rounds.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section aria-labelledby="away-title">
+        <div class="wrap">
+          <div class="head-block">
+            <h2 id="away-title">Set it up once, and it keeps working</h2>
+            <p class="lede">Connect the services you use, start work on a schedule, and reach the team from where you already are.</p>
+          </div>
+          <div class="duo">
+            <div class="tile">
+              <h3>Runs without you</h3>
+              <p>Start work on an interval, at a time of day, or when another service calls.</p>
+              <div class="sched">
+                <div class="sched-row"><svg class="i" aria-hidden="true"><use href="#i-clock" /></svg>Summarise yesterday's waitlist signups<span class="when">Weekdays 09:00</span></div>
+                <div class="sched-row"><svg class="i" aria-hidden="true"><use href="#i-hook" /></svg>Look into the new error and open a fix<span class="when">When Sentry calls</span></div>
+              </div>
+              <div class="channel-logos"><img width="20" height="20" src="assets/brands/telegram.svg" alt="" /><img width="20" height="20" src="assets/brands/whatsapp.svg" alt="" />Message the team from Telegram or WhatsApp, experimental</div>
+            </div>
+            <div class="tile">
+              <h3>Connectors, skills and tools <span class="tag">39 connectors</span></h3>
+              <p>One click for GitHub, Notion, Linear, Vercel, Supabase, Sentry and dozens more, or any MCP server of your own. Add skills from GitHub, and tools like a command guard or auto-format.</p>
+              <div class="logo-grid">
+                <div><img width="28" height="28" src="assets/brands/github.png" alt="GitHub" /></div>
+                <div><img width="28" height="28" src="assets/brands/gitlab.png" alt="GitLab" /></div>
+                <div><img width="28" height="28" src="assets/brands/notion.png" alt="Notion" /></div>
+                <div><img width="28" height="28" src="assets/brands/linear.png" alt="Linear" /></div>
+                <div><img width="28" height="28" src="assets/brands/vercel.png" alt="Vercel" /></div>
+                <div><img width="28" height="28" src="assets/brands/supabase.png" alt="Supabase" /></div>
+                <div><img width="28" height="28" src="assets/brands/sentry.png" alt="Sentry" /></div>
+                <div><img width="28" height="28" src="assets/brands/zapier.png" alt="Zapier" /></div>
+                <div><img width="28" height="28" src="assets/brands/plane.png" alt="Plane" /></div>
+                <div><img width="28" height="28" src="assets/brands/posthog.png" alt="PostHog" /></div>
+                <div><img width="28" height="28" src="assets/brands/cloudflare.jpg" alt="Cloudflare" /></div>
+                <div><img width="28" height="28" src="assets/brands/neon.png" alt="Neon" /></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="self-host" aria-labelledby="self-title">
+        <div class="wrap split">
+          <div class="copy">
+            <h2 id="self-title">Yours to run</h2>
+            <p class="lede">Satgas is open source under AGPL-3.0. It runs on your laptop or your server, with your own model sign-in or keys.</p>
+            <ul class="points">
+              <li><svg class="i" aria-hidden="true"><use href="#i-folder" /></svg><span><b>Your folder.</b> Boards, files and settings stay on the machine you run it on.</span></li>
+              <li><svg class="i" aria-hidden="true"><use href="#i-key" /></svg><span><b>Your keys.</b> Agents reach outside accounts only through the connectors you add.</span></li>
+              <li><svg class="i" aria-hidden="true"><use href="#i-server" /></svg><span><b>Needs</b> Bun 1.2 or newer, and Claude Code or the Codex CLI.</span></li>
+            </ul>
+          </div>
+          <div>
+            <div class="term">
+              <div class="bar"><i></i><i></i><i></i><span>Quick start</span><button class="copy-btn" type="button" data-copy="git clone https://github.com/zeative/satgas.git&#10;cd satgas&#10;bun install&#10;bun run dev"><svg class="i" aria-hidden="true"><use href="#i-copy" /></svg><span>Copy</span></button></div>
+              <pre><span class="p">$ </span>git clone https://github.com/zeative/satgas.git
+<span class="p">$ </span>cd satgas
+<span class="p">$ </span>bun install
+<span class="p">$ </span>bun run dev
+<span class="c">  Open the sign-in link it prints, once</span></pre>
+            </div>
+            <div class="ways">
+              <div class="way"><b>Docker</b><span><code>docker compose up -d</code>, with Claude Code, Codex and a browser inside</span></div>
+              <div class="way"><b>Dokploy</b><span>A template that sets up the service and its sign-in</span></div>
+              <div class="way"><b>One binary</b><span><code>bun run build</code>, then run <code>dist/satgas</code></span></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="cloud" aria-labelledby="cloud-title">
+        <div class="wrap">
+          <div class="head-block center">
+            <h2 id="cloud-title">Run it yourself today. Or let us host it, soon</h2>
+            <p class="lede">The same Satgas either way. Satgas Cloud will run your workspace for you, on its own machine, never shared.</p>
+          </div>
+          <div class="plans">
+            <div class="plan">
+              <div class="name">Open source</div>
+              <div class="price">Free <small>forever, on your machine</small></div>
+              <ul>
+                <li><svg class="i" aria-hidden="true"><use href="#i-check" /></svg>Every feature, nothing held back</li>
+                <li><svg class="i" aria-hidden="true"><use href="#i-check" /></svg>Your own model sign-in or API keys</li>
+                <li><svg class="i" aria-hidden="true"><use href="#i-check" /></svg>Laptop, server, Docker or Dokploy</li>
+                <li><svg class="i" aria-hidden="true"><use href="#i-check" /></svg>Updates from the app, in one click</li>
+              </ul>
+              <a class="btn primary" href="#self-host">Get started</a>
+            </div>
+            <div class="plan soon">
+              <div class="name">Satgas Cloud <span class="soon-tag">Coming soon</span></div>
+              <div class="price" style="color: var(--t2)">Hosted <small>no server to run</small></div>
+              <ul>
+                <li><svg class="i" aria-hidden="true"><use href="#i-check" /></svg>Sign in and start, nothing to install</li>
+                <li><svg class="i" aria-hidden="true"><use href="#i-check" /></svg>A workspace of your own, on its own machine</li>
+                <li><svg class="i" aria-hidden="true"><use href="#i-check" /></svg>Your team in one workspace</li>
+                <li><svg class="i" aria-hidden="true"><use href="#i-check" /></svg>Updates and backups taken care of</li>
+              </ul>
+              <a class="btn" href="https://github.com/zeative/satgas/releases"><svg class="i" aria-hidden="true"><use href="#i-github" /></svg>Follow the releases</a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section aria-labelledby="faq-title">
+        <div class="wrap">
+          <div class="head-block center"><h2 id="faq-title">Questions</h2></div>
+          <div class="faq">
+            <details>
+              <summary>What does the name mean<svg class="i" aria-hidden="true"><use href="#i-plus" /></svg></summary>
+              <p>Satgas is Indonesian for satuan tugas, a task force: a team put together for one job.</p>
+            </details>
+            <details>
+              <summary>Does my code leave my machine<svg class="i" aria-hidden="true"><use href="#i-plus" /></svg></summary>
+              <p>Your files stay in your folder. The agents send their prompts to the model provider you pick, exactly as Claude Code or Codex would in your terminal.</p>
+            </details>
+            <details>
+              <summary>Which models can it use<svg class="i" aria-hidden="true"><use href="#i-plus" /></svg></summary>
+              <p>Claude Code serves your Claude sign-in or subscription, the Anthropic API, DeepSeek, Qwen, Z.ai, OpenRouter and Ollama. Codex serves your Codex sign-in, the OpenAI API, Groq and LM Studio. Pick one model and the whole team runs on it.</p>
+            </details>
+            <details>
+              <summary>What does it cost<svg class="i" aria-hidden="true"><use href="#i-plus" /></svg></summary>
+              <p>Satgas is free. You pay your model provider what you would pay to use Claude Code or Codex yourself, and Satgas shows the tokens and the estimated cost.</p>
+            </details>
+            <details>
+              <summary>Is it ready for real work<svg class="i" aria-hidden="true"><use href="#i-plus" /></svg></summary>
+              <p>It is early, at version 0.1. Expect rough edges and breaking changes, and please open an issue when you hit one.</p>
+            </details>
+          </div>
+        </div>
+      </section>
+
+      <section class="final" aria-labelledby="final-title">
+        <div class="wrap">
+          <img class="mark" src="assets/icon.svg" alt="" width="56" height="56" />
+          <h2 id="final-title">Put a task force on it</h2>
+          <div class="actions">
+            <a class="btn primary" href="#self-host">Get started<svg class="i" aria-hidden="true"><use href="#i-arrow" /></svg></a>
+            <a class="btn" href="https://github.com/zeative/satgas"><svg class="i" aria-hidden="true"><use href="#i-github" /></svg>Star on GitHub</a>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="wrap">
+        <div class="about">
+          <a class="logo" href="#top"><img src="assets/icon.svg" alt="" width="28" height="28" />Satgas</a>
+          <span>Open source under AGPL-3.0</span>
+        </div>
+        <div>
+          <h6>Product</h6>
+          <ul>
+            <li><a href="#how">How it works</a></li>
+            <li><a href="#features">Features</a></li>
+            <li><a href="#cloud">Cloud</a></li>
+          </ul>
+        </div>
+        <div>
+          <h6>Project</h6>
+          <ul>
+            <li><a href="https://github.com/zeative/satgas">GitHub</a></li>
+            <li><a href="https://github.com/zeative/satgas/releases">Releases</a></li>
+            <li><a href="https://github.com/zeative/satgas/blob/main/LICENSE">License</a></li>
+          </ul>
+        </div>
+        <div class="sponsor">
+          <h6>Sponsored by</h6>
+          <a href="https://dcloud.co.id/?ref=DCloudKejaa5"><img src="assets/dcloud.svg" alt="DCloud" width="104" /></a>
+        </div>
+      </div>
+    </footer>
+    <script src="app.js" defer></script>
+  </body>
+</html>
