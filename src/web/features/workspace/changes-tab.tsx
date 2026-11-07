@@ -140,31 +140,34 @@ function TaskChanges({ run, task, who }: { run: Run; task: NodeState; who: strin
         }
       >
         <ul className="flex flex-col">
-          {changes.files.map((f) => {
-            const mark = CHANGE_MARK[f.change];
-            const undone = changes.reverted?.includes(f.path);
-            const name = baseName(f.path);
-            return (
-              <TreeRow
-                key={f.path}
-                depth={2}
-                icon={<FileIcon name={name} />}
-                label={name}
-                tone={undone ? undefined : mark.tone}
-                struck={undone}
-                trail={f.path.slice(0, -name.length - 1) || undefined}
-                end={
-                  undone ? (
-                    <span className="text-[11px] text-muted-foreground">{tw.reverted}</span>
-                  ) : (
-                    <span className={cn("font-mono", mark.tone)}>{mark.letter}</span>
-                  )
-                }
-                title={`${f.path} · ${tw.change[f.change]}`}
-                onClick={() => openReview({ kind: "node", node: task.id }, f.path)}
-              />
-            );
-          })}
+          {/* By path, so a folder's files sit together; the name stays plain and only the letter says what changed,
+              the way a git client lists them. */}
+          {[...changes.files]
+            .sort((a, b) => a.path.localeCompare(b.path))
+            .map((f) => {
+              const mark = CHANGE_MARK[f.change];
+              const undone = changes.reverted?.includes(f.path);
+              const name = baseName(f.path);
+              return (
+                <TreeRow
+                  key={f.path}
+                  depth={2}
+                  icon={<FileIcon name={name} muted />}
+                  label={name}
+                  struck={undone || f.change === "deleted"}
+                  trail={f.path.slice(0, -name.length - 1) || undefined}
+                  end={
+                    undone ? (
+                      <span className="text-[11px] text-muted-foreground">{tw.reverted}</span>
+                    ) : (
+                      <span className={cn("inline-block w-3 text-center font-mono text-[11px] font-medium", mark.tone)}>{mark.letter}</span>
+                    )
+                  }
+                  title={`${f.path} · ${tw.change[f.change]}`}
+                  onClick={() => openReview({ kind: "node", node: task.id }, f.path)}
+                />
+              );
+            })}
         </ul>
       </TreeSection>
       {dialog}

@@ -75,11 +75,12 @@ const markOf = (name: string): Mark => {
   return BY_EXT[lower.slice(lower.lastIndexOf(".") + 1)] ?? { icon: File, tone: GRAY };
 };
 
-// A file's kind at a glance, in a fixed 16px box so every name starts on one line.
-export function FileIcon({ name }: { name: string }) {
+// A file's kind at a glance, in a fixed 16px box so every name starts on one line. `muted` drops the colour where
+// something else in the row already carries one, such as a change's letter.
+export function FileIcon({ name, muted }: { name: string; muted?: boolean }) {
   const { icon: Icon, text, tone } = markOf(name);
   return (
-    <span aria-hidden="true" className={cn("flex size-4 shrink-0 items-center justify-center", tone)}>
+    <span aria-hidden="true" className={cn("flex size-4 shrink-0 items-center justify-center", muted ? GRAY : tone)}>
       {Icon ? (
         <Icon className="size-3.5" strokeWidth={1.75} />
       ) : (
