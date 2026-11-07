@@ -164,30 +164,6 @@ if (gsap && ST && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
 
   const mm = gsap.matchMedia();
   mm.add("(min-width: 961px)", () => {
-    // Cards drift at their own depth, so the board reads as layers under the scroll.
-    for (const card of document.querySelectorAll(".board .card[data-depth]"))
-      gsap.to(card, {
-        y: Number(card.dataset.depth) * -60,
-        ease: "none",
-        scrollTrigger: { trigger: ".board", start: "top bottom", end: "bottom top", scrub: true },
-      });
-
-    // The rings turn; --spin turns each logo back so it stays upright.
-    for (const [sel, deg] of [
-      [".ring.r1", 90],
-      [".ring.r2", -60],
-    ])
-      gsap.fromTo(
-        sel,
-        { rotation: 0, "--spin": "0deg" },
-        {
-          rotation: deg,
-          "--spin": `${deg}deg`,
-          ease: "none",
-          scrollTrigger: { trigger: ".orbit", start: "top bottom", end: "bottom top", scrub: true },
-        },
-      );
-
     // How it works pins and the scroll walks the four steps, but only when the whole section fits the screen.
     const how = document.getElementById("how");
     if (how && flowCtl && how.offsetHeight < innerHeight) {
@@ -198,10 +174,16 @@ if (gsap && ST && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
         start: "center center",
         end: `+=${flowCtl.count * 600}`,
         pin: true,
-        onUpdate: (self) => flowCtl.show(Math.min(flowCtl.count - 1, Math.floor(self.progress * flowCtl.count))),
+        onUpdate: (self) => {
+          const at = self.progress * flowCtl.count;
+          flowCtl.show(Math.min(flowCtl.count - 1, Math.floor(at)));
+          // The open step's line fills with the scroll inside that step.
+          flow.style.setProperty("--fill", String(self.progress >= 1 ? 1 : at - Math.floor(at)));
+        },
       });
       return () => {
         st.kill();
+        flow.style.removeProperty("--fill");
         flowCtl.scrolled = false;
       };
     }
