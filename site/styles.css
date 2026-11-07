@@ -281,16 +281,12 @@ p {
 .aura {
   position: absolute;
   inset: -64px 0 auto;
-  height: 1180px;
+  height: 900px;
   z-index: -1;
   pointer-events: none;
-  background:
-    radial-gradient(34% 26% at 50% 30%, rgb(255 185 14 / 0.26), transparent 70%),
-    radial-gradient(26% 24% at 30% 44%, rgb(232 89 32 / 0.24), transparent 72%),
-    radial-gradient(28% 26% at 72% 40%, rgb(64 104 156 / 0.26), transparent 72%),
-    radial-gradient(40% 30% at 50% 58%, rgb(140 52 16 / 0.28), transparent 74%),
-    radial-gradient(70% 46% at 50% 46%, rgb(48 26 14 / 0.5), transparent 78%);
-  mask-image: linear-gradient(to bottom, #000 0%, #000 52%, transparent 92%);
+  /* Gradient Lab's Edge Glow (backgrounds.supply) in Satgas's colours: night above, a dusk horizon behind the board. */
+  background: url("assets/bg/hero-glow.jpg") center bottom / cover no-repeat;
+  mask-image: linear-gradient(to bottom, #000 0%, #000 78%, transparent 100%);
 }
 /* A brighter band where the board's top edge meets the light, so the window sits in it rather than on it. */
 .hero-stage::before {
@@ -963,124 +959,436 @@ section {
   object-fit: contain;
 }
 
-/* How it works */
-.steps {
+/* How it works: the four steps on the left, one large stage on the right showing the product at that step. */
+.flow {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  gap: 48px;
+  align-items: stretch;
+}
+.flow-list {
+  display: grid;
+  align-content: center;
+  gap: 4px;
+}
+.flow-step {
   position: relative;
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 16px;
+  grid-template-columns: 40px 1fr;
+  align-items: baseline;
+  gap: 0 8px;
+  padding: 20px 24px 20px 20px;
+  border: 0;
+  border-radius: 16px;
+  background: transparent;
+  color: var(--t2);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color 200ms var(--ease),
+    color 200ms var(--ease);
 }
-.steps .line {
-  position: absolute;
-  top: 6px;
-  left: 6px;
-  right: 6px;
-  border-top: 1.5px dashed rgb(255 185 14 / 0.6);
+.flow-step:hover {
+  color: var(--t1);
 }
-.step {
-  position: relative;
-  padding-top: 36px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+.flow-step.on {
+  background: linear-gradient(180deg, #19191b, #141415);
+  box-shadow: inset 0 0 0 1px var(--line);
+  color: var(--t1);
 }
-.step::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 13px;
-  height: 13px;
-  border-radius: 50%;
-  background: var(--bg);
-  border: 1.5px solid var(--amber);
-}
-.step .n {
-  font: 13px var(--mono);
+.flow-n {
+  font: 500 13px var(--mono);
   color: var(--t3);
 }
-.step p {
-  color: var(--t2);
-  font-size: 15px;
+.flow-step.on .flow-n {
+  color: var(--amber);
 }
-.frag {
+.flow-t {
+  font: 600 22px / 1.2 var(--brand);
+  letter-spacing: -0.02em;
+}
+.flow-d {
+  grid-column: 2;
+  display: none;
   margin-top: 8px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: linear-gradient(180deg, #18181a, #121213);
-  padding: 12px;
-  font-size: 12px;
-  min-height: 150px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--t2);
 }
-.frag .ask {
+.flow-step.on .flow-d {
+  display: block;
+}
+/* How long until the next step: a thin amber line along the bottom of the open one. */
+.flow-bar {
+  position: absolute;
+  left: 20px;
+  right: 24px;
+  bottom: 0;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--line);
+  overflow: hidden;
+  opacity: 0;
+}
+.flow-step.on .flow-bar {
+  opacity: 1;
+}
+.flow-bar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--amber);
+  transform: scaleX(0);
+  transform-origin: left;
+}
+.flow.auto .flow-step.on .flow-bar::after {
+  animation: flow-run var(--flow-ms, 6000ms) linear forwards;
+}
+@keyframes flow-run {
+  to {
+    transform: scaleX(1);
+  }
+}
+.flow-stage {
+  position: relative;
+  min-height: 460px;
   border: 1px solid var(--line2);
-  border-radius: 10px;
-  padding: 10px;
-  background: var(--s2);
-  color: var(--t1);
-  line-height: 1.45;
-  flex: 1;
+  border-radius: 24px;
+  overflow: hidden;
+  background-color: #111112;
+  background-image:
+    radial-gradient(60% 50% at 50% 40%, rgb(255 185 14 / 0.12), transparent 70%),
+    radial-gradient(40% 40% at 85% 85%, rgb(64 104 156 / 0.16), transparent 70%),
+    radial-gradient(rgb(237 237 240 / 0.08) 1px, transparent 1px);
+  background-size:
+    auto,
+    auto,
+    20px 20px;
 }
-.frag .meta-row {
+.flow-stage::before {
+  content: "";
+  position: absolute;
+  inset: 0 12% auto;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgb(255 205 110 / 0.6), transparent);
+}
+.flow-panel {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 40px;
+  animation: flow-in 400ms var(--ease);
+}
+.flow-panel[hidden] {
+  display: none;
+}
+@keyframes flow-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+/* 01 Ask */
+.fp-ask {
+  width: min(460px, 100%);
+  display: grid;
+  gap: 16px;
+}
+.fp-composer {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid var(--line2);
+  background: var(--s2);
+  box-shadow: 0 24px 48px rgb(0 0 0 / 0.35);
+}
+.fp-composer p {
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--t1);
+}
+.fp-composer .chip {
+  justify-self: start;
+}
+.fp-tools {
   display: flex;
   align-items: center;
   gap: 8px;
+  font-size: 13px;
   color: var(--t2);
 }
-.frag .meta-row img {
+.fp-tools img {
   width: 14px;
   height: 14px;
+  border-radius: 50%;
 }
-.hire {
+.fp-send {
+  margin-inline-start: auto;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--t1);
+  color: #111113;
+}
+.fp-send .i {
+  rotate: -90deg;
+}
+.fp-reply {
   display: flex;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: rgb(19 19 20 / 0.8);
+}
+.fp-reply img {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  flex: none;
+}
+.fp-reply b {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+}
+.fp-reply span {
+  font-size: 13px;
+  color: var(--t3);
+}
+.fp-q {
+  margin-top: 12px;
+  font-size: 14px;
+}
+.fp-opts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+.fp-opts span {
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 14px;
+  border: 1px solid var(--line2);
+  display: inline-flex;
   align-items: center;
+  font-size: 12px;
+  color: var(--t2);
+}
+.fp-opts .sel {
+  border-color: var(--amber);
+  color: var(--t1);
+  background: var(--amber-soft);
+}
+
+/* 02 Plan */
+.fp-plan {
+  width: min(600px, 100%);
+  display: grid;
+  justify-items: center;
+}
+.fp-lead {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  text-align: center;
+}
+.fp-lead img {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 2px var(--bg),
+    0 0 0 4px var(--amber);
+  margin-bottom: 8px;
+}
+.fp-lead b {
+  font-size: 15px;
+  font-weight: 500;
+}
+.fp-lead span {
+  font-size: 13px;
+  color: var(--t3);
+}
+.fp-wires {
+  width: 100%;
+  height: 60px;
+  margin-top: 16px;
+}
+.fp-wires path {
+  fill: none;
+  stroke: rgb(255 185 14 / 0.7);
+  stroke-width: 1.5;
+  stroke-dasharray: 5 5;
+  vector-effect: non-scaling-stroke;
+}
+.fp-hires {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+.fp-hires div {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  padding: 16px 8px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: var(--s1);
+  text-align: center;
+}
+.fp-hires img {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  margin-bottom: 4px;
+}
+.fp-hires b {
+  font-size: 14px;
+  font-weight: 500;
+}
+.fp-hires span {
+  font-size: 12px;
+  color: var(--t3);
+}
+
+/* 03 Work */
+.fp-work {
+  width: min(520px, 100%);
+  display: grid;
   gap: 8px;
 }
-.hire img {
+.fp-task {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) 80px auto 16px;
+  align-items: center;
+  gap: 12px;
+  height: 52px;
+  padding: 0 16px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--s1);
+  font-size: 14px;
+}
+.fp-task img {
   width: 24px;
   height: 24px;
   border-radius: 50%;
 }
-.hire span {
-  color: var(--t3);
-}
-.mini-task {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  height: 28px;
-  padding: 0 8px;
-  border-radius: 8px;
-  background: var(--s2);
-}
-.mini-task .t {
-  flex: 1;
+.fp-task .t {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.mini-task .s {
-  font: 11px var(--mono);
+.fp-task .s {
+  font: 12px var(--mono);
   color: var(--t3);
+  white-space: nowrap;
 }
-.chip {
-  display: inline-flex;
+.fp-task .ok {
+  color: var(--green);
+  display: grid;
+}
+.fp-track {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--s3);
+  overflow: hidden;
+}
+.fp-track i {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--amber);
+}
+.fp-task.done .fp-track i {
+  background: var(--green);
+}
+.fp-task.wait {
+  opacity: 0.55;
+}
+.fp-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1.5px dashed var(--line2);
+}
+.fp-live {
+  display: flex;
   align-items: center;
   gap: 8px;
-  height: 26px;
-  padding: 0 8px;
-  border-radius: 8px;
-  border: 1px solid var(--line);
+  margin-top: 8px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: rgb(0 0 0 / 0.3);
+  font-size: 13px;
   color: var(--t2);
-  font-size: 12px;
 }
-.chips {
-  display: flex;
-  flex-wrap: wrap;
+.fp-live .i {
+  color: var(--t3);
+}
+.fp-live b {
+  font-weight: 500;
+  color: var(--t1);
+}
+.fp-live code {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 04 Build on it */
+.fp-build {
+  width: min(540px, 100%);
+  display: grid;
+  gap: 20px;
+}
+.fp-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.fp-card {
+  display: grid;
   gap: 8px;
+  align-content: start;
+  height: 132px;
+  padding: 16px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: var(--s1);
+}
+.fp-card span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--t1);
+  margin-bottom: 8px;
+}
+.fp-card span .i {
+  color: var(--t3);
+}
+.fp-card i {
+  display: block;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--s3);
+}
+.fp-card.amber {
+  border-color: rgb(255 185 14 / 0.35);
+  background: linear-gradient(180deg, rgb(255 185 14 / 0.1), var(--s1));
+}
+.fp-composer.small p {
+  font-size: 14px;
 }
 
 /* Watch them work */
@@ -1725,24 +2033,27 @@ footer .sponsor img {
   .feed {
     max-height: 520px;
   }
-  .steps {
+  .flow {
     grid-template-columns: minmax(0, 1fr);
-    gap: 40px;
-    padding-left: 32px;
+    gap: 24px;
   }
-  .steps .line {
-    top: 6px;
-    bottom: 6px;
-    left: 6px;
-    right: auto;
-    border-top: 0;
-    border-left: 1.5px dashed rgb(255 185 14 / 0.6);
+  .flow-stage {
+    min-height: 420px;
   }
-  .step {
-    padding-top: 0;
+  .flow-panel {
+    padding: 24px 16px;
   }
-  .step::before {
-    left: -32px;
+  .fp-hires {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .fp-wires {
+    display: none;
+  }
+  .fp-task {
+    grid-template-columns: 24px minmax(0, 1fr) auto 16px;
+  }
+  .fp-task .fp-track {
+    display: none;
   }
   .split,
   .eng,
@@ -1796,15 +2107,6 @@ footer .sponsor img {
   }
 }
 @media (max-width: 560px) {
-  /* A narrow screen gets its own aurora: the desktop one, measured in percent, turns into thin stripes here. */
-  .aura {
-    height: 900px;
-    background:
-      radial-gradient(90% 26% at 50% 26%, rgb(255 185 14 / 0.24), transparent 72%),
-      radial-gradient(70% 22% at 18% 44%, rgb(232 89 32 / 0.22), transparent 72%),
-      radial-gradient(70% 24% at 86% 40%, rgb(64 104 156 / 0.26), transparent 72%),
-      radial-gradient(120% 34% at 50% 50%, rgb(48 26 14 / 0.55), transparent 80%);
-  }
   .wrap {
     width: min(var(--wrap), 100% - 40px);
   }

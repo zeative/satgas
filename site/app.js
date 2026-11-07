@@ -48,6 +48,59 @@ if (scene && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
   seen.observe(scene);
 }
 
+// How it works: one step open at a time. It moves on by itself while in view, until someone picks a step.
+const flow = document.querySelector("[data-flow]");
+if (flow) {
+  const tabs = [...flow.querySelectorAll('[role="tab"]')];
+  const panels = tabs.map((t) => document.getElementById(t.getAttribute("aria-controls")));
+  const MS = 6000;
+  let at = 0;
+  let timer = 0;
+  const show = (i) => {
+    at = (i + tabs.length) % tabs.length;
+    tabs.forEach((t, n) => {
+      t.classList.toggle("on", n === at);
+      t.setAttribute("aria-selected", String(n === at));
+      t.tabIndex = n === at ? 0 : -1;
+      if (panels[n]) panels[n].hidden = n !== at;
+    });
+  };
+  const stop = () => {
+    clearInterval(timer);
+    timer = 0;
+    flow.classList.remove("auto");
+  };
+  const run = () => {
+    if (timer || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    flow.style.setProperty("--flow-ms", `${MS}ms`);
+    flow.classList.add("auto");
+    timer = setInterval(() => {
+      // Restart the bar's fill for the next step.
+      flow.classList.remove("auto");
+      void flow.offsetWidth;
+      show(at + 1);
+      flow.classList.add("auto");
+    }, MS);
+  };
+  tabs.forEach((t, n) =>
+    t.addEventListener("click", () => {
+      stop();
+      show(n);
+    }),
+  );
+  flow.addEventListener("keydown", (e) => {
+    if (e.key !== "ArrowDown" && e.key !== "ArrowUp" && e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+    e.preventDefault();
+    stop();
+    show(at + (e.key === "ArrowDown" || e.key === "ArrowRight" ? 1 : -1));
+    tabs[at].focus();
+  });
+  let picked = false;
+  tabs.forEach((t) => t.addEventListener("pointerdown", () => (picked = true)));
+  new IntersectionObserver(([e]) => (e?.isIntersecting && !picked ? run() : stop()), { threshold: 0.4 }).observe(flow);
+  show(0);
+}
+
 const nav = document.querySelector(".nav");
 const onScroll = () => nav?.classList.toggle("scrolled", window.scrollY > 8);
 addEventListener("scroll", onScroll, { passive: true });

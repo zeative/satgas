@@ -223,51 +223,83 @@
             <h2 id="how-title">From one sentence to a working team</h2>
             <p class="lede">A coding agent in a terminal is one long scroll. Satgas gives a whole team of them one place to work, and you a view of all of it.</p>
           </div>
-          <div class="steps">
-            <span class="line" aria-hidden="true"></span>
-            <div class="step">
-              <span class="n">01</span>
-              <h3>Ask</h3>
-              <p>Write what you want in plain words, and attach files if they help. If a choice would change the work, the lead asks first.</p>
-              <div class="frag">
-                <div class="ask">Launch a coffee subscription: a landing page, a launch email and a waitlist</div>
-                <div class="meta-row"><svg class="i" aria-hidden="true"><use href="#i-plus" /></svg><img width="14" height="14" src="assets/brands/claude.svg" alt="" />Claude Opus 5.5</div>
-              </div>
+          <div class="flow" data-flow>
+            <div class="flow-list" role="tablist" aria-label="How Satgas works">
+              <button class="flow-step on" role="tab" aria-selected="true" aria-controls="flow-ask" id="tab-ask" type="button">
+                <span class="flow-n">01</span><span class="flow-t">Ask</span>
+                <span class="flow-d">Write what you want in plain words, and attach files if they help. If a choice would change the work, the lead asks first.</span>
+                <span class="flow-bar" aria-hidden="true"></span>
+              </button>
+              <button class="flow-step" role="tab" aria-selected="false" aria-controls="flow-plan" id="tab-plan" type="button">
+                <span class="flow-n">02</span><span class="flow-t">Plan</span>
+                <span class="flow-d">The lead hires only the roles this request needs and plans the tasks: who does what, and what waits for what.</span>
+                <span class="flow-bar" aria-hidden="true"></span>
+              </button>
+              <button class="flow-step" role="tab" aria-selected="false" aria-controls="flow-work" id="tab-work" type="button">
+                <span class="flow-n">03</span><span class="flow-t">Work</span>
+                <span class="flow-d">Tasks start as soon as what they need is done, several at once. A failed task stops only its own branch.</span>
+                <span class="flow-bar" aria-hidden="true"></span>
+              </button>
+              <button class="flow-step" role="tab" aria-selected="false" aria-controls="flow-build" id="tab-build" type="button">
+                <span class="flow-n">04</span><span class="flow-t">Build on it</span>
+                <span class="flow-d">What they make lands on the board. Send a follow-up, and the same team picks it up with what it already knows.</span>
+                <span class="flow-bar" aria-hidden="true"></span>
+              </button>
             </div>
-            <div class="step">
-              <span class="n">02</span>
-              <h3>Plan</h3>
-              <p>The lead hires only the roles this request needs and plans the tasks: who does what, and what waits for what.</p>
-              <div class="frag">
-                <div class="hire"><img width="24" height="24" src="assets/faces/dewi.svg" alt="" style="background: oklch(0.88 0.05 150)" />Dewi <span>Market researcher</span></div>
-                <div class="hire"><img width="24" height="24" src="assets/faces/raka.svg" alt="" style="background: oklch(0.88 0.05 240)" />Raka <span>Copywriter</span></div>
-                <div class="hire"><img width="24" height="24" src="assets/faces/sinta.svg" alt="" style="background: oklch(0.88 0.05 330)" />Sinta <span>Frontend engineer</span></div>
-                <div class="hire"><img width="24" height="24" src="assets/faces/bima.svg" alt="" style="background: oklch(0.88 0.05 55)" />Bima <span>QA reviewer</span></div>
-              </div>
-            </div>
-            <div class="step">
-              <span class="n">03</span>
-              <h3>Work</h3>
-              <p>Tasks start as soon as what they need is done, several at once. A failed task stops only its own branch.</p>
-              <div class="frag">
-                <div class="mini-task"><span class="check" style="color: var(--green)"><svg class="i"><use href="#i-check" /></svg></span><span class="t">Find rival prices</span><span class="s">9 steps</span></div>
-                <div class="mini-task"><span class="spin on" aria-hidden="true"></span><span class="t">Draft the launch email</span><span class="s">6 steps</span></div>
-                <div class="mini-task"><span class="spin on" aria-hidden="true"></span><span class="t">Add the waitlist form</span><span class="s">5 steps</span></div>
-                <div class="mini-task"><span class="spin" aria-hidden="true" style="border-color: var(--line2)"></span><span class="t muted">Check the page on mobile</span><span class="s">next</span></div>
-              </div>
-            </div>
-            <div class="step">
-              <span class="n">04</span>
-              <h3>Build on it</h3>
-              <p>What they make lands on the board. Send a follow-up, and the same team picks it up with what it already knows.</p>
-              <div class="frag">
-                <span class="muted">Made on the board</span>
-                <div class="chips">
-                  <span class="chip"><svg class="i"><use href="#i-grid" /></svg>Competitor pricing</span>
-                  <span class="chip"><svg class="i"><use href="#i-pen" /></svg>Launch brief</span>
-                  <span class="chip"><svg class="i"><use href="#i-eye" /></svg>index.html</span>
+
+            <div class="flow-stage">
+              <div class="flow-panel on" role="tabpanel" id="flow-ask" aria-labelledby="tab-ask">
+                <div class="fp-ask">
+                  <div class="fp-composer">
+                    <p>Launch a coffee subscription: a landing page, a launch email and a waitlist</p>
+                    <span class="chip"><svg class="i"><use href="#i-pen" /></svg>brief.md</span>
+                    <div class="fp-tools"><svg class="i" aria-hidden="true"><use href="#i-plus" /></svg><img width="14" height="14" src="assets/brands/claude.svg" alt="" />Claude Opus 5.5<span class="fp-send"><svg class="i"><use href="#i-arrow" /></svg></span></div>
+                  </div>
+                  <div class="fp-reply">
+                    <img width="28" height="28" src="assets/faces/lead.svg" alt="" style="background: oklch(0.88 0.05 95)" />
+                    <div><b>Lead</b><span>One question before I plan</span>
+                      <div class="fp-q">Who is it for?</div>
+                      <div class="fp-opts"><span class="sel">People who brew at home</span><span>Offices</span><span>Cafés</span></div>
+                    </div>
+                  </div>
                 </div>
-                <div class="ask" style="flex: none; color: var(--t2)">Make the email shorter, and add a line about skipping a month</div>
+              </div>
+
+              <div class="flow-panel" role="tabpanel" id="flow-plan" aria-labelledby="tab-plan" hidden>
+                <div class="fp-plan">
+                  <div class="fp-lead"><img width="56" height="56" src="assets/faces/lead.svg" alt="" style="background: oklch(0.88 0.05 95)" /><b>Lead</b><span>Hired 4, planned 4 tasks</span></div>
+                  <svg class="fp-wires" viewBox="0 0 600 60" preserveAspectRatio="none" aria-hidden="true"><path d="M300 0 V24 H75 V60 M300 24 H225 V60 M300 24 H375 V60 M300 24 H525 V60" /></svg>
+                  <div class="fp-hires">
+                    <div><img width="40" height="40" src="assets/faces/dewi.svg" alt="" style="background: oklch(0.88 0.05 150)" /><b>Dewi</b><span>Market researcher</span></div>
+                    <div><img width="40" height="40" src="assets/faces/raka.svg" alt="" style="background: oklch(0.88 0.05 240)" /><b>Raka</b><span>Copywriter</span></div>
+                    <div><img width="40" height="40" src="assets/faces/sinta.svg" alt="" style="background: oklch(0.88 0.05 330)" /><b>Sinta</b><span>Frontend engineer</span></div>
+                    <div><img width="40" height="40" src="assets/faces/bima.svg" alt="" style="background: oklch(0.88 0.05 55)" /><b>Bima</b><span>QA reviewer</span></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="flow-panel" role="tabpanel" id="flow-work" aria-labelledby="tab-work" hidden>
+                <div class="fp-work">
+                  <div class="fp-task done"><img width="24" height="24" src="assets/faces/dewi.svg" alt="" style="background: oklch(0.88 0.05 150)" /><span class="t">Find rival prices</span><span class="fp-track"><i style="width: 100%"></i></span><span class="s">9 steps</span><span class="ok"><svg class="i"><use href="#i-check" /></svg></span></div>
+                  <div class="fp-task"><img width="24" height="24" src="assets/faces/raka.svg" alt="" style="background: oklch(0.88 0.05 240)" /><span class="t">Draft the launch email</span><span class="fp-track"><i style="width: 64%"></i></span><span class="s">6 steps</span><span class="spin on" aria-hidden="true"></span></div>
+                  <div class="fp-task"><img width="24" height="24" src="assets/faces/sinta.svg" alt="" style="background: oklch(0.88 0.05 330)" /><span class="t">Add the waitlist form</span><span class="fp-track"><i style="width: 48%"></i></span><span class="s">5 steps</span><span class="spin on" aria-hidden="true"></span></div>
+                  <div class="fp-task wait"><img width="24" height="24" src="assets/faces/bima.svg" alt="" style="background: oklch(0.88 0.05 55)" /><span class="t">Check it on a phone</span><span class="fp-track"><i style="width: 0%"></i></span><span class="s">waits for Sinta</span><span class="fp-dot"></span></div>
+                  <div class="fp-live"><svg class="i" aria-hidden="true"><use href="#i-term" /></svg><b>Sinta</b><code>bun x prettier --write index.html</code></div>
+                </div>
+              </div>
+
+              <div class="flow-panel" role="tabpanel" id="flow-build" aria-labelledby="tab-build" hidden>
+                <div class="fp-build">
+                  <div class="fp-cards">
+                    <div class="fp-card"><span><svg class="i"><use href="#i-grid" /></svg>Competitor pricing</span><i></i><i></i><i style="width: 70%"></i></div>
+                    <div class="fp-card"><span><svg class="i"><use href="#i-pen" /></svg>Launch brief</span><i></i><i style="width: 80%"></i><i style="width: 55%"></i></div>
+                    <div class="fp-card amber"><span><svg class="i"><use href="#i-eye" /></svg>index.html</span><i></i><i style="width: 60%"></i></div>
+                  </div>
+                  <div class="fp-composer small">
+                    <p>Make the email shorter, and add a line about skipping a month</p>
+                    <div class="fp-tools"><img width="14" height="14" src="assets/faces/raka.svg" alt="" />Raka picks it up<span class="fp-send"><svg class="i"><use href="#i-arrow" /></svg></span></div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
