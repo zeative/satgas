@@ -397,9 +397,10 @@ export type ServerEvent =
   | { type: "removed"; id: string }
   | { type: "lane"; lane: Lane }
   // origin lets the tab that made the change skip its own echo.
-  | { type: "board"; runId: string; ops: BoardOp[]; origin?: string };
+  | { type: "board"; runId: string; ops: BoardOp[]; origin?: string }
+  | { type: "pong" };
 
-export type ClientMessage = { type: "watch"; runId: string | null } | { type: "pipeline"; on: boolean };
+export type ClientMessage = { type: "watch"; runId: string | null } | { type: "pipeline"; on: boolean } | { type: "ping" };
 
 export interface ModelInfo {
   id: string;

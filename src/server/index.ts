@@ -1036,6 +1036,8 @@ const server: Server<SocketData> = Bun.serve({
     },
     message(ws, raw) {
       const msg = parse(String(raw));
+      // The tab's heartbeat: an answer proves the connection still carries messages both ways.
+      if (msg?.type === "ping") return send(ws, { type: "pong" });
       // The Pipeline page follows every board's lane while it is open.
       if (msg?.type === "pipeline") {
         if (msg.on) ws.subscribe("pipeline");

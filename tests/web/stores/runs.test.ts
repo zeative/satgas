@@ -1,8 +1,8 @@
 import "../../helpers/browser";
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, jest, test } from "bun:test";
 import { type BoardOp, type Card, emptyBoard } from "../../../src/shared/board";
 import type { Run } from "../../../src/shared/types";
-import { sendBoardOps, useRuns } from "../../../src/web/stores/runs";
+import { connect, sendBoardOps, useRuns, watch } from "../../../src/web/stores/runs";
 
 const card = (id: string): Card => ({ id, kind: "note", x: 0, y: 0, w: 10, h: 10, text: id, createdAt: 0 });
 const put = (id: string): BoardOp[] => [{ op: "put", card: card(id) }];
@@ -88,5 +88,75 @@ describe("sendBoardOps", () => {
     await expect(sendBoardOps("r1", put("a"))).resolves.toBeUndefined();
     await settle();
     expect(calls).toHaveLength(2);
+  });
+});
+
+// A socket that only records: tests open it, answer on it, or leave it silent the way a dead connection is.
+class FakeSocket {
+  static CONNECTING = 0;
+  static OPEN = 1;
+  static CLOSED = 3;
+  readyState = FakeSocket.CONNECTING;
+  sent: { type: string; runId?: string | null }[] = [];
+  onopen: (() => void) | null = null;
+  onclose: (() => void) | null = null;
+  onmessage: ((e: { data: string }) => void) | null = null;
+  constructor() {
+    sockets.push(this);
+  }
+  send(raw: string) {
+    this.sent.push(JSON.parse(raw));
+  }
+  close() {
+    this.readyState = FakeSocket.CLOSED;
+  }
+  open() {
+    this.readyState = FakeSocket.OPEN;
+    this.onopen?.();
+  }
+}
+let sockets: FakeSocket[];
+
+describe("connection", () => {
+  const g = globalThis as Record<string, unknown>;
+  const realSocket = g.WebSocket;
+  beforeEach(() => {
+    sockets = [];
+    g.WebSocket = FakeSocket;
+    g.location ??= { protocol: "http:", host: "localhost:4317" };
+    const doc = g.document as { addEventListener?: unknown; visibilityState?: string };
+    doc.addEventListener ??= () => {};
+    globalThis.fetch = (async () => json([])) as unknown as typeof fetch;
+    jest.useFakeTimers();
+  });
+  afterEach(() => {
+    jest.useRealTimers();
+    g.WebSocket = realSocket;
+  });
+
+  test("a board opened on a socket that stopped answering gets a new one, which asks for the board", () => {
+    connect();
+    sockets[0]?.open();
+    watch("r1");
+    expect(sockets[0]?.sent.map((m) => m.type)).toEqual(["watch", "watch", "ping"]);
+    jest.advanceTimersByTime(5000);
+    expect(sockets).toHaveLength(2);
+    sockets[1]?.open();
+    expect(sockets[1]?.sent[0]).toEqual({ type: "watch", runId: "r1" });
+  });
+
+  test("a socket that answers is kept", () => {
+    connect();
+    sockets[0]?.open();
+    watch("r1");
+    sockets[0]?.onmessage?.({ data: JSON.stringify({ type: "pong" }) });
+    jest.advanceTimersByTime(5000);
+    expect(sockets).toHaveLength(1);
+  });
+
+  test("a socket that never opens is replaced", () => {
+    connect();
+    jest.advanceTimersByTime(8000);
+    expect(sockets).toHaveLength(2);
   });
 });

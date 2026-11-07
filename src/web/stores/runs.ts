@@ -49,6 +49,13 @@ const clientId = randomUuid();
 
 let ws: WebSocket | undefined;
 let retry = 0;
+// A socket can stay "open" after sleep, a network change or a proxy dropping it, while nothing gets through.
+// The tab pings it now and then and whenever a board opens; one that stays silent is replaced at once.
+const OPEN_WAIT = 8000;
+const PONG_WAIT = 5000;
+const BEAT = 25000;
+let pongDue: ReturnType<typeof setTimeout> | undefined;
+let beat: ReturnType<typeof setInterval> | undefined;
 let watching: string | null = null;
 // Whether the Pipeline page is open, so a reconnect subscribes again and refills it.
 let pipelineOn = false;
@@ -57,10 +64,35 @@ function send(msg: ClientMessage) {
   if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
 }
 
+function probe() {
+  if (ws?.readyState !== WebSocket.OPEN || pongDue) return;
+  const sock = ws;
+  pongDue = setTimeout(() => replace(sock), PONG_WAIT);
+  send({ type: "ping" });
+}
+
+// Drops a socket that stopped answering without waiting for its close, which a dead connection may never send.
+function replace(sock: WebSocket) {
+  if (ws !== sock) return;
+  clearTimeout(pongDue);
+  pongDue = undefined;
+  sock.onopen = sock.onclose = sock.onmessage = null;
+  sock.close();
+  connect();
+}
+
 export function connect() {
   set({ conn: "connecting" });
-  ws = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws`);
-  ws.onopen = () => {
+  const sock = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws`);
+  ws = sock;
+  const opening = setTimeout(() => sock.readyState === WebSocket.CONNECTING && replace(sock), OPEN_WAIT);
+  if (!beat) {
+    beat = setInterval(probe, BEAT);
+    addEventListener("online", probe);
+    document.addEventListener("visibilitychange", () => document.visibilityState === "visible" && probe());
+  }
+  sock.onopen = () => {
+    clearTimeout(opening);
     retry = 0;
     set({ conn: "open" });
     send({ type: "watch", runId: watching });
@@ -71,11 +103,19 @@ export function connect() {
     void loadRuns();
     void loadConfig();
   };
-  ws.onclose = () => {
+  sock.onclose = () => {
+    clearTimeout(opening);
+    clearTimeout(pongDue);
+    pongDue = undefined;
     set({ conn: "closed" });
     setTimeout(connect, Math.min(8000, 500 * 2 ** retry++));
   };
-  ws.onmessage = (e) => handle(JSON.parse(e.data) as ServerEvent);
+  sock.onmessage = (e) => {
+    // Any message proves the line is alive.
+    clearTimeout(pongDue);
+    pongDue = undefined;
+    handle(JSON.parse(e.data) as ServerEvent);
+  };
 }
 
 export function watchPipeline(on: boolean) {
@@ -88,6 +128,8 @@ export function watch(runId: string | null) {
   watching = runId;
   if (get().run?.id !== runId) set({ run: null, logs: {} });
   send({ type: "watch", runId });
+  // Opening a board is when a dead line hurts most, so check it now rather than on the next beat.
+  if (runId) probe();
 }
 
 // A field the server cleared arrives as null; dropping it keeps the object's shape as the server holds it.
