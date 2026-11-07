@@ -603,95 +603,156 @@ table.mini tr:last-child td {
   font: 11px var(--mono);
   color: var(--t3);
 }
-.site {
-  background: #f4f1ea;
-  color: #1f1b16;
-  font-family: Georgia, "Times New Roman", serif;
-}
-.site .top {
-  display: flex;
-  gap: 16px;
-  align-items: baseline;
-  padding: 12px 16px;
-  font-size: 13px;
-}
-.site .top span {
+.mk {
+  background: radial-gradient(120% 90% at 88% 18%, #9a5420 0%, #43200d 40%, #170c06 78%);
+  color: #f6efe6;
   font-family: var(--sans);
-  font-size: 11px;
-  color: #6c6459;
 }
-.site .hero-s {
-  display: grid;
-  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
-  align-items: center;
-  gap: 8px;
-  padding: 8px 16px 16px;
-}
-.site .batch {
-  font: 11px var(--sans);
-  color: #74581d;
-  margin-bottom: 8px;
-}
-.site h4 {
-  margin: 0;
-  font-weight: 400;
-  font-size: 20px;
-  line-height: 1.05;
-  letter-spacing: -0.02em;
-}
-.site .cta {
+.mk-nav {
   display: flex;
-  white-space: nowrap;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px 4px;
+  font-size: 11px;
+  color: #d9c6b3;
+}
+.mk-logo {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-inline-end: auto;
+  font:
+    italic 600 15px Georgia,
+    "Times New Roman",
+    serif;
+  color: #f6efe6;
+}
+.mk-logo i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #f2a33a;
+}
+.mk-nav b {
+  padding: 4px 10px;
+  border-radius: 12px;
+  border: 1px solid rgb(246 239 230 / 0.22);
+  font-weight: 500;
+  color: #f6efe6;
+}
+.mk-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px 16px;
+}
+.mk-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  border: 1px solid rgb(242 163 58 / 0.4);
+  font-size: 11px;
+  color: #f2c080;
+}
+.mk h4 {
+  margin: 8px 0 0;
+  font: 600 21px / 1.05 var(--sans);
+  letter-spacing: -0.035em;
+}
+.mk-cta {
+  display: flex;
+  align-items: center;
   gap: 8px;
   margin-top: 12px;
-  font: 500 11px var(--sans);
-  align-items: center;
+  font-size: 11px;
+  color: #d9c6b3;
+  white-space: nowrap;
 }
-.site .cta b {
-  background: #1f1b16;
-  color: #f4f1ea;
+.mk-cta b {
   padding: 4px 12px;
-  border-radius: 4px;
-  font-weight: 500;
+  border-radius: 12px;
+  background: #f2a33a;
+  color: #1a0d06;
+  font-weight: 600;
 }
-.cup {
-  aspect-ratio: 1;
-  border-radius: 50%;
-  background: radial-gradient(circle at 50% 50%, #3b2416 0 38%, #6b4226 39% 44%, #e9e3d8 45% 58%, #d9d1c3 59% 62%, transparent 63%);
-  box-shadow: 0 10px 24px rgb(31 27 22 / 0.18);
+/* The product, drawn: a kraft pouch with its seal and label, lit from the top left. */
+.mk-bag {
+  position: relative;
+  aspect-ratio: 3 / 4;
+  width: 82%;
+  justify-self: center;
+  border-radius: 8px 8px 12px 12px;
+  background: linear-gradient(160deg, #f1e6d6, #d9c4a8 58%, #c2a685);
+  box-shadow:
+    0 16px 28px rgb(0 0 0 / 0.5),
+    inset 0 -10px 18px rgb(0 0 0 / 0.1),
+    inset 8px 0 14px rgb(255 255 255 / 0.25);
+  transform: rotate(-7deg);
 }
-.cup::after {
-  content: "";
-  display: block;
-  width: 26%;
-  height: 26%;
-  margin: 31% 0 0 31%;
-  border-radius: 50%;
-  background: radial-gradient(circle at 40% 40%, rgb(214 168 112 / 0.75), transparent 70%);
+.mk-seal {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 14%;
+  border-radius: 8px 8px 0 0;
+  background: repeating-linear-gradient(90deg, #2b1a10 0 3px, #3a2416 3px 6px);
 }
-.site .plans {
+.mk-label {
+  position: absolute;
+  inset: 32% 12% 14%;
+  border-radius: 6px;
+  background: #1d110a;
+  display: grid;
+  place-content: center;
+  text-align: center;
+  gap: 4px;
+}
+.mk-label em {
+  font:
+    italic 600 18px Georgia,
+    serif;
+  color: #f2a33a;
+}
+.mk-label small {
+  font-size: 11px;
+  color: #d9c6b3;
+}
+.mk-plans {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  border-top: 1px solid #e2dccf;
+  gap: 8px;
+  padding: 0 16px 16px;
 }
-.site .plans div {
-  padding: 12px;
-  border-right: 1px solid #e2dccf;
-  font-size: 14px;
+.mk-plans div {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid rgb(246 239 230 / 0.14);
+  font-size: 12px;
 }
-.site .plans div:last-child {
-  border-right: 0;
+.mk-plans div.on {
+  border-color: #f2a33a;
+  background: rgb(242 163 58 / 0.12);
 }
-.site .plans small {
+.mk-plans em {
   display: block;
-  font: 11px var(--sans);
-  color: #6c6459;
-}
-.site .plans em {
-  display: block;
-  margin-top: 8px;
-  font: 500 11px var(--sans);
+  margin-top: 4px;
   font-style: normal;
+  font-weight: 600;
+  color: #f2a33a;
+  font-variant-numeric: tabular-nums;
+}
+.mk-lg h4 {
+  font-size: 32px;
+}
+.mk-lg .mk-hero {
+  padding: 24px 24px 24px;
+}
+.mk-lg .mk-nav,
+.mk-lg .mk-plans {
+  padding-inline: 24px;
+}
+.mk-lg .mk-plans {
+  padding-bottom: 24px;
 }
 
 /* Chat panel */
@@ -1037,9 +1098,6 @@ section {
 }
 .watch .rows {
   border-right: 1px solid var(--line);
-}
-.watch .site h4 {
-  font-size: 30px;
 }
 
 /* A board you can use */
