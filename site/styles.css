@@ -1589,9 +1589,6 @@ footer .sponsor img {
   .task {
     transition: none;
   }
-  [data-pulse] .edges path.pulse {
-    display: none;
-  }
 }
 .f-points span,
 .kinds {
@@ -1731,27 +1728,30 @@ footer .sponsor img {
 [data-pulse] .edges path {
   stroke: rgb(237 237 240 / 0.14);
 }
-[data-pulse] .edges path.pulse {
+[data-pulse] .edges .comet path {
   stroke: var(--amber);
   stroke-width: 2;
   stroke-linecap: round;
-  stroke-dasharray: 10 90;
-  opacity: 0;
-  transition: opacity 0.4s;
-  animation: pulse-run 2.8s linear infinite;
 }
-.flowing .edges path.pulse {
-  opacity: 1;
+[data-pulse] .edges .comet path:nth-child(1) {
+  opacity: 0.22;
 }
-[data-pulse] .edges path.pulse.rev {
-  animation-direction: reverse;
+[data-pulse] .edges .comet path:nth-child(2) {
+  opacity: 0.55;
 }
-@keyframes pulse-run {
+[data-pulse] .edges .comet path:nth-child(3) {
+  stroke: #ffe3a3;
+  stroke-width: 2.5;
+}
+.hub-mark.hit {
+  animation: hub-flare 0.8s ease-out;
+}
+@keyframes hub-flare {
   from {
-    stroke-dashoffset: 100;
+    filter: drop-shadow(0 0 14px rgb(255 185 14 / 0.6));
   }
   to {
-    stroke-dashoffset: 0;
+    filter: drop-shadow(0 0 0 rgb(255 185 14 / 0));
   }
 }
 .edges circle {

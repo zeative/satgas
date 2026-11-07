@@ -169,7 +169,7 @@ if (gsap && ST && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
       start: "top 70%",
       once: true,
       onEnter: () => {
-        const paths = [...box.querySelectorAll(".edges path:not(.pulse)")];
+        const paths = [...box.querySelectorAll(".edges > path")];
         for (const p of paths) {
           const len = p.getTotalLength();
           gsap.fromTo(
@@ -262,6 +262,8 @@ if (gsap && ST && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
 
 // The board's connectors: each container lists "from>to" card ids; a trailing * marks the edge where work is flowing now.
 const SVG = "http://www.w3.org/2000/svg";
+// A comet is three dashes sharing one head: a long faint tail, a body, and a bright tip.
+const COMET = [24, 10, 3];
 const GLOW =
   '<defs><filter id="pulse-glow" filterUnits="userSpaceOnUse" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="3" result="b" /><feMerge><feMergeNode in="b" /><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge></filter></defs>';
 for (const box of document.querySelectorAll("[data-edges]")) {
@@ -281,7 +283,7 @@ for (const box of document.querySelectorAll("[data-edges]")) {
       if (!a || !b) continue;
       const dx = b.left + b.width / 2 - (a.left + a.width / 2);
       const dy = b.top + b.height / 2 - (a.top + a.height / 2);
-      let x1, y1, x2, y2, d;
+      let x1, y1, x2, y2, d, back;
       // Side to side when the cards sit in a row, top to bottom when one is under the other.
       if (Math.abs(dx) > Math.abs(dy)) {
         const ltr = dx > 0;
@@ -291,6 +293,7 @@ for (const box of document.querySelectorAll("[data-edges]")) {
         y2 = b.top + b.height / 2 - o.top;
         const k = (x2 - x1) / 2;
         d = `M${x1} ${y1} C${x1 + k} ${y1} ${x2 - k} ${y2} ${x2} ${y2}`;
+        back = `M${x2} ${y2} C${x2 - k} ${y2} ${x1 + k} ${y1} ${x1} ${y1}`;
       } else {
         const down = dy > 0;
         x1 = a.left + a.width / 2 - o.left;
@@ -299,20 +302,26 @@ for (const box of document.querySelectorAll("[data-edges]")) {
         y2 = (down ? b.top : b.bottom) - o.top;
         const k = (y2 - y1) / 2;
         d = `M${x1} ${y1} C${x1} ${y1 + k} ${x2} ${y2 - k} ${x2} ${y2}`;
+        back = `M${x2} ${y2} C${x2} ${y2 - k} ${x1} ${y1 + k} ${x1} ${y1}`;
       }
       const path = document.createElementNS(SVG, "path");
       path.setAttribute("d", d);
       if (live) path.dataset.live = "";
       svg.append(path);
-      // A short glowing run travels each wire toward the pulse target, staggered so the team never looks idle.
       if (to) {
-        const run = path.cloneNode();
-        run.classList.add("pulse");
-        if (ids[0] === to) run.classList.add("rev");
-        run.setAttribute("filter", "url(#pulse-glow)");
-        run.setAttribute("pathLength", "100");
-        run.style.animationDelay = `${-0.7 * svg.querySelectorAll(".pulse").length}s`;
-        svg.append(run);
+        const g = document.createElementNS(SVG, "g");
+        g.classList.add("comet");
+        g.setAttribute("filter", "url(#pulse-glow)");
+        for (const len of COMET) {
+          const s = document.createElementNS(SVG, "path");
+          // Comets always fly toward the target, so a wire leaving it is traced backwards.
+          s.setAttribute("d", ids[0] === to ? back : d);
+          s.setAttribute("pathLength", "100");
+          s.style.strokeDasharray = `${len} 200`;
+          s.style.strokeDashoffset = String(len);
+          g.append(s);
+        }
+        svg.append(g);
       }
       for (const [cx, cy, id] of [
         [x1, y1, ids[0]],
@@ -327,12 +336,44 @@ for (const box of document.querySelectorAll("[data-edges]")) {
       }
       if (box.classList.contains("drawn") || !window.gsap) path.classList.toggle("live", live);
     }
+    box.comets = [...svg.querySelectorAll(".comet")];
   };
   new ResizeObserver(draw).observe(box);
   draw();
-  if (!window.gsap) box.classList.add("flowing");
   box.drawEdges = draw;
 }
+
+// Each wire sends one comet at a time, speeding up into the mark, which flares as it lands.
+if (gsap && !matchMedia("(prefers-reduced-motion: reduce)").matches)
+  for (const box of document.querySelectorAll("[data-pulse]")) {
+    const mark = document.getElementById(box.dataset.pulse);
+    let seen = false;
+    new IntersectionObserver(([e]) => {
+      seen = !!e?.isIntersecting;
+    }).observe(box);
+    const next = (i, wait) => gsap.delayedCall(wait, () => (seen && box.classList.contains("flowing") ? fly(i) : next(i, 1)));
+    const fly = (i) => {
+      const head = { h: 0 };
+      let landed = false;
+      gsap.to(head, {
+        h: 100 + COMET[0],
+        duration: gsap.utils.random(1.4, 1.9),
+        ease: "power2.in",
+        onUpdate: () => {
+          const g = box.comets?.[i];
+          if (g) for (const [n, s] of [...g.children].entries()) s.style.strokeDashoffset = String(COMET[n] - head.h);
+          if (!landed && head.h >= 100 && mark) {
+            landed = true;
+            mark.classList.remove("hit");
+            void mark.offsetWidth;
+            mark.classList.add("hit");
+          }
+        },
+        onComplete: () => next(i, gsap.utils.random(1.6, 4.2)),
+      });
+    };
+    for (const i of (box.comets ?? []).keys()) next(i, gsap.utils.random(0.2, 3));
+  }
 
 const nav = document.querySelector(".nav");
 const onScroll = () => nav?.classList.toggle("scrolled", window.scrollY > 8);
