@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { Check, ChevronDown, TriangleAlert } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { ClaudeMark, CodexMark } from "@/components/brand-marks";
 import { plain, RichText } from "@/components/rich-text";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -32,6 +33,24 @@ function modelsOf(kind: ProviderKind, status: ProviderStatus | undefined): Model
 // Picks the one model everything runs on: connected providers on the rail, their models, then reasoning.
 // The agent follows from the provider, so nobody has to know which CLI serves it.
 // Providers that failed their check stay on the rail, dimmed, so the reason is one click away; unset ones are hidden.
+const RAIL_MARK = { claude: ClaudeMark, codex: CodexMark };
+
+function RailDivider({ runtime, first }: { runtime: keyof typeof RAIL_MARK; first: boolean }) {
+  const Mark = RAIL_MARK[runtime];
+  return (
+    <span
+      role="img"
+      aria-label={t.agent[runtime]}
+      title={t.agent[runtime]}
+      className={cn("mb-1 flex w-full cursor-default items-center gap-1 px-1.5 select-none", !first && "mt-1")}
+    >
+      <span aria-hidden="true" className="h-px flex-1 bg-border" />
+      <Mark className="size-3 shrink-0 opacity-50 grayscale" />
+      <span aria-hidden="true" className="h-px flex-1 bg-border" />
+    </span>
+  );
+}
+
 export function ModelPicker() {
   const settings = useSettings((s) => s.settings);
   const loadError = useSettings((s) => s.error);
@@ -154,17 +173,8 @@ export function ModelPicker() {
                   const prev = shown[i - 1];
                   return (
                     <li key={p.kind} className="flex w-full flex-col items-center">
-                      {/* Each agent's providers sit under its name, which only labels them. */}
-                      {prev?.runtime !== p.runtime && (
-                        <span
-                          className={cn(
-                            "mb-1 w-full px-1 text-center text-[11px] leading-3.5 text-muted-foreground select-none",
-                            prev && "mt-2 border-t pt-2",
-                          )}
-                        >
-                          {t.agent[p.runtime]}
-                        </span>
-                      )}
+                      {/* Each agent's small mark divides the rail; it is not a provider, so it takes no click. */}
+                      {prev?.runtime !== p.runtime && <RailDivider runtime={p.runtime} first={!prev} />}
                       <button
                         type="button"
                         aria-pressed={current === p.kind}
