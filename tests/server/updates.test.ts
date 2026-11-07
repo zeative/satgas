@@ -1,4 +1,4 @@
-import { afterAll, afterEach, beforeAll, beforeEach, expect, test } from "bun:test";
+import { afterAll, afterEach, beforeAll, beforeEach, expect, setSystemTime, test } from "bun:test";
 import { mkdtemp, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -70,6 +70,7 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  setSystemTime();
   delete process.env.SATGAS_CONTAINER;
   await rm(dir, { recursive: true, force: true });
 });
@@ -90,6 +91,31 @@ test("reports a newer release with its notes, and asks GitHub once while the ans
   expect(hits).toBe(1);
   await updateInfo({ force: true });
   expect(hits).toBe(2);
+});
+
+test("asks GitHub again once the answer is 15 minutes old", async () => {
+  const start = Date.now();
+  await updateInfo();
+  setSystemTime(new Date(start + 14 * 60_000));
+  await updateInfo();
+  expect(hits).toBe(1);
+  setSystemTime(new Date(start + 15 * 60_000));
+  await updateInfo();
+  expect(hits).toBe(2);
+});
+
+test("a failed check keeps the release it already found, and tries again on the same interval", async () => {
+  const start = Date.now();
+  await updateInfo();
+  status = 403;
+  expect(await updateInfo({ force: true })).toMatchObject({ check: "failed", latest: NEXT, available: true, notes: "## Notes" });
+  expect(hits).toBe(2);
+  status = 200;
+  await updateInfo();
+  expect(hits).toBe(2);
+  setSystemTime(new Date(start + 15 * 60_000));
+  expect(await updateInfo()).toMatchObject({ check: "ok", latest: NEXT });
+  expect(hits).toBe(3);
 });
 
 test("a repo with no release yet is not an error, and an outage is not mistaken for up to date", async () => {

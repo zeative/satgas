@@ -15,9 +15,8 @@ import {
 import { config } from "./config";
 import { getSettings } from "./settings";
 
-const TTL = 6 * 60 * 60 * 1000;
-// Offline or rate limited: try again sooner than a success would.
-const RETRY = 15 * 60 * 1000;
+// GitHub gives an IP 60 anonymous requests an hour and counts an ETag's 304 too, so a plain interval costs the same.
+const TTL = 15 * 60 * 1000;
 const HEADERS = { accept: "application/vnd.github+json", "user-agent": "satgas" };
 
 interface Asset {
@@ -72,11 +71,12 @@ async function fetchRelease(): Promise<Check> {
 }
 
 function release(force: boolean): Promise<Check> {
-  if (!force && cache && Date.now() - cache.at < (cache.check === "failed" ? RETRY : TTL)) return Promise.resolve(cache);
+  if (!force && cache && Date.now() - cache.at < TTL) return Promise.resolve(cache);
   inflight ??= fetchRelease()
     .then((c) => {
-      cache = c;
-      return c;
+      // A failed check says nothing about the release, so what it already found stays on screen.
+      cache = c.check === "failed" && cache ? { ...cache, at: c.at, check: c.check } : c;
+      return cache;
     })
     .finally(() => {
       inflight = undefined;

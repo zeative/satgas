@@ -12,8 +12,8 @@ import { loadSettings, saveSettings, useSettings } from "@/stores/settings";
 import { installUpdate, loadUpdates, useUpdates } from "@/stores/updates";
 
 const tu = t.update;
-// The server's own answer can wait; an hour keeps a tab left open honest without asking GitHub, which it caches.
-const REFRESH = 60 * 60 * 1000;
+// As often as the server asks GitHub; this only reads the server's cached answer.
+const REFRESH = 15 * 60 * 1000;
 
 function AutoCheck() {
   const settings = useSettings((s) => s.settings);
