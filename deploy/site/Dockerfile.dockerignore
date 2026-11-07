@@ -1,0 +1,4 @@
+# Used instead of the repo's .dockerignore for this image (which leaves deploy/ out): only the page and its config.
+*
+!site
+!deploy/site/nginx.conf
