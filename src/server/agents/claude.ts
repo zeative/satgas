@@ -12,7 +12,17 @@ import { getSettings } from "../settings";
 import { enabledSkills, pluginRoot } from "../skills";
 import { teamServer } from "../team";
 import { ATTRIBUTION, prepareToolHooks, removeToolHooks, type ToolHooks } from "../tools";
-import { AgentError, type AgentRequest, type AgentResult, clip, describeInput, type EnvChange, logText, runJsonl } from "./process";
+import {
+  AgentError,
+  type AgentRequest,
+  type AgentResult,
+  clip,
+  clipOutput,
+  describeInput,
+  type EnvChange,
+  logText,
+  runJsonl,
+} from "./process";
 
 const WRITES = new Set(["Write", "Edit", "MultiEdit", "NotebookEdit"]);
 
@@ -178,10 +188,31 @@ export async function runClaude(req: AgentRequest, opts: ClaudeOptions = {}): Pr
             else if (block.type === "tool_use") {
               // How the lead hands back its plan, which the chat already shows; not something it did.
               if (block.name !== "StructuredOutput")
-                req.onLog({ kind: "tool", text: `${block.name} ${describeInput(block.input)}`.trim() });
+                req.onLog({ kind: "tool", text: `${block.name} ${describeInput(block.input)}`.trim(), call: block.id });
               const path = block.input?.file_path ?? block.input?.notebook_path;
               if (typeof path === "string" && WRITES.has(block.name)) req.onFile?.(path, block.name === "Write" ? "added" : "modified");
             }
+          }
+        } else if (ev.type === "user") {
+          // What each tool gave back, shown under its call in the chat: the text, and a picture when it returned one.
+          for (const block of ev.message?.content ?? []) {
+            if (block?.type !== "tool_result" || typeof block.tool_use_id !== "string") continue;
+            const parts = typeof block.content === "string" ? [{ type: "text", text: block.content }] : (block.content ?? []);
+            const text = parts
+              .filter((p: { type?: string }) => p?.type === "text")
+              .map((p: { text?: string }) => p.text ?? "")
+              .join("\n");
+            const image = parts.find(
+              (p: { type?: string; source?: { type?: string } }) => p?.type === "image" && p.source?.type === "base64",
+            );
+            if (!text.trim() && !image) continue;
+            req.onLog({
+              kind: "out",
+              text: clipOutput(text),
+              call: block.tool_use_id,
+              ...(block.is_error ? { failed: true } : {}),
+              ...(image ? { picture: { mime: image.source.media_type, data: image.source.data } } : {}),
+            });
           }
         } else if (ev.type === "rate_limit_event") {
           void noteLimits(ev.rate_limit_info);

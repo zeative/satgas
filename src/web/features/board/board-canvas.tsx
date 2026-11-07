@@ -27,10 +27,11 @@ import { isMac, t } from "@/i18n";
 import { isLiveRun } from "@/lib/actions";
 import { cn } from "@/lib/utils";
 import { usePanel } from "@/stores/panel";
-import { uploadImage } from "@/stores/runs";
+import { uploadImage, useRuns } from "@/stores/runs";
 import { setBoardSelection } from "@/stores/selection";
 import { type Board, type BoardOp, type Card, type ColorName, DEFAULT_SIZE, emptyBoard, type ShapeKind } from "../../../shared/board";
 import { insideOwnFrame } from "../../../shared/board-blocks";
+import { flowLinks } from "../../../shared/flow";
 import {
   crew,
   currentTask,
@@ -65,6 +66,8 @@ import { type Inset, unionRect, viewportFor, zoomAround } from "./frame";
 import { type Box, boundsOf, dragBox, type Guide, lockAngle, snapBox } from "./geometry";
 import { INBOX_ID, INBOX_W, InboxNode, type InboxNodeType, waiting } from "./inbox-node";
 import { modHeld } from "./keys";
+import { liveWork } from "./live";
+import { CursorNode, type CursorNodeType, SlotNode, type SlotNodeType } from "./live-nodes";
 import { watchLongPress } from "./long-press";
 import { PALETTE } from "./palette";
 import { useBoardPrefs } from "./prefs";
@@ -78,7 +81,7 @@ import { loadView, saveView } from "./viewport";
 // Tools that drop a new card where the person clicks.
 const CREATES = new Set<Tool>(["note", "text", "shape", "frame"]);
 
-const nodeTypes = { lead: LeadNode, person: PersonNode, card: CardNode, inbox: InboxNode };
+const nodeTypes = { lead: LeadNode, person: PersonNode, card: CardNode, inbox: InboxNode, slot: SlotNode, cursor: CursorNode };
 const edgeTypes = { floating: FloatingEdge, talk: TalkEdge };
 const PAN_STEP = 80;
 const PAN: Record<string, { x: number; y: number }> = {
@@ -105,6 +108,8 @@ const MAX_STROKE_POINTS = 8000;
 const panelSpace = () => usePanel.getState().width + 48;
 const insetOf = (panelOpen: boolean): Inset => ({ top: 64, left: 72, bottom: 96, right: panelOpen ? panelSpace() : 48 });
 const FIT_MIN_ZOOM = 0.2;
+// A first visit opens close enough for cards to show their content instead of grey bars (see DETAIL_ZOOM).
+const OPEN_MIN_ZOOM = 0.5;
 const NO_SELECTION: ReadonlySet<string> = new Set();
 // Zooming to one card stops here, so a small sticky reads comfortably instead of filling the screen.
 const FOCUS_ZOOM = 1.25;
@@ -116,7 +121,10 @@ const boardFocused = (surface: HTMLElement | null) => {
   return !el || el === document.body || !!surface?.contains(el) || !!el.closest("[data-board-chrome]");
 };
 
-type BoardNode = LeadNodeType | PersonNodeType | CardNodeType | InboxNodeType;
+// Slots and pointers show the team at work; they are not part of the board, so fits, pictures and snapping skip them.
+const isLive = (id: string) => id.startsWith("slot:") || id.startsWith("cursor:");
+
+type BoardNode = LeadNodeType | PersonNodeType | CardNodeType | InboxNodeType | SlotNodeType | CursorNodeType;
 // Fetched when the browser is idle, so the first right-click opens at once without weighing on the first paint.
 const loadMenu = () => import("./board-menu");
 const BoardMenu = lazy(() => loadMenu().then((m) => ({ default: m.BoardMenu })));
@@ -271,19 +279,26 @@ function Canvas({ run, selectedTaskId, onSelectTask, panelOpen }: Props) {
   const carried = useRef<Carried | null>(null);
   // A board opened before comes back where the person left the camera; only a first visit is framed to fit.
   const [savedView] = useState(() => loadView(run.id));
-  // What a first fit frames, read from the data: team nodes have no measured size before their first paint.
-  const contentBounds = useEvent(() =>
-    unionRect([
-      { x: spots.lead.x, y: spots.lead.y, width: LEAD_W, height: LEAD_H },
-      ...[...spots.members.values()].map((p) => ({ x: p.x, y: p.y, width: PERSON_W, height: PERSON_H })),
-      ...board.cards.map((c) => ({ x: c.x, y: c.y, width: c.w, height: c.h })),
-    ]),
-  );
+  // What a first fit frames, read from the data (team nodes have no measured size before their first paint): the latest
+  // round's work, with the team while the board is on its first round, so the board opens on where things stand.
+  const contentBounds = useEvent(() => {
+    const latest = Math.max(0, ...run.nodes.map((n) => n.round ?? 0));
+    const recent = new Set(run.nodes.filter((n) => (n.round ?? 0) === latest).map((n) => n.id));
+    const made = board.cards.filter((c) => c.from && recent.has(c.from));
+    const team =
+      latest === 0 || !made.length
+        ? [
+            { x: spots.lead.x, y: spots.lead.y, width: LEAD_W, height: LEAD_H },
+            ...[...spots.members.values()].map((p) => ({ x: p.x, y: p.y, width: PERSON_W, height: PERSON_H })),
+          ]
+        : [];
+    return unionRect([...team, ...(made.length ? made : board.cards).map((c) => ({ x: c.x, y: c.y, width: c.w, height: c.h }))]);
+  });
   // The board fills the window, so the first frame is already framed beside the panel; once React Flow is ready the
   // fit is redone against the board's real size, which only moves it if the two differ.
   const [firstView] = useState(() => {
     const b = contentBounds();
-    return savedView ?? (b ? viewportFor(b, window.innerWidth, window.innerHeight, FIT_MIN_ZOOM, 1, insetOf(panelOpen)) : undefined);
+    return savedView ?? (b ? viewportFor(b, window.innerWidth, window.innerHeight, OPEN_MIN_ZOOM, 1, insetOf(panelOpen)) : undefined);
   });
   const expand = useCallback((card: Card) => setExpandedId(card.id), []);
   const hasCard = useCallback((id: string) => cardsRef.current.some((c) => c.id === id), []);
@@ -425,6 +440,53 @@ function Canvas({ run, selectedTaskId, onSelectTask, panelOpen }: Props) {
     return all;
   }, [run, people, spots, taskById, board, drafts, selected, selectedTaskId, editingId, measured, erasing, exporting]);
 
+  // How the work flowed, card to card; recomputed only when tasks or cards change, never mid-drag.
+  const flow = useMemo(() => flowLinks(run.nodes, board.cards), [run.nodes, board.cards]);
+  // The team at work: where each running task's cards will land, and each teammate's pointer on what they touch now.
+  const logs = useRuns((s) => s.logs);
+  const live = useMemo(() => (exporting ? { slots: [], cursors: [] } : liveWork(run, logs)), [run, logs, exporting]);
+  const liveNodes = useMemo<BoardNode[]>(() => {
+    const names = new Map(people.map((m) => [m.id, m.name]));
+    const who = (task: NodeState) => {
+      const id = memberIdOf(task);
+      const name = names.get(id);
+      return name ? { id, name } : null;
+    };
+    return [
+      ...live.slots.map(
+        (s): BoardNode => ({
+          id: `slot:${s.task.id}`,
+          type: "slot",
+          position: { x: s.x, y: s.y },
+          data: { title: s.task.title, who: who(s.task), steps: s.steps },
+          draggable: false,
+          selectable: false,
+          deletable: false,
+          focusable: false,
+        }),
+      ),
+      ...live.cursors.flatMap((c): BoardNode[] => {
+        const w = who(c.task);
+        return w
+          ? [
+              {
+                id: `cursor:${c.task.id}`,
+                type: "cursor",
+                position: { x: c.x, y: c.y },
+                data: { who: w, now: c.now, typing: c.typing },
+                draggable: false,
+                selectable: false,
+                deletable: false,
+                focusable: false,
+                // Above every card and frame, so a pointer is never hidden under what it points at.
+                zIndex: 3_000_000,
+              },
+            ]
+          : [];
+      }),
+    ];
+  }, [live, people]);
+  const shown = useMemo(() => (liveNodes.length ? [...nodes, ...liveNodes] : nodes), [nodes, liveNodes]);
   // Only a working round's talk is drawn; once it ends the chat keeps the words.
   const asks = isLiveRun(run) ? run.talk?.[Math.max(0, ...run.nodes.map((n) => n.round ?? 0))]?.asks : undefined;
   const edges = useMemo<Edge[]>(() => {
@@ -495,10 +557,41 @@ function Canvas({ run, selectedTaskId, onSelectTask, panelOpen }: Props) {
         markerEnd: l.arrow ? LINK_HEAD : undefined,
       }),
     );
+    // The flow between results, unless the person already drew that connection themselves.
+    const drawn = new Set(board.links.flatMap((l) => [`${l.source}>${l.target}`, `${l.target}>${l.source}`]));
+    const flowing = flow
+      .filter((f) => !drawn.has(`${f.source}>${f.target}`))
+      .map(
+        (f): Edge => ({
+          id: f.id,
+          type: "floating",
+          source: f.source,
+          target: f.target,
+          data: { dots: true },
+          deletable: false,
+          selectable: false,
+          className: "satgas-flow",
+        }),
+      );
+    // Work in progress flows into its slot from the cards it is made from.
+    const working = live.slots.flatMap((s) =>
+      s.from.map(
+        (source): Edge => ({
+          id: `live:${source}>${s.task.id}`,
+          type: "floating",
+          source,
+          target: `slot:${s.task.id}`,
+          data: { dots: true },
+          deletable: false,
+          selectable: false,
+          className: "satgas-flow satgas-flow-live",
+        }),
+      ),
+    );
     // Unchanged edges keep their identity, so moving one card re-renders its own threads, not every edge on the board.
     const cache = edgeCache.current;
     const next = new Map<string, Edge>();
-    const all = [...org, ...talking, ...origins, ...links].map((e) => {
+    const all = [...org, ...talking, ...flowing, ...working, ...origins, ...links].map((e) => {
       const hit = cache.get(e.id);
       const same =
         hit &&
@@ -514,7 +607,7 @@ function Canvas({ run, selectedTaskId, onSelectTask, panelOpen }: Props) {
     });
     edgeCache.current = next;
     return all;
-  }, [run.nodes, asks, people, taskById, nodeOfTask, board, selectedLinks, selected, selectedTaskId]);
+  }, [run.nodes, asks, people, taskById, nodeOfTask, board, selectedLinks, selected, selectedTaskId, flow, live.slots]);
 
   useEffect(() => {
     const el = surface.current;
@@ -550,7 +643,7 @@ function Canvas({ run, selectedTaskId, onSelectTask, panelOpen }: Props) {
   const fit = useCallback(
     (duration = 300, ids?: string[]) => {
       const el = surface.current;
-      const all = ids ? rf.getNodes().filter((n) => ids.includes(n.id)) : rf.getNodes();
+      const all = rf.getNodes().filter((n) => (ids ? ids.includes(n.id) : !isLive(n.id)));
       if (!el || !all.length) return Promise.resolve(false);
       const view = viewportFor(rf.getNodesBounds(all), el.clientWidth, el.clientHeight, FIT_MIN_ZOOM, ids ? 1.5 : 1, insetOf(panelOpen));
       return rf.setViewport(view, { duration });
@@ -571,7 +664,7 @@ function Canvas({ run, selectedTaskId, onSelectTask, panelOpen }: Props) {
         frame = requestAnimationFrame(settle);
         return;
       }
-      void rf.setViewport(viewportFor(b, el.clientWidth, el.clientHeight, FIT_MIN_ZOOM, 1, insetOf(panelOpenRef.current)));
+      void rf.setViewport(viewportFor(b, el.clientWidth, el.clientHeight, OPEN_MIN_ZOOM, 1, insetOf(panelOpenRef.current)));
     };
     frame = requestAnimationFrame(settle);
     return () => cancelAnimationFrame(frame);
@@ -661,7 +754,7 @@ function Canvas({ run, selectedTaskId, onSelectTask, panelOpen }: Props) {
       const { format, ids, name } = (e as CustomEvent<ExportRequest>).detail;
       const only = ids ? new Set(ids) : undefined;
       const keep = only && new Set([...only, ...edges.filter((x) => only.has(x.source) && only.has(x.target)).map((x) => x.id)]);
-      const nodes = only ? rf.getNodes().filter((n) => only.has(n.id)) : rf.getNodes();
+      const nodes = rf.getNodes().filter((n) => (only ? only.has(n.id) : !isLive(n.id)));
       // The first painted surface behind the board, so the picture keeps the board's own background.
       const painted = [surface.current, document.querySelector(".react-flow"), document.body]
         .map((el) => (el ? getComputedStyle(el).backgroundColor : ""))
@@ -855,9 +948,9 @@ function Canvas({ run, selectedTaskId, onSelectTask, panelOpen }: Props) {
         const seen = rect
           ? { x: -view.x / view.zoom, y: -view.y / view.zoom, w: rect.width / view.zoom, h: rect.height / view.zoom }
           : null;
-        const others = itemsOf(rf.getNodes().flatMap((n) => (skip.has(n.id) || byId.get(n.id)?.kind === "drawing" ? [] : [n.id]))).filter(
-          (b) => !seen || (b.x < seen.x + seen.w && b.x + b.w > seen.x && b.y < seen.y + seen.h && b.y + b.h > seen.y),
-        );
+        const others = itemsOf(
+          rf.getNodes().flatMap((n) => (skip.has(n.id) || isLive(n.id) || byId.get(n.id)?.kind === "drawing" ? [] : [n.id])),
+        ).filter((b) => !seen || (b.x < seen.x + seen.w && b.x + b.w > seen.x && b.y < seen.y + seen.h && b.y + b.h > seen.y));
         snapping.current = { others, dx: 0, dy: 0 };
       }
     },
@@ -1408,10 +1501,10 @@ function Canvas({ run, selectedTaskId, onSelectTask, panelOpen }: Props) {
             pointer.current = null;
           }}
           // Its own stacking context: card z-indexes and composited layers stay inside the canvas, under the panels.
-          className={cn("relative isolate size-full outline-none", CREATES.has(tool) && "cursor-crosshair")}
+          className={cn("satgas-board relative isolate size-full outline-none", CREATES.has(tool) && "cursor-crosshair")}
         >
           <ReactFlow
-            nodes={nodes}
+            nodes={shown}
             edges={edges}
             nodeTypes={nodeTypes}
             edgeTypes={edgeTypes}
@@ -1446,7 +1539,7 @@ function Canvas({ run, selectedTaskId, onSelectTask, panelOpen }: Props) {
             nodesDraggable={!hand}
             nodesConnectable={!hand}
           >
-            {prefs.grid && <Background variant={BackgroundVariant.Lines} gap={24} />}
+            {prefs.grid && <Background variant={BackgroundVariant.Dots} gap={24} size={1} />}
             {(CREATES.has(tool) || tool === "arrow" || tool === "line") && (
               <CreateLayer tool={tool} shape={toolStyle.shape} onBox={handleBox} onLine={handleLine} snap={gridPoint} />
             )}

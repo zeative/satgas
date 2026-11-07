@@ -145,6 +145,35 @@
   color: var(--muted-foreground);
 }
 
+/* The board: a deep canvas with a fine dot grid in the dark, and cards that sit just above it as raised sheets with a
+   hairline and a soft drop, so they read as objects on the board rather than boxes drawn on it. */
+.dark .satgas-board {
+  --card: oklch(0.18 0 0);
+  background-color: oklch(0.155 0 0);
+}
+.satgas-board .react-flow {
+  --xy-background-pattern-color: color-mix(in oklab, var(--foreground) 16%, transparent);
+}
+@layer components {
+  .satgas-card {
+    border: 1px solid color-mix(in oklab, var(--foreground) 10%, transparent);
+    box-shadow:
+      0 1px 2px rgb(0 0 0 / 0.04),
+      0 8px 24px rgb(0 0 0 / 0.06);
+  }
+  .dark .satgas-card {
+    border-color: color-mix(in oklab, var(--foreground) 14%, transparent);
+    box-shadow: 0 16px 40px rgb(0 0 0 / 0.32);
+  }
+}
+/* Code cards take their colours from the highlighter's two themes, picked by the app's own. */
+.satgas-code span {
+  color: var(--shiki-light);
+}
+.dark .satgas-code span {
+  color: var(--shiki-dark);
+}
+
 /* Mission canvas: the leg feeding a running task is the live route, a dead branch fades out. */
 .react-flow__edge.satgas-live .react-flow__edge-path {
   stroke: var(--signal-ink);
@@ -179,18 +208,18 @@
   }
 }
 
-/* Planning view: the same line grid as the board it turns into. */
+/* Planning view: the same dot grid as the board it turns into. */
 .satgas-grid {
-  --grid: color-mix(in oklab, var(--foreground) 6%, transparent);
-  background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  --grid: color-mix(in oklab, var(--foreground) 16%, transparent);
+  background-image: radial-gradient(var(--grid) 1px, transparent 1px);
   background-size: 24px 24px;
 }
 
-/* Home: the boards' line grid, fading out under the prompt so it reads as the edge of a canvas. */
+/* Home: the boards' dot grid, fading out under the prompt so it reads as the edge of a canvas. */
 .satgas-hero-grid {
-  --grid: color-mix(in oklab, var(--foreground) 6%, transparent);
-  background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
-  background-size: 28px 28px;
+  --grid: color-mix(in oklab, var(--foreground) 16%, transparent);
+  background-image: radial-gradient(var(--grid) 1px, transparent 1px);
+  background-size: 24px 24px;
   background-position: center top;
   mask-image: radial-gradient(ellipse 60% 70% at 50% 0%, black 25%, transparent 80%);
 }
@@ -252,6 +281,57 @@
   stroke: color-mix(in oklab, var(--foreground) 45%, transparent);
   stroke-width: 1.5;
   mask: url(#satgas-behind-cards);
+}
+/* How the work flowed between results: a quiet wire with a ring at each end, behind the cards it joins. */
+.react-flow__edge.satgas-flow .react-flow__edge-path {
+  stroke: color-mix(in oklab, var(--foreground) 26%, transparent);
+  stroke-width: 1.5;
+  mask: url(#satgas-behind-cards);
+}
+.satgas-flow-dot {
+  fill: var(--background);
+  stroke: color-mix(in oklab, var(--foreground) 40%, transparent);
+  stroke-width: 1.5;
+}
+/* Work in progress: the wire into a running task's slot flows toward it in the signal colour. */
+@keyframes satgas-flow-run {
+  to {
+    stroke-dashoffset: -20;
+  }
+}
+.react-flow__edge.satgas-flow-live .react-flow__edge-path {
+  stroke: var(--signal-ink);
+  stroke-dasharray: 4 6;
+  animation: satgas-flow-run 1.2s linear infinite;
+}
+.satgas-slot {
+  border-color: color-mix(in oklab, var(--signal-ink) 45%, transparent);
+}
+/* A teammate's pointer glides from card to card instead of jumping, and never takes a click. */
+.react-flow__node-cursor {
+  pointer-events: none;
+  transition: transform 700ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+@keyframes satgas-cursor-type {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(56px);
+  }
+}
+.satgas-cursor-type {
+  animation: satgas-cursor-type 2.4s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .react-flow__edge.satgas-flow-live .react-flow__edge-path,
+  .satgas-cursor-type {
+    animation: none;
+  }
+  .react-flow__node-cursor {
+    transition: none;
+  }
 }
 .react-flow__edge.satgas-link.selected .react-flow__edge-path {
   stroke: var(--foreground);

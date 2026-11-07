@@ -26,5 +26,16 @@ export const FloatingEdge = memo(function FloatingEdge({ id, source, target, sty
     targetPosition: POSITION[end.to],
   };
   const [path] = data?.elbow ? getSmoothStepPath({ ...ends, borderRadius: 10, offset: 20 }) : getBezierPath(ends);
-  return <BaseEdge id={id} path={path} style={style} markerEnd={markerEnd} interactionWidth={interactionWidth} />;
+  return (
+    <>
+      <BaseEdge id={id} path={path} style={style} markerEnd={markerEnd} interactionWidth={interactionWidth} />
+      {/* The flow between results ends in small rings on both cards, like a wire plugged in at each end. */}
+      {data?.dots && (
+        <>
+          <circle cx={end.sx} cy={end.sy} r={3} className="satgas-flow-dot" />
+          <circle cx={end.tx} cy={end.ty} r={3} className="satgas-flow-dot" />
+        </>
+      )}
+    </>
+  );
 });

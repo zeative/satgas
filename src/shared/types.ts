@@ -64,14 +64,38 @@ export interface PlannedSchedule {
   weekdays: number[];
 }
 
+export type AppStatus = "starting" | "running" | "stopped" | "failed";
+
+export interface RunApp {
+  name: string;
+  // The command that starts it, run in `dir` inside the board's folder.
+  command: string;
+  dir: string;
+  status: AppStatus;
+  // Why it stopped or would not start: the last lines it printed.
+  error?: string;
+  startedAt?: number;
+  // Anyone with the link may open it, not only the signed-in person.
+  shared?: boolean;
+  // Where it is served on Satgas's own address, with the key its links carry; the app is built to live under it.
+  path: string;
+}
+
 export interface LogLine {
   // Per-run sequence number; lets clients drop lines they already got in a snapshot.
   seq: number;
   t: number;
-  kind: "text" | "think" | "tool" | "error" | "info";
+  // out: what a tool call gave back, tied to its call by `call`.
+  kind: "text" | "think" | "tool" | "out" | "error" | "info";
   text: string;
   // On the lead's lines, which all share one log: the round they belong to.
   round?: number;
+  // A tool call's id, on the call and on its output, so the two are shown together.
+  call?: string;
+  // On an output: a picture the tool returned, saved with the board's assets.
+  image?: string;
+  // On an output: the call failed (a command's non-zero exit, a tool error).
+  failed?: boolean;
 }
 
 // The lead's plan while it is being written, so the chat shows it take shape instead of a still label.
@@ -197,6 +221,8 @@ export interface Run {
   // Per round: the teammates who already got that round's messages mid-task, so the lead plans only what is left.
   steered?: Record<number, string[]>;
   // Home organizing: kept on top, put away, or hidden until a time; and when the person last looked at the board.
+  // Web apps an agent started for this board, by name: Satgas runs them and serves them under its own address.
+  apps?: Record<string, RunApp>;
   pinned?: boolean;
   archived?: boolean;
   snoozedUntil?: number;

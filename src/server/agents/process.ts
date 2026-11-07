@@ -9,7 +9,8 @@ export interface AgentRequest {
   prompt: string;
   cwd: string;
   signal: AbortSignal;
-  onLog: (line: Omit<LogLine, "t" | "seq">) => void;
+  // `picture` is an image a tool returned; whoever logs it saves it and keeps only its name in the line.
+  onLog: (line: Omit<LogLine, "t" | "seq"> & { picture?: { mime: string; data: string } }) => void;
   // Files the agent writes, so the board can show what it produced.
   onFile?: (path: string, change: FileChange["change"]) => void;
   // Set: the agent takes messages while it works (Claude Code's streaming input). It gets a send function once
@@ -244,6 +245,21 @@ export function describeInput(input: any): string {
     input.description;
   const v = named ?? Object.entries(input).find(([k, x]) => typeof x === "string" && x.trim() && !SENSITIVE_ARG.test(k))?.[1];
   return v ? clip(String(v), 400) : "";
+}
+
+// What a tool gave back, kept readable for the chat: lines intact, terminal colours gone, and a long output cut to its
+// start and end, where errors and results usually are.
+// Terminal colour codes, which start with the escape character.
+export const ANSI = new RegExp(`${String.fromCharCode(27)}\\[[0-9;?]*[A-Za-z]`, "g");
+const OUTPUT_HEAD = 1600;
+const OUTPUT_TAIL = 600;
+export function clipOutput(s: string): string {
+  const text = s.replace(ANSI, "").replace(/\r\n?/g, "\n").trimEnd();
+  if (text.length <= OUTPUT_HEAD + OUTPUT_TAIL + 40) return text;
+  const head = text.slice(0, OUTPUT_HEAD);
+  const tail = text.slice(-OUTPUT_TAIL);
+  const hidden = text.slice(OUTPUT_HEAD, -OUTPUT_TAIL).split("\n").length - 1;
+  return `${head}\n… ${hidden} more lines …\n${tail}`;
 }
 
 export function clip(s: string, n = 160): string {

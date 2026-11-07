@@ -5,7 +5,17 @@ import { withLogins } from "../oauth";
 import { getSettings } from "../settings";
 import { teamServer } from "../team";
 import { codexHookArgs, prepareToolHooks, removeToolHooks, type ToolHooks } from "../tools";
-import { AgentError, type AgentRequest, type AgentResult, clip, describeInput, type EnvChange, logText, runJsonl } from "./process";
+import {
+  AgentError,
+  type AgentRequest,
+  type AgentResult,
+  clip,
+  clipOutput,
+  describeInput,
+  type EnvChange,
+  logText,
+  runJsonl,
+} from "./process";
 
 export interface CodexMcp {
   args: string[];
@@ -139,11 +149,19 @@ export async function runCodex(req: AgentRequest, { bare = false } = {}): Promis
       req,
       (ev) => {
         if (ev.type === "item.started" && ev.item?.type === "command_execution") {
-          req.onLog({ kind: "tool", text: `Bash ${clip(shellBody(String(ev.item.command ?? "")), 400)}` });
+          req.onLog({ kind: "tool", text: `Bash ${clip(shellBody(String(ev.item.command ?? "")), 400)}`, call: ev.item.id });
         } else if (ev.type === "item.started" && ev.item?.type === "mcp_tool_call") {
           req.onLog({ kind: "tool", text: mcpLine(ev.item) });
         } else if (ev.type === "item.completed") {
           const item = ev.item ?? {};
+          // A command's output, shown under it in the chat.
+          if (item.type === "command_execution" && typeof item.id === "string" && String(item.aggregated_output ?? "").trim())
+            req.onLog({
+              kind: "out",
+              text: clipOutput(String(item.aggregated_output)),
+              call: item.id,
+              ...(item.exit_code ? { failed: true } : {}),
+            });
           if (item.type === "reasoning" && item.text?.trim()) {
             req.onLog({ kind: "think", text: logText(item.text.trim(), 2000) });
           } else if (item.type === "web_search" && item.query) {

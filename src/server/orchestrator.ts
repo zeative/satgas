@@ -12,12 +12,13 @@ import { fillVariables } from "../shared/widgets";
 import { runClaude } from "./agents/claude";
 import { runCodex } from "./agents/codex";
 import type { AgentRequest } from "./agents/process";
-import { cardsForTask, cardsFromReply, placeOnShelf, relativeInside, reuseFileCards, withMoves } from "./artifacts";
+import { cardsForTask, cardsFromReply, placeInFlow, relativeInside, reuseFileCards, withMoves } from "./artifacts";
 import { askLeadAside } from "./aside";
 import { changes, snapshot } from "./changes";
 import { cloudBlocked, cloudReport } from "./cloud";
 import { config } from "./config";
 import { editBoard } from "./edits";
+import { savePicture } from "./files";
 import { changeList, checkpoint } from "./history";
 import { applyMemory, getMemory } from "./memory";
 import { plan } from "./planner";
@@ -692,7 +693,13 @@ interface Resume {
 
 async function runNode(run: Run, node: NodeState, blind: boolean, signal: AbortSignal, resume?: Resume, trees = false): Promise<void> {
   patchNode(run.id, node.id, { status: "running", startedAt: Date.now(), branch: undefined });
-  const log = (l: Parameters<typeof appendLog>[2]) => appendLog(run.id, node.id, l);
+  // A picture a tool returned is saved first, so the line keeps its name instead of its bytes.
+  const log = ({ picture, ...l }: Parameters<AgentRequest["onLog"]>[0]) => {
+    if (!picture) return appendLog(run.id, node.id, l);
+    void savePicture(run.id, picture.mime, picture.data)
+      .catch(() => null)
+      .then((image) => appendLog(run.id, node.id, image ? { ...l, image } : l));
+  };
   // A writing task in a round that works on branches gets its own worktree; the rest work in the board's folder.
   const tree: TaskTree | null = trees && node.access !== "read" && !resume ? await openTree(run, node, log) : null;
   const workdir = tree?.dir ?? run.cwd;
@@ -849,8 +856,9 @@ async function showOnBoard(run: Run, node: NodeState, written: Map<string, FileC
     if (edits.length) editBoard(run.id, node.round ?? 0, edits, node.id);
     const units = cardsFromReply(run, node, output);
     const { fresh: files, ops } = reuseFileCards(run, written.size ? await cardsForTask(run, node, written) : []);
-    // Each block takes one spot on the shelf (a framed board moves as one); what it holds keeps its place inside.
-    const anchors = placeOnShelf(getRun(run.id) ?? run, [...units.map((u) => u.anchor), ...files]);
+    // Each block takes one spot (a framed board moves as one), next to what the work came from; what it holds keeps
+    // its place inside.
+    const anchors = placeInFlow(getRun(run.id) ?? run, node, [...units.map((u) => u.anchor), ...files]);
     anchors.forEach((card, i) => {
       ops.push({ op: "put", card });
       for (const child of units[i]?.children ?? [])

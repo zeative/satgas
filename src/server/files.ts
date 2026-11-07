@@ -28,6 +28,18 @@ export async function saveImage(runId: string, req: Request): Promise<{ src: str
   return { src: `/api/runs/${runId}/assets/${name}` };
 }
 
+// A picture a tool gave an agent (a screenshot it took, an image it read), kept with the board's assets so the chat can
+// show it under the step. Base64 from the agent's stream; none above the size an upload may have.
+const MAX_PICTURE = 8 * 1024 * 1024;
+export async function savePicture(runId: string, mime: string, data: string): Promise<string | null> {
+  const ext = IMAGE_TYPES[mime];
+  if (!ext || data.length > (MAX_PICTURE * 4) / 3) return null;
+  const name = `${crypto.randomUUID()}.${ext}`;
+  await mkdir(assetsDir(runId), { recursive: true });
+  await Bun.write(join(assetsDir(runId), name), Buffer.from(data, "base64"));
+  return name;
+}
+
 export async function serveAsset(runId: string, name: string): Promise<Response> {
   if (!ASSET_NAME.test(name)) return new Response("Not found.", { status: 404 });
   const file = Bun.file(join(assetsDir(runId), name));

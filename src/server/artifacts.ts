@@ -3,18 +3,15 @@ import { relative, resolve, sep } from "node:path";
 import { type BoardOp, type Card, cardKindForFile, DEFAULT_SIZE, type FileChange, LIMITS, parseDelimited } from "../shared/board";
 import { type BlockCard, blockUnit, splitBlocks, type Unit } from "../shared/board-blocks";
 import { imageCardSize, imageSize } from "../shared/image-size";
-import { crew, teamBounds } from "../shared/team";
 import type { NodeState, Run } from "../shared/types";
 import { docxMarkdown, pptxMarkdown, xlsxRows } from "./office";
+
+// Where cards land is shared with the board, which draws the spot a running task's work is heading for.
+export { placeInFlow, placeOnShelf, withinFrame } from "../shared/placement";
 
 const MAX_RICH_CARDS = 6;
 const MAX_TEXT_BYTES = 200_000;
 const MAX_SHEET_BYTES = 1_000_000;
-const SHELF_GAP = 40;
-const SHELF_TOP = 96;
-// Wide enough for two framed boards side by side.
-const SHELF_MAX_WIDTH = 2400;
-const MAX_SHELF_SEARCH = 200;
 
 const real = (p: string) => {
   try {
@@ -165,53 +162,6 @@ export function reuseFileCards(
 export function withMoves(run: Run): NodeState[] {
   const moved = run.board?.moved ?? {};
   return run.nodes.map((n) => (moved[n.id] ? { ...n, ...moved[n.id] } : n));
-}
-
-// Agent cards fill a shelf under the team: each takes the highest, then leftmost, free spot, so cards of different
-// sizes pack into tidy rows and never cover the team, frames or other cards.
-export function placeOnShelf(run: Run, cards: Omit<Card, "x" | "y">[]): Card[] {
-  const g = teamBounds(crew(run));
-  const left = g.left;
-  const right = left + Math.max(SHELF_MAX_WIDTH, g.right - g.left);
-  const top = g.bottom + SHELF_TOP;
-  const board = run.board?.cards ?? [];
-  const near = (r: Rect) => r.y + r.h > top && r.x < right && r.x + r.w > left;
-  // A frame stands for everything inside it.
-  const taken: Rect[] = board.filter((c) => !withinFrame(c, board)).filter(near);
-  return cards.map((c) => {
-    const card = { ...c, ...freeSpot(c, taken, left, right, top) } as Card;
-    taken.push(card);
-    return card;
-  });
-}
-
-interface Rect {
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-}
-
-export const withinFrame = (c: Card, cards: Card[]) =>
-  c.kind !== "frame" &&
-  cards.some((f) => f.kind === "frame" && f.id !== c.id && c.x >= f.x && c.y >= f.y && c.x + c.w <= f.x + f.w && c.y + c.h <= f.y + f.h);
-
-const clash = (a: Rect, x: number, y: number, w: number, h: number) =>
-  a.x < x + w + SHELF_GAP && x < a.x + a.w + SHELF_GAP && a.y < y + h + SHELF_GAP && y < a.y + a.h + SHELF_GAP;
-
-// Spots worth trying sit at the shelf's edges and just past what is already there.
-function freeSpot(c: { w: number; h: number }, taken: Rect[], left: number, right: number, top: number): { x: number; y: number } {
-  const below = { x: left, y: Math.max(top, ...taken.map((r) => r.y + r.h + SHELF_GAP)) };
-  // The search grows with the cube of what is there; a crowded shelf just continues underneath.
-  if (taken.length > MAX_SHELF_SEARCH) return below;
-  const ys = [...new Set([top, ...taken.map((r) => r.y + r.h + SHELF_GAP)])].filter((y) => y >= top).sort((a, b) => a - b);
-  for (const y of ys) {
-    const band = taken.filter((r) => r.y < y + c.h + SHELF_GAP && r.y + r.h + SHELF_GAP > y);
-    const xs = [...new Set([left, ...band.map((r) => r.x + r.w + SHELF_GAP)])].sort((a, b) => a - b);
-    // Something wider than the shelf still gets the left edge of a free row.
-    for (const x of xs) if ((x + c.w <= right || x === left) && !band.some((r) => clash(r, x, y, c.w, c.h))) return { x, y };
-  }
-  return below;
 }
 
 // Native content an agent wrote into its reply, one unit per block: tables, docs, notes, code, and framed boards of

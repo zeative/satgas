@@ -2,7 +2,7 @@ import { afterAll, beforeAll, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { AgentError, logText, runJsonl } from "../../../src/server/agents/process";
+import { AgentError, clipOutput, logText, runJsonl } from "../../../src/server/agents/process";
 
 let dir = "";
 
@@ -103,4 +103,14 @@ test("background work left by a finished CLI is waited for, then stopped when it
   } finally {
     Object.assign(background, saved);
   }
+});
+
+test("a tool's output keeps its lines, loses terminal colours, and a long one keeps its start and end", () => {
+  expect(clipOutput("\x1b[32mok\x1b[0m\r\nnext\n\n")).toBe("ok\nnext");
+  const long = Array.from({ length: 400 }, (_, i) => `line ${i}`).join("\n");
+  const kept = clipOutput(long);
+  expect(kept.startsWith("line 0\n")).toBe(true);
+  expect(kept.endsWith("line 399")).toBe(true);
+  expect(kept).toMatch(/… \d+ more lines …/);
+  expect(kept.length).toBeLessThan(2400);
 });

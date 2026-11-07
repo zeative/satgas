@@ -1159,12 +1159,38 @@ function ActRow({ act, live, cwd }: { act: Act; live: boolean; cwd?: string }) {
   const detail = actDetail(act);
   const short = cwd ? shortPath(detail, cwd) : detail;
   const path = SHOWS_PATH.has(act.kind) ? pathParts(short) : null;
+  const runId = useRuns((s) => s.run?.id);
+  // Opened, a step shows what it gave back, as a terminal or a viewer would: the output, and the picture it returned.
+  const result =
+    act.out || (act.image && runId) ? (
+      <div className="flex flex-col gap-2">
+        {act.out && (
+          <pre
+            className={cn(
+              "nowheel max-h-64 overflow-auto rounded-md border bg-muted/40 px-2.5 py-2 font-mono text-[11px] leading-[18px] whitespace-pre text-muted-foreground",
+              act.failed && "border-destructive/30 text-destructive",
+            )}
+          >
+            {act.out}
+          </pre>
+        )}
+        {act.image && runId && (
+          <img
+            src={`/api/runs/${runId}/assets/${act.image}`}
+            alt=""
+            loading="lazy"
+            className="max-h-64 w-fit max-w-full rounded-md border object-contain"
+          />
+        )}
+      </div>
+    ) : undefined;
   return (
     <TraceRow
       Icon={ACT_ICON[act.kind]}
       live={live}
       verb={actVerb(act)}
       body={short}
+      result={result}
       line={
         path ? (
           <>
@@ -1183,16 +1209,19 @@ function TraceRow({
   verb,
   body,
   line,
+  result,
   live,
 }: {
   Icon: ComponentType<{ className?: string; "aria-hidden"?: "true" }>;
   verb?: string;
   body: string;
   line?: ReactNode;
+  // What opening the row shows under it, past the whole text: a step's output.
+  result?: ReactNode;
   live: boolean;
 }) {
   const [open, setOpen] = useState(false);
-  return (
+  const row = (
     <button
       type="button"
       aria-expanded={open}
@@ -1211,6 +1240,13 @@ function TraceRow({
         )}
       />
     </button>
+  );
+  if (!result) return row;
+  return (
+    <div>
+      {row}
+      {open && <div className="ms-[22px] mt-1 mb-1.5">{result}</div>}
+    </div>
   );
 }
 

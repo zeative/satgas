@@ -71,6 +71,19 @@ describe("timeline", () => {
     expect(items.map((i) => i.type)).toEqual(["text", "group", "text", "group", "error"]);
     expect(items[1]?.type === "group" && items[1].acts.length).toBe(2);
   });
+  test("puts what a call gave back on its own step, even when other calls came in between, and adds no row", () => {
+    const items = timeline([
+      { ...line("tool", "Bash npm test"), call: "a" },
+      { ...line("tool", "Read shot.png"), call: "b" },
+      { ...line("out", "picture"), call: "b", image: "x.png" },
+      { ...line("out", "1 failed"), call: "a", failed: true },
+      { ...line("out", "nobody's"), call: "zz" },
+    ]);
+    expect(items).toHaveLength(1);
+    const [test1, shot] = items[0]?.type === "group" ? items[0].acts : [];
+    expect(test1).toMatchObject({ detail: "npm test", out: "1 failed", failed: true });
+    expect(shot).toMatchObject({ kind: "image", image: "x.png" });
+  });
 });
 
 describe("summarize", () => {

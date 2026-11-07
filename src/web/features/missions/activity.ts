@@ -27,6 +27,10 @@ export interface Act {
   tool: string;
   // For MCP tools: the connector's name.
   server?: string;
+  // What the call gave back, once it has: its text, a picture's asset name, and whether it failed.
+  out?: string;
+  image?: string;
+  failed?: boolean;
 }
 
 export type Item =
@@ -66,10 +70,18 @@ export function classify(line: string): Act {
 
 export function timeline(lines: LogLine[]): Item[] {
   const items: Item[] = [];
+  // Calls by id, so an output that arrives later lands on its own step.
+  const calls = new Map<string, Act>();
   for (const l of lines) {
+    if (l.kind === "out") {
+      const act = l.call ? calls.get(l.call) : undefined;
+      if (act) Object.assign(act, { out: l.text || undefined, image: l.image, failed: l.failed });
+      continue;
+    }
     if (l.kind === "tool") {
       const last = items.at(-1);
       const act = classify(l.text);
+      if (l.call) calls.set(l.call, act);
       if (last?.type === "group") last.acts.push(act);
       else items.push({ type: "group", acts: [act] });
     } else if (l.kind === "text" && l.text.trim()) items.push({ type: "text", text: l.text.trim() });
