@@ -77,6 +77,11 @@ export const fileKey = (runId: string) => createHmac("sha256", token).update(`fi
 
 export const validFileKey = (runId: string, key: string) => !!token && same(key, fileKey(runId));
 
+// The key in a web app's address: a link to one app opens that app and nothing else on the board.
+export const appKey = (runId: string, name: string) =>
+  createHmac("sha256", token).update(`app:${runId}:${name}`).digest("base64url").slice(0, 22);
+export const validAppKey = (runId: string, name: string, key: string) => !!token && same(key, appKey(runId, name));
+
 const secure = () => (config.publicUrl?.startsWith("https://") ? "; Secure" : "");
 
 // HttpOnly so page scripts (and anything injected into them) never see it; Strict so other sites can't ride on it.

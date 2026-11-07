@@ -12,6 +12,19 @@ import { maskSettings, restoreSecrets } from "../shared/settings";
 import { type ClientMessage, cleanIcon, cleanLang, cleanTitle, type Run, type ServerEvent } from "../shared/types";
 import { USAGE_RANGES, usageReport } from "../shared/usage";
 import { detectAgents } from "./agents/detect";
+import {
+  type AppSocket,
+  appLog,
+  appSocket,
+  cleanAppName,
+  serveApp,
+  settleApps,
+  shareApp,
+  startApp,
+  stopAllApps,
+  stopApp,
+  sweepIdleApps,
+} from "./apps";
 import { authorized, fileKey, loadToken, rotateToken, signIn, signInCookie, signInLink, signOutCookie, validFileKey } from "./auth";
 import { channelsView, logoutWhatsApp, newPairing, removePerson, startChannels, stopChannels, updateChannel } from "./channels";
 import { isChannelKind } from "./channels/hub";
@@ -104,9 +117,19 @@ import { removeRunTrees } from "./worktrees";
 
 interface SocketData {
   watching: string | null;
+  // Set on a socket that carries a web app's own traffic (its live reload), not Satgas's.
+  app?: AppSocket;
 }
 
 await loadRuns();
+// Nothing an app ran before this start is still running.
+settleApps(listRunIds());
+{
+  // `bun --hot` re-runs this file; one sweep for idle apps is enough.
+  const g = globalThis as typeof globalThis & { __satgasAppSweep?: ReturnType<typeof setInterval> };
+  if (g.__satgasAppSweep) clearInterval(g.__satgasAppSweep);
+  g.__satgasAppSweep = setInterval(() => sweepIdleApps(), 60_000);
+}
 await loadSettings();
 // Built-in skills are written out and the plugin folder Claude Code reads is rebuilt, so both match this version.
 await prepareSkills().catch((e) => console.error(`Could not prepare skills: ${(e as Error).message}`));
@@ -1015,6 +1038,35 @@ const server: Server<SocketData> = Bun.serve({
         return problem ? error(409, problem) : new Response(null, { status: 204 });
       }),
     },
+    // A web app on the board: start or stop it, share it with anyone who has the link, read what it printed.
+    "/api/runs/:id/apps/:name/:action": {
+      POST: api(async (req) => {
+        if (!isTrusted(req)) return forbidden();
+        const run = getRun(req.params.id);
+        const name = cleanAppName(req.params.name);
+        if (!run || !name || !run.apps?.[name]) return error(404, "App not found.");
+        const action = req.params.action;
+        if (action === "start") {
+          const r = await startApp(run.id, name);
+          return r.ok ? Response.json({ ok: true }) : error(409, r.error);
+        }
+        if (action === "stop") {
+          await stopApp(run.id, name);
+          return Response.json({ ok: true });
+        }
+        if (action === "share" || action === "unshare") {
+          shareApp(run.id, name, action === "share");
+          return Response.json({ ok: true });
+        }
+        return error(404, "Unknown action.");
+      }),
+      GET: api((req) => {
+        const run = getRun(req.params.id);
+        const name = cleanAppName(req.params.name);
+        if (!run || !name || !run.apps?.[name] || req.params.action !== "log") return error(404, "App not found.");
+        return Response.json({ lines: appLog(run.id, name) });
+      }),
+    },
     "/api/runs/:id/cancel": {
       POST: api((req) => {
         if (!isTrusted(req)) return forbidden();
@@ -1025,6 +1077,8 @@ const server: Server<SocketData> = Bun.serve({
   fetch(req, srv) {
     if (!allowedHost(req)) return misdirected();
     const { pathname } = new URL(req.url);
+    if (pathname.startsWith("/apps/"))
+      return serveApp(req, (data, headers) => srv.upgrade(req, { data: { watching: null, app: data }, headers }), authorized(req));
     if (pathname !== "/ws") return serveWeb(pathname);
     if (!isTrusted(req, false)) return forbidden();
     if (!authorized(req)) return signInFirst();
@@ -1032,9 +1086,14 @@ const server: Server<SocketData> = Bun.serve({
   },
   websocket: {
     open(ws) {
+      if (ws.data.app) return appSocket.open(appEnd(ws));
       ws.subscribe("runs");
     },
+    close(ws) {
+      if (ws.data.app) appSocket.close(appEnd(ws));
+    },
     message(ws, raw) {
+      if (ws.data.app) return appSocket.message(appEnd(ws), raw);
       const msg = parse(String(raw));
       // The tab's heartbeat: an answer proves the connection still carries messages both ways.
       if (msg?.type === "ping") return send(ws, { type: "pong" });
@@ -1117,6 +1176,13 @@ function parse(raw: string): ClientMessage | undefined {
   }
 }
 
+// One end of an app's socket pair, as the relay in apps.ts sees it.
+const appEnd = (ws: ServerWebSocket<SocketData>) => ({
+  data: ws.data.app as AppSocket,
+  send: (m: string | ArrayBuffer | Uint8Array) => void ws.send(m),
+  close: () => ws.close(),
+});
+
 function send(ws: ServerWebSocket<SocketData>, event: ServerEvent) {
   ws.send(JSON.stringify(event));
 }
@@ -1127,6 +1193,7 @@ async function stop(signal: string, code = 0) {
   stopping = true;
   console.log(`\n${signal}: stopping agents and saving missions…`);
   await shutdown();
+  await stopAllApps();
   await stopChannels();
   await stopCloud();
   await flushAll();

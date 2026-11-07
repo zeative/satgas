@@ -48,13 +48,16 @@ test("speaks MCP: initialize, lists the team tools, and hands a call to Satgas w
     "team_files",
     "team_ask",
     "team_answer",
+    "app_start",
+    "app_stop",
+    "app_status",
     "request_secret",
   ]);
   expect(byId.get(3)?.result).toEqual({ content: [{ type: "text", text: "Posted for the team." }], isError: false });
   expect(seen).toEqual([{ op: "/api/team/note", auth: "Bearer tok", body: { text: "API returns id" } }]);
 });
 
-test("a task working alone is offered only the secret request", async () => {
+test("a task working alone is offered its web apps and the secret request, not the team tools", async () => {
   const replies = await talk([{ jsonrpc: "2.0", id: 1, method: "tools/list" }], { SATGAS_TEAM_TALK: "0" });
-  expect(replies[0]?.result.tools.map((t: { name: string }) => t.name)).toEqual(["request_secret"]);
+  expect(replies[0]?.result.tools.map((t: { name: string }) => t.name)).toEqual(["app_start", "app_stop", "app_status", "request_secret"]);
 });

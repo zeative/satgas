@@ -30,6 +30,8 @@ export default defineConfig({
     proxy: {
       "/api": api,
       "/ws": { target: api.replace("http", "ws"), ws: true },
+      // Web apps the team runs, with their live reload.
+      "/apps": { target: api, ws: true },
     },
   },
 });

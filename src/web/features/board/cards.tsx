@@ -1,13 +1,26 @@
 import { Handle, type Node, type NodeProps, NodeResizer, Position, type ReactFlowState, useStore } from "@xyflow/react";
-import { Download, ExternalLink, Lock, Maximize2, Monitor, RotateCw, Smartphone } from "lucide-react";
-import { lazy, memo, Suspense, useContext, useDeferredValue, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { Download, ExternalLink, Globe, Link2, Lock, Maximize2, Monitor, RotateCw, Smartphone } from "lucide-react";
+import {
+  type CSSProperties,
+  lazy,
+  memo,
+  Suspense,
+  useContext,
+  useDeferredValue,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { toast } from "sonner";
 import { LinkedText } from "@/components/linked-text";
 import { InlineText, Markdown } from "@/components/markdown";
 import { openExternal } from "@/components/outbound-link";
 import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { t } from "@/i18n";
 import { cn } from "@/lib/utils";
+import { useRuns } from "@/stores/runs";
 import { type Card, isPdf } from "../../../shared/board";
 import { MiniFace } from "../team/face";
 import { FullDetail, keyedSrc, useBoard } from "./context";
@@ -27,14 +40,16 @@ const WidgetBody = lazy(() => loadWidgets().then((m) => ({ default: m.WidgetBody
 export const EXPANDABLE = new Set<Card["kind"]>(["doc", "table", "image", "preview", "code", "files"]);
 const handle = "satgas-handle size-2.5 border-2 border-background bg-muted-foreground";
 
-const PAPER = "bg-[oklch(0.95_0.07_95)] text-[oklch(0.25_0.03_85)] shadow-sm dark:bg-[oklch(0.38_0.06_90)] dark:text-[oklch(0.96_0.02_95)]";
+// A sticky: warm paper in the light, a low amber glow in the dark with a hairline of the same amber.
+const PAPER =
+  "border border-[oklch(0.86_0.09_90)] bg-[oklch(0.95_0.07_95)] text-[oklch(0.25_0.03_85)] shadow-sm dark:border-[rgb(255_185_14/0.25)] dark:bg-[oklch(0.31_0.04_92)] dark:text-[oklch(0.93_0.05_88)]";
 
 // The surface each kind sits on: paper for notes, nothing for free text, shapes and ink, a quiet panel for frames.
 function shellOf(card: Card): string {
   if (card.kind === "note") return card.color ? `${PALETTE[card.color].note} shadow-sm` : PAPER;
   if (card.kind === "text" || card.kind === "shape" || card.kind === "drawing") return "";
   if (card.kind === "frame") return "rounded-xl border bg-muted/25";
-  return "border bg-card text-card-foreground shadow-sm";
+  return "satgas-card bg-card text-card-foreground";
 }
 
 const BARE = new Set<Card["kind"]>(["drawing", "frame"]);
@@ -84,7 +99,7 @@ export const CardNode = memo(function CardNode({ data, selected, width, height }
       {/* A label above the card: what a widget is, or the card's title, and a lock when it is locked. Quick actions sit
           inside the card's corner. */}
       {(card.title || lockShown || card.widget || author) && (
-        <div className="absolute -top-8 left-0 flex h-7 max-w-full items-center gap-1 text-xs text-muted-foreground">
+        <div className="absolute -top-7 left-0 flex h-6 max-w-full items-center gap-1 text-[11px] text-muted-foreground">
           {lockShown && (
             <span title={t.boardMenu.locked} className="flex shrink-0 px-0.5">
               <Lock aria-hidden="true" className="size-3" />
@@ -94,8 +109,8 @@ export const CardNode = memo(function CardNode({ data, selected, width, height }
           {card.widget && <WidgetLabel widget={card.widget} />}
           {/* Who made it, in place of a thread back to them across the board. */}
           {author && (
-            <span className="flex shrink-0 items-center gap-1 ps-0.5 text-foreground">
-              <MiniFace seed={author.id} className="size-4" />
+            <span className="flex shrink-0 items-center gap-2 ps-0.5">
+              <MiniFace seed={author.id} className="size-3.5" />
               {author.name}
               {card.title && (
                 <span aria-hidden="true" className="text-muted-foreground">
@@ -110,7 +125,7 @@ export const CardNode = memo(function CardNode({ data, selected, width, height }
 
       <div
         className={cn(
-          "group/card relative size-full overflow-hidden rounded-lg",
+          "group/card relative size-full overflow-hidden rounded-xl",
           shellOf(card),
           card.kind === "drawing" && "pointer-events-none",
           card.kind === "frame" && "overflow-visible",
@@ -267,12 +282,10 @@ export const CardBody = memo(function CardBody({ card, active = false, large = f
     case "image":
       return card.src ? <ImageBody card={card} src={keyedSrc(card.src, runId, fileKey) ?? card.src} /> : null;
     case "preview":
-      return <PreviewBody card={card} interactive={active || large} />;
+      return card.app ? <AppBody card={card} interactive={active || large} /> : <PreviewBody card={card} interactive={active || large} />;
     case "code":
       return card.from || large ? (
-        <pre className="nowheel size-full overflow-auto p-3 font-mono text-xs leading-5 whitespace-pre">
-          <code>{card.text}</code>
-        </pre>
+        <CodeText text={card.text ?? ""} name={card.title} />
       ) : (
         <EditableText
           card={card}
@@ -585,7 +598,62 @@ function LineBody({ card }: { card: Card }) {
 
 // Dark muted is translucent, so the header lays it over the card to stay solid above scrolled rows; its rule is a shadow so it sticks too.
 const HEAD_CELL =
-  "sticky top-0 z-[1] px-2.5 py-1.5 text-start font-medium whitespace-nowrap shadow-[inset_0_-1px_0_var(--border)] [background:linear-gradient(var(--muted),var(--muted)),var(--card)]";
+  "sticky top-0 z-[1] px-3 py-2 text-start font-medium whitespace-nowrap shadow-[inset_0_-1px_0_var(--border)] [background:linear-gradient(var(--muted),var(--muted)),var(--card)]";
+
+// Beyond this a code card stays plain text: highlighting it would hold the page up for little gain at board size.
+const MAX_HIGHLIGHT = 40_000;
+
+// Code with the file's name as its header and the diff view's colours, from the same highlighter, loaded the first time
+// a code card shows. Until then, and for very long files, it reads as plain text.
+function CodeText({ text, name }: { text: string; name?: string }) {
+  const [lines, setLines] = useState<Token[][] | null>(null);
+  useEffect(() => {
+    if (text.length > MAX_HIGHLIGHT) return;
+    let live = true;
+    void (async () => {
+      const d = await import("@pierre/diffs");
+      const lang = d.getFiletypeFromFileName(name ?? "");
+      const hl = await d.getSharedHighlighter({ themes: ["pierre-light", "pierre-dark"], langs: [lang] });
+      const { tokens } = hl.codeToTokens(text, { lang, themes: { light: "pierre-light", dark: "pierre-dark" }, defaultColor: false });
+      if (live) setLines(tokens.map((line) => line.map((t) => ({ text: t.content, style: t.htmlStyle as CSSProperties | undefined }))));
+    })().catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [text, name]);
+  return (
+    <div className="flex size-full flex-col">
+      {name && (
+        <div className="card-handle flex h-8 shrink-0 items-center border-b px-3 font-mono text-[11px] text-muted-foreground">
+          <span className="truncate">{name.split("/").pop()}</span>
+        </div>
+      )}
+      <pre className="satgas-code nowheel min-h-0 flex-1 overflow-auto p-3 font-mono text-xs leading-5 whitespace-pre">
+        <code>
+          {lines
+            ? lines.map((line, i) => (
+                // biome-ignore lint/suspicious/noArrayIndexKey: lines of one immutable text, never reordered.
+                <span key={i}>
+                  {line.map((t, j) => (
+                    // biome-ignore lint/suspicious/noArrayIndexKey: tokens of one line, never reordered.
+                    <span key={j} style={t.style}>
+                      {t.text}
+                    </span>
+                  ))}
+                  {"\n"}
+                </span>
+              ))
+            : text}
+        </code>
+      </pre>
+    </div>
+  );
+}
+
+interface Token {
+  text: string;
+  style?: CSSProperties;
+}
 
 function TableBody({ rows }: { rows: string[][] }) {
   const [head, ...body] = rows;
@@ -610,7 +678,7 @@ function TableBody({ rows }: { rows: string[][] }) {
             <tr key={r} className="border-b last:border-0">
               {row.map((cell, c) => (
                 // biome-ignore lint/suspicious/noArrayIndexKey: cells have no identity beyond their position.
-                <td key={c} className="px-2.5 py-1.5 align-top tabular-nums">
+                <td key={c} className="px-3 py-2 align-top tabular-nums">
                   <InlineText text={cell} />
                 </td>
               ))}
@@ -633,8 +701,55 @@ function PreviewBody({ card, interactive }: { card: Card; interactive: boolean }
   const [phone, setPhone] = useState(false);
   const page = !isPdf(card.src ?? "");
   const { runId, fileKey } = useBoard();
+  return (
+    <div className="flex size-full flex-col">
+      <div className="card-handle flex h-8 shrink-0 items-center gap-2 border-b bg-muted/40 px-2.5">
+        <span className="min-w-0 flex-1 truncate font-mono text-xs text-muted-foreground">{card.src?.split("/files/")[1] ?? card.src}</span>
+        <QuickActions card={card} />
+        {page && (
+          <BarButton label={phone ? t.board.desktop : t.board.mobile} onClick={() => setPhone((v) => !v)}>
+            {phone ? <Monitor /> : <Smartphone />}
+          </BarButton>
+        )}
+        <BarButton label={t.board.reload} onClick={() => setNonce((n) => n + 1)}>
+          <RotateCw />
+        </BarButton>
+      </div>
+      <PageFrame
+        key={nonce}
+        src={keyedSrc(card.src, runId, fileKey)}
+        title={card.title ?? card.src ?? "preview"}
+        page={page}
+        phone={phone}
+        interactive={interactive}
+        w={card.w}
+        h={card.h}
+      />
+    </div>
+  );
+}
+
+// A page at a real screen width, shrunk to fit its card, so a small card shows it as built instead of reflowing it. The
+// page runs sandboxed and only takes clicks while its card is selected, so the board stays draggable.
+function PageFrame({
+  src,
+  title,
+  page,
+  phone,
+  interactive,
+  w,
+  h,
+}: {
+  src: string | undefined;
+  title: string;
+  page: boolean;
+  phone: boolean;
+  interactive: boolean;
+  w: number;
+  h: number;
+}) {
   const box = useRef<HTMLDivElement>(null);
-  const [size, setSize] = useState({ w: card.w, h: Math.max(card.h - 32, 0) });
+  const [size, setSize] = useState({ w, h: Math.max(h - 32, 0) });
   useLayoutEffect(() => {
     const el = box.current;
     if (!el) return;
@@ -646,53 +761,179 @@ function PreviewBody({ card, interactive }: { card: Card; interactive: boolean }
   const view = phone ? PHONE_W : Math.max(DESKTOP_W, size.w);
   const scale = size.w > 0 ? Math.min(1, size.w / view) : 1;
   return (
+    <div ref={box} className="relative min-h-0 flex-1 overflow-hidden">
+      <iframe
+        src={src}
+        title={title}
+        // A PDF needs the browser's own viewer, which a sandboxed frame refuses; it carries no page script to contain.
+        sandbox={page ? "allow-scripts allow-forms allow-popups allow-modals" : undefined}
+        loading="lazy"
+        style={
+          page
+            ? {
+                width: view,
+                height: size.h / scale,
+                left: Math.max(0, (size.w - view * scale) / 2),
+                transform: scale < 1 ? `scale(${scale})` : undefined,
+              }
+            : undefined
+        }
+        className={cn(
+          "nodrag nowheel absolute top-0 left-0 origin-top-left bg-white",
+          !page && "size-full",
+          phone && "border-x",
+          !interactive && "pointer-events-none",
+        )}
+      />
+    </div>
+  );
+}
+
+const appCall = async (runId: string, name: string, action: "start" | "stop" | "share" | "unshare") => {
+  const res = await fetch(`/api/runs/${runId}/apps/${name}/${action}`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: "{}",
+  });
+  if (!res.ok) throw new Error(((await res.json().catch(() => null)) as { error?: string } | null)?.error ?? t.board.app.failed);
+};
+
+// A web app the team runs, live on the board: its status, start and stop, sharing, and the app itself once it answers.
+function AppBody({ card, interactive }: { card: Card; interactive: boolean }) {
+  const { runId } = useBoard();
+  const name = card.app ?? "";
+  const app = useRuns((s) => (s.run?.id === runId ? s.run.apps?.[name] : undefined));
+  const [nonce, setNonce] = useState(0);
+  const [phone, setPhone] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const status = app?.status ?? "stopped";
+  const act = (action: "start" | "stop") => {
+    setBusy(true);
+    appCall(runId, name, action)
+      .catch((e: Error) => toast.error(e.message))
+      .finally(() => setBusy(false));
+  };
+  return (
     <div className="flex size-full flex-col">
       <div className="card-handle flex h-8 shrink-0 items-center gap-2 border-b bg-muted/40 px-2.5">
-        <span className="min-w-0 flex-1 truncate font-mono text-xs text-muted-foreground">{card.src?.split("/files/")[1] ?? card.src}</span>
-        <QuickActions card={card} />
-        {page && (
-          <BarButton label={phone ? t.board.desktop : t.board.mobile} onClick={() => setPhone((v) => !v)}>
-            {phone ? <Monitor /> : <Smartphone />}
-          </BarButton>
-        )}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="nodrag size-6 text-muted-foreground hover:text-foreground [&_svg]:size-3.5"
-          aria-label={t.board.reload}
-          title={t.board.reload}
-          onClick={() => setNonce((n) => n + 1)}
-        >
-          <RotateCw />
-        </Button>
-      </div>
-      <div ref={box} className="relative min-h-0 flex-1 overflow-hidden">
-        <iframe
-          key={nonce}
-          src={keyedSrc(card.src, runId, fileKey)}
-          title={card.title ?? card.src ?? "preview"}
-          // A PDF needs the browser's own viewer, which a sandboxed frame refuses; it carries no page script to contain.
-          sandbox={page ? "allow-scripts allow-forms" : undefined}
-          loading="lazy"
-          style={
-            page
-              ? {
-                  width: view,
-                  height: size.h / scale,
-                  left: Math.max(0, (size.w - view * scale) / 2),
-                  transform: scale < 1 ? `scale(${scale})` : undefined,
-                }
-              : undefined
-          }
+        <span
+          aria-hidden="true"
           className={cn(
-            "nodrag nowheel absolute top-0 left-0 origin-top-left bg-white",
-            !page && "size-full",
-            phone && "border-x",
-            !interactive && "pointer-events-none",
+            "size-1.5 shrink-0 rounded-full",
+            status === "running"
+              ? "bg-emerald-500"
+              : status === "starting"
+                ? "bg-signal-ink"
+                : status === "failed"
+                  ? "bg-destructive"
+                  : "bg-muted-foreground/50",
           )}
         />
+        <span className="min-w-0 flex-1 truncate font-mono text-xs text-muted-foreground">
+          {name} · {t.board.app.status[status]}
+        </span>
+        {app && <AppShare runId={runId} name={name} shared={!!app.shared} path={app.path} />}
+        <Button
+          variant="ghost"
+          size="sm"
+          disabled={busy || status === "starting"}
+          className="nodrag h-6 px-2 text-xs text-muted-foreground hover:text-foreground"
+          onClick={() => act(status === "running" ? "stop" : "start")}
+        >
+          {status === "running" ? t.board.app.stop : t.board.app.start}
+        </Button>
+        <BarButton label={phone ? t.board.desktop : t.board.mobile} onClick={() => setPhone((v) => !v)}>
+          {phone ? <Monitor /> : <Smartphone />}
+        </BarButton>
+        {app && (
+          <BarButton label={t.board.open} onClick={() => openExternal(`${location.origin}${app.path}`)}>
+            <ExternalLink />
+          </BarButton>
+        )}
+        <BarButton label={t.board.reload} onClick={() => setNonce((n) => n + 1)}>
+          <RotateCw />
+        </BarButton>
       </div>
+      {status === "running" && app ? (
+        <PageFrame key={nonce} src={app.path} title={name} page phone={phone} interactive={interactive} w={card.w} h={card.h} />
+      ) : (
+        <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
+          {status === "starting" ? (
+            <p className="satgas-shimmer text-sm">{t.board.app.starting(name)}</p>
+          ) : (
+            <>
+              <p className="max-w-sm text-sm text-muted-foreground">
+                {status === "failed" ? t.board.app.failedLead : t.board.app.stoppedLead}
+              </p>
+              {status === "failed" && app?.error && (
+                <pre className="nowheel max-h-40 w-full max-w-xl overflow-auto rounded-md border bg-muted/40 p-2 text-start font-mono text-[11px] leading-4 whitespace-pre-wrap text-destructive">
+                  {app.error}
+                </pre>
+              )}
+              <Button size="sm" variant="secondary" className="nodrag" disabled={busy} onClick={() => act("start")}>
+                {t.board.app.start}
+              </Button>
+            </>
+          )}
+        </div>
+      )}
     </div>
+  );
+}
+
+// Who may open the app, the way a document is shared: only the signed-in person, or anyone with the link.
+function AppShare({ runId, name, shared, path }: { runId: string; name: string; shared: boolean; path: string }) {
+  const set = (on: boolean) => void appCall(runId, name, on ? "share" : "unshare").catch((e: Error) => toast.error(e.message));
+  const link = `${location.origin}${path}`;
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="ghost" size="sm" className="nodrag h-6 gap-1.5 px-2 text-xs text-muted-foreground hover:text-foreground">
+          {shared ? <Globe className="size-3.5" aria-hidden="true" /> : <Lock className="size-3.5" aria-hidden="true" />}
+          {t.board.app.share}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="nodrag w-80 p-4">
+        <p className="text-sm font-medium">{t.board.app.shareTitle(name)}</p>
+        <p className="mt-4 text-xs text-muted-foreground">{t.board.app.access}</p>
+        <div className="mt-2 flex flex-col gap-1">
+          {[false, true].map((on) => (
+            <button
+              key={String(on)}
+              type="button"
+              aria-pressed={shared === on}
+              onClick={() => set(on)}
+              className={cn(
+                "flex items-start gap-3 rounded-md px-2 py-2 text-start transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+                shared === on && "bg-muted",
+              )}
+            >
+              <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                {on ? <Globe className="size-3.5" /> : <Lock className="size-3.5" />}
+              </span>
+              <span className="flex min-w-0 flex-col">
+                <span className="text-sm">{on ? t.board.app.anyone : t.board.app.restricted}</span>
+                <span className="text-xs text-muted-foreground">{on ? t.board.app.anyoneHint : t.board.app.restrictedHint}</span>
+              </span>
+            </button>
+          ))}
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          className="mt-4 gap-1.5"
+          onClick={() =>
+            void navigator.clipboard
+              ?.writeText(link)
+              .then(() => toast.success(t.board.app.copied))
+              .catch(() => toast.error(link))
+          }
+        >
+          <Link2 className="size-3.5" aria-hidden="true" />
+          {t.board.app.copyLink}
+        </Button>
+      </PopoverContent>
+    </Popover>
   );
 }
 

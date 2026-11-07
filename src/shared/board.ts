@@ -50,6 +50,8 @@ export interface Card {
   rows?: string[][];
   // image and preview
   src?: string;
+  // On a preview: the board's web app it shows, by name, instead of a file.
+  app?: string;
   files?: FileChange[];
   // drawing: flat [x, y, x, y, …] relative to the card's top-left corner
   points?: number[];
@@ -132,7 +134,8 @@ export const DEFAULT_SIZE: Record<CardKind, { w: number; h: number }> = {
   doc: { w: 380, h: 300 },
   table: { w: 420, h: 260 },
   image: { w: 320, h: 220 },
-  preview: { w: 480, h: 340 },
+  // Big enough to read the page on the board without opening it: a 1280px page at three quarters, 16:10, plus the header.
+  preview: { w: 960, h: 632 },
   code: { w: 420, h: 260 },
   files: { w: 300, h: 200 },
   drawing: { w: 100, h: 100 },
@@ -224,6 +227,7 @@ const REMOVABLE = [
   "title",
   "lang",
   "src",
+  "app",
   "text",
   "rows",
   "files",
@@ -257,7 +261,7 @@ function cleanCardFields(input: Record<string, unknown>): Partial<Card> | null {
     if (!num(raw[k])) return null;
     out[k] = raw[k] as number;
   }
-  for (const k of ["from", "title", "lang", "src", "group", "ref"] as const) {
+  for (const k of ["from", "title", "lang", "src", "app", "group", "ref"] as const) {
     if (raw[k] === undefined) continue;
     if (!str(raw[k])) return null;
     out[k] = raw[k] as string;

@@ -16,6 +16,8 @@ import {
   type TeamTalk,
 } from "../../shared/talk";
 import { crew, memberIdOf } from "../../shared/team";
+import { appLog, appUrl, cleanAppName, startApp, stopApp } from "../apps";
+import { config } from "../config";
 import { requestSecret } from "../secrets";
 import { getRun, patchRun } from "../store";
 
@@ -79,6 +81,41 @@ function teammates(s: Session) {
 }
 
 type Reply = { ok: true; text: string } | { ok: false; error: string };
+
+// Where the person opens what Satgas serves: its public address on a server, the page they use on a laptop.
+const pageUrl = () => config.publicUrl ?? `http://localhost:${process.env.NODE_ENV === "production" ? config.port : config.webPort}`;
+
+async function appCall(s: Session, op: string, body: Record<string, unknown>): Promise<Reply> {
+  if (op === "app_status") {
+    const apps = Object.values(getRun(s.runId)?.apps ?? {});
+    const only = cleanAppName(body.name);
+    const shown = only ? apps.filter((a) => a.name === only) : apps;
+    if (!shown.length) return ok(only ? `No app named ${only} on this board.` : "No web apps on this board yet.");
+    return ok(
+      shown
+        .map((a) => {
+          const log = appLog(s.runId, a.name)
+            .slice(only ? -60 : -8)
+            .join("\n")
+            .trim();
+          return `${a.name}: ${a.status} at ${appUrl(s.runId, a.name, pageUrl())}\ncommand: ${a.command} (in ${a.dir})${a.error ? `\nerror: ${a.error}` : ""}${log ? `\nlast output:\n${log}` : ""}`;
+        })
+        .join("\n\n"),
+    );
+  }
+  const name = cleanAppName(body.name);
+  if (!name) return no('Give the app a short lowercase name: letters, digits and dashes, like "web".');
+  if (op === "app_stop") {
+    await stopApp(s.runId, name);
+    return ok(`Stopped ${name}.`);
+  }
+  if (typeof body.command !== "string" || !body.command.trim()) return no("Say the command that starts the app.");
+  const r = await startApp(s.runId, name, body.command, typeof body.dir === "string" ? body.dir : undefined, s.nodeId);
+  if (!r.ok) return no(`${name} did not start. ${r.error}`);
+  return ok(
+    `${name} runs. Check it yourself in your browser at http://127.0.0.1:${r.port}${r.app.path}, which reaches it directly on this machine. The person opens it at ${appUrl(s.runId, name, pageUrl())}, served by Satgas: give them that address, never a localhost one. It is on the board as a live card, keeps running after your task, and stops after two hours nobody opened it; opening it starts it again.`,
+  );
+}
 const ok = (text: string): Reply => ({ ok: true, text });
 const no = (error: string): Reply => ({ ok: false, error });
 
@@ -86,6 +123,7 @@ export async function teamCall(token: string, op: string, body: Record<string, u
   const s = sessions.get(token);
   if (!s) return no("This task is no longer running.");
   if (op === "secret") return ok(await requestSecret(s.runId, s.nodeId, body.label, body.reason, body.hint));
+  if (op === "app_start" || op === "app_stop" || op === "app_status") return appCall(s, op, body);
   if (!s.talk) return no("Nobody else works alongside you this round.");
   const talk = talkOf(s.runId, s.round);
 
