@@ -13,6 +13,7 @@ import { runClaude } from "./agents/claude";
 import { runCodex } from "./agents/codex";
 import type { AgentRequest } from "./agents/process";
 import { cardsForTask, cardsFromReply, placeOnShelf, relativeInside, reuseFileCards, withMoves } from "./artifacts";
+import { askLeadAside } from "./aside";
 import { changes, snapshot } from "./changes";
 import { config } from "./config";
 import { editBoard } from "./edits";
@@ -147,6 +148,8 @@ export function queuePrompt(
   const run = getRun(id);
   if (!run) return "missing";
   const picked = selectedCards(run, cards);
+  // What the person types while the team works goes to the lead first, who answers at once.
+  const reads = live.has(id) && !origin && (session ?? MAIN_SESSION) === sessionOf(run, run.rounds?.length ?? 0);
   const item: QueuedPrompt = {
     id: crypto.randomUUID().slice(0, 8),
     // Filled when it is accepted, so the chat shows the words the team will get.
@@ -157,12 +160,51 @@ export function queuePrompt(
     ...(session && session !== MAIN_SESSION ? { session } : {}),
     ...(files.length ? { files } : {}),
     ...(lang ? { lang } : {}),
+    ...(reads ? { reading: true } : {}),
   };
   patchRun(id, { queue: [...(run.queue ?? []), item] });
+  if (reads) void answerAside(id, item.id);
   // The round may have ended between the busy check and now.
-  if (!live.has(id)) drain(id);
+  else if (!live.has(id)) drain(id);
   else deliver(id);
   return "ok";
+}
+
+const ASIDE_MS = 120_000;
+
+// The lead answers a message sent mid-work, then it reaches the teammates the lead chose. One that asks for new work
+// stays queued for the next round; one that does not becomes an aside of this round. If the lead cannot answer, the
+// message goes the old way: to every running teammate, then the next round.
+async function answerAside(id: string, itemId: string) {
+  const run = getRun(id);
+  const item = run?.queue?.find((q) => q.id === itemId);
+  if (!run || !item) return;
+  const decision = await askLeadAside(run, item.prompt, AbortSignal.timeout(ASIDE_MS)).catch(() => null);
+  const now = getRun(id);
+  if (!now?.queue?.some((q) => q.id === itemId)) return;
+  const mark = (change: Partial<QueuedPrompt>) =>
+    patchRun(id, { queue: (getRun(id)?.queue ?? []).map((q) => (q.id === itemId ? { ...q, reading: false, ...change } : q)) });
+  mark(decision ? { reply: decision.reply, to: decision.tell } : {});
+  deliver(id);
+  if (decision && !decision.later) {
+    const after = getRun(id);
+    const done = after?.queue?.find((q) => q.id === itemId);
+    if (after && done) {
+      const round = after.rounds?.length ?? 0;
+      const aside = {
+        id: done.id,
+        prompt: done.prompt,
+        reply: decision.reply,
+        at: done.at,
+        ...(done.heard?.length ? { heard: done.heard } : {}),
+      };
+      patchRun(id, {
+        queue: (after.queue ?? []).filter((q) => q.id !== itemId),
+        asides: { ...after.asides, [round]: [...(after.asides?.[round] ?? []), aside] },
+      });
+    }
+  }
+  if (!live.has(id)) drain(id);
 }
 
 export function unqueuePrompt(id: string, itemId: string): boolean {
@@ -201,13 +243,16 @@ export function moveQueued(id: string, itemId: string, before?: string): boolean
 // queued messages together. The lead is told who already got them, so it plans only what is left.
 function drain(id: string) {
   const waiting = getRun(id)?.queue ?? [];
-  if (!waiting.length || live.has(id)) return;
+  // A message the lead is still reading waits for its answer, which drains the queue when it comes.
+  if (!waiting.length || live.has(id) || waiting.some((q) => q.reading)) return;
   // One round belongs to one session: the oldest message's session goes next, the others keep waiting their turn.
   const session = waiting[0]?.session ?? MAIN_SESSION;
   const queue = waiting.filter((q) => (q.session ?? MAIN_SESSION) === session);
   patchRun(id, { queue: waiting.filter((q) => (q.session ?? MAIN_SESSION) !== session) });
   const heard = [...new Set(queue.flatMap((q) => q.heard ?? []))];
-  continueRun(
+  const said = queue.flatMap((q) => (q.reply ? [q.reply] : []));
+  const next = (getRun(id)?.rounds?.length ?? 0) + 1;
+  const started = continueRun(
     id,
     queue.map((q) => q.prompt).join("\n\n"),
     queue.flatMap((q) => q.files ?? []),
@@ -218,6 +263,7 @@ function drain(id: string) {
     [...new Set(queue.flatMap((q) => q.cards ?? []))],
     session,
   );
+  if (started === "ok" && said.length) patchRun(id, { replies: { ...getRun(id)?.replies, [next]: said } });
 }
 
 const steerText = (text: string, about = "") =>
@@ -238,7 +284,8 @@ function selectedCards(run: Run, ids: string[]): string[] {
   return [...new Set(ids)].filter((id) => known.has(id)).slice(0, MAX_SELECTED);
 }
 
-// Every queued message goes to each running Claude task that has not had it yet, at its next step.
+// Every queued message goes to each running Claude task that has not had it yet, at its next step: only the ones the
+// lead chose when it answered, and none while it is still reading.
 function deliver(id: string) {
   const run = getRun(id);
   const boxes = inboxes.get(id);
@@ -253,11 +300,11 @@ function deliver(id: string) {
   const working = sessionOf(run, run.rounds?.length ?? 0);
   let changed = false;
   const next = queue.map((item) => {
-    if ((item.session ?? MAIN_SESSION) !== working) return item;
+    if ((item.session ?? MAIN_SESSION) !== working || item.reading) return item;
     const sent = new Set(item.sent ?? []);
     const heard = new Set(item.heard ?? []);
     for (const [nodeId, send] of boxes) {
-      if (sent.has(nodeId)) continue;
+      if (sent.has(nodeId) || (item.to && !item.to.includes(nodeId))) continue;
       const about = (item.cards ?? [])
         .map((cid) => run.board?.cards.find((c) => c.id === cid))
         .filter((c) => !!c)

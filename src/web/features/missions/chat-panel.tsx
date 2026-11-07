@@ -93,7 +93,7 @@ import { MAIN_SESSION, sessionOf, sessionsOf } from "../../../shared/sessions";
 import type { SetupRecord } from "../../../shared/setup";
 import type { TeamAsk, TeamTalk } from "../../../shared/talk";
 import { crew, type Member, memberIdOf } from "../../../shared/team";
-import type { NodeState, PlanDraft, QueuedPrompt, RoundOrigin, Run } from "../../../shared/types";
+import type { Aside, NodeState, PlanDraft, QueuedPrompt, RoundOrigin, Run } from "../../../shared/types";
 import { keyedSrc } from "../board/context";
 import { requestSnapshot } from "../board/export";
 import { MiniFace } from "../team/face";
@@ -157,6 +157,8 @@ function sameChat(a: Props, b: Props): boolean {
     "talk",
     "draft",
     "queue",
+    "asides",
+    "replies",
     "origins",
     "secrets",
     "memories",
@@ -414,6 +416,10 @@ function RoundView({
       {run.selected?.[round.index] && <SentContext cards={run.board?.cards ?? []} ids={run.selected[round.index] as string[]} />}
       {round.files.length > 0 && <SentFiles run={run} files={round.files} />}
       {round.asked && <AskedNote asked={round.asked} waiting={latest && run.status === "asking"} />}
+      {/* What the lead already said about these words while the team was still on the round before. */}
+      {run.replies?.[round.index]?.map((r) => (
+        <Report key={r} text={r} page={page} />
+      ))}
 
       <div className="flex flex-col gap-2.5 text-sm">
         <LeadTrace round={round.index} planning={planning} cwd={run.cwd} />
@@ -463,6 +469,7 @@ function RoundView({
         {round.tasks.some((n) => n.approval && (n.held || n.approved)) && <ApprovalList run={run} tasks={round.tasks} people={people} />}
         {run.talk?.[round.index] && <TalkList talk={run.talk[round.index] as TeamTalk} people={people} />}
         {round.tasks.some((n) => n.recovery) && <RecoveryNotes tasks={round.tasks} people={people} />}
+        {run.asides?.[round.index]?.length ? <AsideList run={run} asides={run.asides[round.index] as Aside[]} /> : null}
         {failed && !failed.recovery && (
           <div
             role="alert"
@@ -1445,16 +1452,43 @@ function QueuedBubble({
   known: (kind: "/" | "@", name: string) => boolean;
 }) {
   const heard = [...new Set(items.flatMap((q) => q.heard ?? []))];
+  const reading = items.some((q) => q.reading);
+  const replies = items.flatMap((q) => (q.reply ? [q.reply] : []));
   return (
-    <div className="ms-8 flex flex-col items-end gap-1">
-      <div className="flex min-w-0 max-w-full flex-col gap-2 rounded-2xl border border-dashed px-3.5 py-2.5 text-sm text-muted-foreground">
-        <span className="sr-only">{t.chat.queued}: </span>
-        {items.map((q, i) => (
-          <QueuedItem key={q.id} runId={runId} item={q} before={i > 0 ? items[i - 1]?.id : undefined} known={known} />
-        ))}
+    <div className="flex flex-col gap-3">
+      <div className="ms-8 flex flex-col items-end gap-1">
+        <div className="flex min-w-0 max-w-full flex-col gap-2 rounded-2xl border border-dashed px-3.5 py-2.5 text-sm text-muted-foreground">
+          <span className="sr-only">{t.chat.queued}: </span>
+          {items.map((q, i) => (
+            <QueuedItem key={q.id} runId={runId} item={q} before={i > 0 ? items[i - 1]?.id : undefined} known={known} />
+          ))}
+        </div>
+        <p className={cn("text-[11px] text-muted-foreground", reading && "satgas-shimmer")}>
+          {reading ? t.chat.leadReading : heard.length ? t.chat.passedTo(heard.join(", ")) : t.chat.nextRound}
+        </p>
       </div>
-      <p className="text-[11px] text-muted-foreground">{heard.length ? t.chat.sentTo(heard.join(", ")) : t.chat.nextRound}</p>
+      {replies.map((r) => (
+        <Report key={r} text={r} />
+      ))}
     </div>
+  );
+}
+
+// Messages the lead answered mid-work stay where they were sent, with the lead's answer and who else heard them.
+function AsideList({ run, asides }: { run: Run; asides: Aside[] }) {
+  const known = knownFromRefs(undefined, run.board?.cards);
+  return (
+    <>
+      {asides.map((a) => (
+        <div key={a.id} className="flex flex-col gap-3">
+          <div className="flex flex-col items-end gap-1">
+            <UserBubble text={a.prompt} known={known} />
+            {a.heard?.length ? <p className="text-[11px] text-muted-foreground">{t.chat.passedTo(a.heard.join(", "))}</p> : null}
+          </div>
+          <Report text={a.reply} />
+        </div>
+      ))}
+    </>
   );
 }
 

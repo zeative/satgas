@@ -230,19 +230,41 @@ test("the lead clears the canvas itself, and the person can undo it from the cha
   expect(undoEdit(id, 1)).toBe("done");
 });
 
-test("a message sent while the team works waits, then starts as the next round", async () => {
+// The lead's quick answer to a message sent mid-work: what it says, who hears it, and whether it is new work.
+const aside = (reply: string, later: boolean, tell: string[] = []) => planned({ reply, tell, later });
+
+test("a message sent while the team works is answered by the lead at once, and new work runs as the next round", async () => {
   const reply = (text: string) => planned({ title: "T", summary: "S", reply: text, questions: [], hires: [], nodes: [] });
-  setFake({ FAKE_CLI_OUTPUT: reply("Halo."), FAKE_CLI_SLEEP: "400" });
+  setFake({
+    FAKE_CLI_OUTPUT: reply("Halo."),
+    FAKE_CLI_SLEEP: "400",
+    FAKE_CLI_ASIDE_OUTPUT: aside("Siap, setelah ini saya kerjakan.", true),
+  });
   const { id } = startRun("halo", dir);
   expect(isLive(id)).toBe(true);
   expect(queuePrompt(id, "gajadi")).toBe("ok");
-  expect(getRun(id)?.queue?.map((q) => q.prompt)).toEqual(["gajadi"]);
+  expect(getRun(id)?.queue?.[0]).toMatchObject({ prompt: "gajadi", reading: true });
+  await until(() => getRun(id)?.queue?.[0]?.reply === "Siap, setelah ini saya kerjakan.");
   setFake({ FAKE_CLI_OUTPUT: reply("Oke, dibatalkan.") });
   await until(() => getRun(id)?.rounds?.length === 1 && getRun(id)?.status === "done");
   expect(getRun(id)?.rounds).toEqual(["gajadi"]);
   // Cleared as an empty list, which survives the JSON that carries live updates (undefined would not).
   expect(JSON.parse(JSON.stringify(getRun(id)?.queue))).toEqual([]);
+  expect(getRun(id)?.replies?.[1]).toEqual(["Siap, setelah ini saya kerjakan."]);
   expect(getRun(id)?.answers?.[1]).toBe("Oke, dibatalkan.");
+});
+
+test("a question sent while the team works is answered then and there, with no new round", async () => {
+  setFake({
+    FAKE_CLI_OUTPUT: planned({ title: "T", summary: "S", reply: "Halo.", questions: [], hires: [], nodes: [] }),
+    FAKE_CLI_SLEEP: "400",
+    FAKE_CLI_ASIDE_OUTPUT: aside("Masih jalan, sebentar lagi selesai.", false),
+  });
+  const { id } = startRun("halo", dir);
+  queuePrompt(id, "udah sampai mana?");
+  await until(() => !getRun(id)?.queue?.length && getRun(id)?.status === "done");
+  expect(getRun(id)?.asides?.[0]).toMatchObject([{ prompt: "udah sampai mana?", reply: "Masih jalan, sebentar lagi selesai." }]);
+  expect(getRun(id)?.rounds ?? []).toEqual([]);
 });
 
 test("a queued message can be taken back before it starts", async () => {
@@ -296,11 +318,16 @@ test("several messages sent during one round run together as one next round", as
   setFake({
     FAKE_CLI_OUTPUT: planned({ title: "T", summary: "S", reply: "Halo.", questions: [], hires: [], nodes: [] }),
     FAKE_CLI_SLEEP: "500",
+    FAKE_CLI_ASIDE_OUTPUT: aside("Nanti saya kerjakan.", true),
   });
   const { id } = startRun("halo", dir);
   queuePrompt(id, "satu");
   queuePrompt(id, "dua");
-  setFake({ FAKE_CLI_OUTPUT: planned({ title: "T", summary: "S", reply: "Oke.", questions: [], hires: [], nodes: [] }) });
+  await until(() => getRun(id)?.queue?.every((q) => q.reply) === true);
+  setFake({
+    FAKE_CLI_OUTPUT: planned({ title: "T", summary: "S", reply: "Oke.", questions: [], hires: [], nodes: [] }),
+    FAKE_CLI_ASIDE_OUTPUT: aside("Nanti saya kerjakan.", true),
+  });
   await until(() => getRun(id)?.rounds?.length === 1 && getRun(id)?.status === "done");
   expect(getRun(id)?.rounds).toEqual(["satu\n\ndua"]);
 });
@@ -560,11 +587,12 @@ test("a chat session is its own conversation: the lead hears only its rounds, an
   expect(await Bun.file(lead).text()).toContain("Original mission:\nLogin error 500");
 
   // Messages from two sessions sent while the team works run as separate rounds, oldest session first.
-  setFake({ FAKE_CLI_OUTPUT: reply("Ya."), FAKE_CLI_SLEEP: "400" });
+  setFake({ FAKE_CLI_OUTPUT: reply("Ya."), FAKE_CLI_SLEEP: "400", FAKE_CLI_ASIDE_OUTPUT: aside("Setelah ini.", true) });
   expect(continueRun(id, "Warna hero", [], undefined, [], undefined, [], undefined)).toBe("ok");
   queuePrompt(id, "Cek lagi login", [], undefined, undefined, [], "s2");
   queuePrompt(id, "Tambah testimoni");
-  setFake({ FAKE_CLI_OUTPUT: reply("Ya.") });
+  await until(() => getRun(id)?.queue?.find((q) => q.prompt === "Tambah testimoni")?.reply === "Setelah ini.");
+  setFake({ FAKE_CLI_OUTPUT: reply("Ya."), FAKE_CLI_ASIDE_OUTPUT: aside("Setelah ini.", true) });
   await until(() => (getRun(id)?.rounds?.length ?? 0) === 5 && getRun(id)?.status === "done" && !getRun(id)?.queue?.length, 15_000);
   const run = getRun(id);
   expect(run?.rounds?.slice(3)).toEqual(["Cek lagi login", "Tambah testimoni"]);

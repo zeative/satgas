@@ -190,6 +190,10 @@ export interface Run {
   draft?: PlanDraft;
   // Messages sent while the team was working: delivered to running agents at once, then run together as the next round.
   queue?: QueuedPrompt[];
+  // Messages the lead answered while the team worked, by the round they arrived in.
+  asides?: Record<number, Aside[]>;
+  // What the lead said about the messages that then became this round.
+  replies?: Record<number, string[]>;
   // Per round: the teammates who already got that round's messages mid-task, so the lead plans only what is left.
   steered?: Record<number, string[]>;
   // Home organizing: kept on top, put away, or hidden until a time; and when the person last looked at the board.
@@ -296,6 +300,21 @@ export interface QueuedPrompt {
   // Tasks it already reached while they worked (ids), and the teammates who got it (names, for the chat).
   sent?: string[];
   heard?: string[];
+  // The lead is reading it while the team works, so it reaches nobody yet.
+  reading?: boolean;
+  // The lead's answer, given right away while the team worked.
+  reply?: string;
+  // The running tasks it goes to, as the lead chose; absent means every one.
+  to?: string[];
+}
+
+// A message the person sent while the team worked, which the lead answered without it becoming new work.
+export interface Aside {
+  id: string;
+  prompt: string;
+  reply: string;
+  heard?: string[];
+  at: number;
 }
 
 export interface ImageNote {

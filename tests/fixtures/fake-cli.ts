@@ -37,8 +37,11 @@ const capped = process.env.CLAUDE_CODE_MAX_OUTPUT_TOKENS && process.env.FAKE_CLI
 if (process.env.FAKE_CLI_CAP_OUT) await Bun.write(process.env.FAKE_CLI_CAP_OUT, process.env.CLAUDE_CODE_MAX_OUTPUT_TOKENS ?? "");
 // A task can answer apart from the planner: as a Claude Code worker (streaming input) or as Codex (`codex exec`).
 const codex = process.argv[2] === "exec";
-const output =
-  codex && process.env.FAKE_CLI_CODEX_OUTPUT !== undefined
+// The lead's quick answer to a message sent mid-work has its own canned reply, so it never races the plan's.
+const aside = !streaming && process.env.FAKE_CLI_ASIDE_OUTPUT !== undefined && stdin.includes("The person's message:");
+const output = aside
+  ? process.env.FAKE_CLI_ASIDE_OUTPUT
+  : codex && process.env.FAKE_CLI_CODEX_OUTPUT !== undefined
     ? process.env.FAKE_CLI_CODEX_OUTPUT
     : streaming && process.env.FAKE_CLI_WORKER_OUTPUT !== undefined
       ? process.env.FAKE_CLI_WORKER_OUTPUT
@@ -47,7 +50,7 @@ const output =
         : process.env.FAKE_CLI_OUTPUT;
 process.stdout.write(output ?? "");
 if (process.env.FAKE_CLI_STDERR) process.stderr.write(process.env.FAKE_CLI_STDERR);
-if (process.env.FAKE_CLI_SLEEP) await Bun.sleep(Number(process.env.FAKE_CLI_SLEEP));
+if (process.env.FAKE_CLI_SLEEP && !aside) await Bun.sleep(Number(process.env.FAKE_CLI_SLEEP));
 // Something sent to the background that outlives the CLI, in its process group, like `npm run build &`.
 if (process.env.FAKE_CLI_BACKGROUND) Bun.spawn(["sleep", process.env.FAKE_CLI_BACKGROUND], { stdout: "ignore", stderr: "ignore" }).unref();
 // Like the real CLI, a streaming run ends once Satgas closes stdin after the result.

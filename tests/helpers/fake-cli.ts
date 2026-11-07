@@ -5,6 +5,7 @@ import type { LogLine } from "../../src/shared/types";
 
 const FAKE_VARS = [
   "FAKE_CLI_OUTPUT",
+  "FAKE_CLI_ASIDE_OUTPUT",
   "FAKE_CLI_OUTPUT_CAPPED",
   "FAKE_CLI_CAP_OUT",
   "FAKE_CLI_EXIT",
