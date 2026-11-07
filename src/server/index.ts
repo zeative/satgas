@@ -15,6 +15,7 @@ import { detectAgents } from "./agents/detect";
 import { authorized, fileKey, loadToken, rotateToken, signIn, signInCookie, signInLink, signOutCookie, validFileKey } from "./auth";
 import { channelsView, logoutWhatsApp, newPairing, removePerson, startChannels, stopChannels, updateChannel } from "./channels";
 import { isChannelKind } from "./channels/hub";
+import { cloudInfo, cloudSignIn, isCloud, startCloud, stopCloud } from "./cloud";
 import { config } from "./config";
 import { undoEdit } from "./edits";
 import { saveImage, serveAsset, serveWorkFile } from "./files";
@@ -117,6 +118,8 @@ await loadSchedules();
 await loadMemory();
 startSchedules();
 const { fromEnv: tokenFromEnv } = await loadToken();
+// A cloud instance with missing settings stops here, saying which, instead of running with nobody able to sign in.
+await startCloud();
 // Started now so the answer is ready by the time the UI asks for it.
 void detectAgents();
 
@@ -133,6 +136,7 @@ const server: Server<SocketData> = Bun.serve({
     "/api/auth": {
       // One-click sign-in from the link Satgas prints when it starts.
       GET: open((req) => {
+        if (isCloud()) return cloudOnly();
         const result = signIn(new URL(req.url).searchParams.get("token") ?? "");
         if (result === "ok")
           return new Response(null, { status: 303, headers: { location: "/", "set-cookie": signInCookie(), "cache-control": "no-store" } });
@@ -145,6 +149,7 @@ const server: Server<SocketData> = Bun.serve({
       // The sign-in page posts the pasted token.
       POST: open(async (req) => {
         if (!isTrusted(req)) return forbidden();
+        if (isCloud()) return cloudOnly();
         const body = (await req.json().catch(() => null)) as { token?: unknown } | null;
         const result = signIn(typeof body?.token === "string" ? body.token.trim() : "");
         if (result === "limited") return error(429, "Too many sign-in attempts, wait a minute and try again");
@@ -155,6 +160,18 @@ const server: Server<SocketData> = Bun.serve({
         isTrusted(req, false) ? new Response(null, { status: 204, headers: { "set-cookie": signOutCookie() } }) : forbidden(),
       ),
     },
+    // Opening a cloud workspace from the control plane: its signed ticket, good once, becomes the usual session cookie.
+    "/api/auth/cloud": {
+      GET: open((req) => {
+        const result = cloudSignIn(new URL(req.url).searchParams.get("ticket") ?? "");
+        if (result.ok)
+          return new Response(null, { status: 303, headers: { location: "/", "set-cookie": signInCookie(), "cache-control": "no-store" } });
+        return new Response("This link has expired or was already used. Open your workspace again from Satgas Cloud.", {
+          status: result.reason === "off" ? 404 : 401,
+          headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store" },
+        });
+      }),
+    },
     "/api/config": api(async () =>
       Response.json({
         defaultCwd: config.defaultCwd,
@@ -163,6 +180,7 @@ const server: Server<SocketData> = Bun.serve({
         version: pkg.version,
         channels: config.channels,
         container: config.container,
+        cloud: cloudInfo(),
         // A hung CLI must not hold up the composer; the agent pill simply stays hidden.
         agents: await Promise.race([detectAgents(), Bun.sleep(1500).then(() => null)]),
       }),
@@ -206,6 +224,7 @@ const server: Server<SocketData> = Bun.serve({
       // The new token shows once, to the browser that asked, which stays signed in with it.
       POST: api(async (req) => {
         if (!isTrusted(req)) return forbidden();
+        if (isCloud()) return error(409, "Sign-in is managed by Satgas Cloud.");
         const token = await rotateToken();
         if (!token) return error(409, "This token comes from `SATGAS_TOKEN`. Change it there and restart Satgas.");
         return Response.json({ token }, { headers: { "set-cookie": signInCookie(), "cache-control": "no-store" } });
@@ -426,6 +445,7 @@ const server: Server<SocketData> = Bun.serve({
       }),
       POST: api((req) => {
         if (!isTrusted(req)) return forbidden();
+        if (isCloud()) return error(409, "Satgas Cloud updates this workspace for you.");
         const refused = startUpdate(listRunIds().some(isLive), (code) => void stop("Update", code));
         return refused ? error(409, refused) : new Response(null, { status: 202 });
       }),
@@ -1084,6 +1104,8 @@ function error(status: number, message: string) {
 }
 
 const forbidden = () => error(403, "Request refused.");
+// A cloud workspace is opened from Satgas Cloud, so a pasted token or a sign-in link never opens it.
+const cloudOnly = () => error(403, "Open this workspace from Satgas Cloud.");
 
 function parse(raw: string): ClientMessage | undefined {
   try {
@@ -1104,6 +1126,7 @@ async function stop(signal: string, code = 0) {
   console.log(`\n${signal}: stopping agents and saving missions…`);
   await shutdown();
   await stopChannels();
+  await stopCloud();
   await flushAll();
   server.stop(true);
   process.exit(code);

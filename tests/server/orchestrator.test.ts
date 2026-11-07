@@ -599,3 +599,30 @@ test("a chat session is its own conversation: the lead hears only its rounds, an
   expect(run?.roundSessions?.[4]).toBe("s2");
   expect(run?.roundSessions?.[5]).toBeUndefined();
 }, 30_000);
+
+test("in Satgas Cloud, a plan that says no stops a new round before any agent runs, with the plan's message", async () => {
+  const { useReporter } = await import("../../src/server/cloud");
+  const { createReporter } = await import("../../src/server/cloud/report");
+  const cloud = { instance: "ws-acme", url: "https://cloud.test", publicKey: "", secret: "s".repeat(32) };
+  const reporter = createReporter({
+    ...cloud,
+    every: 60_000,
+    fetch: (async () =>
+      Response.json({ quota: { blocked: true, message: "This month's 200 tasks are used." } })) as unknown as typeof fetch,
+  });
+  (config as { cloud: typeof config.cloud }).cloud = cloud;
+  useReporter(reporter, null);
+  try {
+    reporter.report({ type: "round.started", run: "earlier", round: 0 });
+    await reporter.flush();
+    setFake({ FAKE_CLI_OUTPUT: planned({ title: "T", summary: "S", reply: "Halo.", questions: [], hires: [], nodes: [] }) });
+    const { id } = startRun("halo", dir);
+    await until(() => getRun(id)?.status === "failed");
+    expect(getRun(id)?.error).toBe("This month's 200 tasks are used.");
+    expect(getRun(id)?.nodes).toEqual([]);
+  } finally {
+    reporter.stop();
+    useReporter(null, null);
+    (config as { cloud: typeof config.cloud }).cloud = null;
+  }
+});

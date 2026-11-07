@@ -2,6 +2,7 @@ import { Check, Copy, KeyRound, TriangleAlert } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { openExternal } from "@/components/outbound-link";
 import { RichText } from "@/components/rich-text";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -96,6 +97,7 @@ function AgentAccess() {
 }
 
 export function SecurityView() {
+  const cloud = useRuns((s) => s.config.cloud ?? null);
   const { data, failed, load } = useJson<SecurityInfo>("/api/security");
   const now = useNow(true, 60_000);
   const [forget, setForget] = useState<Saved | null>(null);
@@ -142,11 +144,19 @@ export function SecurityView() {
           </Section>
 
           <Section title={tc.signIn}>
-            <Row label={tc.token} hint={data.tokenFromEnv ? <RichText text={tc.tokenEnv} /> : tc.tokenHint}>
-              <Button type="button" variant="outline" size="sm" disabled={data.tokenFromEnv} onClick={() => setRotating(true)}>
-                {tc.rotate}
-              </Button>
-            </Row>
+            {cloud ? (
+              <Row label={tc.account} hint={tc.accountHint}>
+                <Button type="button" variant="outline" size="sm" onClick={() => openExternal(cloud.account)}>
+                  {tc.openAccount}
+                </Button>
+              </Row>
+            ) : (
+              <Row label={tc.token} hint={data.tokenFromEnv ? <RichText text={tc.tokenEnv} /> : tc.tokenHint}>
+                <Button type="button" variant="outline" size="sm" disabled={data.tokenFromEnv} onClick={() => setRotating(true)}>
+                  {tc.rotate}
+                </Button>
+              </Row>
+            )}
             <Row label={tc.publicUrl} hint={data.publicUrl ? <code className="font-mono">{data.publicUrl}</code> : tc.localOnly} />
             <Row label={tc.signOut} hint={tc.signOutHint}>
               <Button type="button" variant="outline" size="sm" onClick={() => void signOut()}>

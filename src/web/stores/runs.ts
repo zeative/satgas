@@ -26,6 +26,8 @@ interface RunsState {
     version: string | null;
     channels?: boolean;
     container?: boolean;
+    // Set when this is a Satgas Cloud workspace: updates and sign-in are managed there, the plan lives at `account`.
+    cloud?: { contract: number; account: string } | null;
     agents: Record<AgentKind, string | null> | null;
   };
 }
@@ -169,6 +171,10 @@ async function loadConfig() {
         version: typeof cfg.version === "string" ? cfg.version : null,
         channels: cfg.channels === true,
         container: cfg.container === true,
+        cloud:
+          cfg.cloud && typeof cfg.cloud.account === "string"
+            ? { contract: Number(cfg.cloud.contract) || 1, account: cfg.cloud.account }
+            : null,
         agents:
           cfg.agents && typeof cfg.agents === "object" ? { claude: cfg.agents.claude ?? null, codex: cfg.agents.codex ?? null } : null,
       },

@@ -16,6 +16,17 @@ export const config = {
   // Vite's dev server, which serves the UI in development and proxies the API.
   webPort: Number(env.SATGAS_WEB_PORT ?? 5317),
   container: env.SATGAS_CONTAINER === "1",
+  // One customer's instance in Satgas Cloud: sign-in, usage and the plan come from its control plane (docs/cloud-mode.md).
+  // Off for everyone who runs Satgas themselves.
+  cloud:
+    env.SATGAS_CLOUD === "1"
+      ? {
+          instance: env.SATGAS_CLOUD_INSTANCE?.trim() ?? "",
+          url: (env.SATGAS_CLOUD_URL ?? "").trim().replace(/\/+$/, ""),
+          publicKey: env.SATGAS_CLOUD_PUBLIC_KEY?.trim() ?? "",
+          secret: env.SATGAS_CLOUD_SECRET?.trim() ?? "",
+        }
+      : null,
   // Chat channels have not met a real Telegram or WhatsApp account yet, so they stay off unless asked for.
   channels: env.SATGAS_CHANNELS === "1",
   // Telegram lets people run their own Bot API server.

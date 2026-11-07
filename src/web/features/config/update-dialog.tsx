@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Switch } from "@/components/ui/switch";
 import { t } from "@/i18n";
 import { cn } from "@/lib/utils";
+import { useRuns } from "@/stores/runs";
 import { loadSettings, saveSettings, useSettings } from "@/stores/settings";
 import { installUpdate, loadUpdates, useUpdates } from "@/stores/updates";
 
@@ -132,13 +133,16 @@ function UpdateDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (op
 // The sidebar's notice; it takes the star card's place, so only one thing asks for attention at a time.
 export function UpdateButton() {
   const info = useUpdates((s) => s.info);
+  const cloud = useRuns((s) => !!s.config.cloud);
   const [open, setOpen] = useState(false);
   useEffect(() => {
+    // Satgas Cloud updates its workspaces itself, so there is nothing to ask GitHub.
+    if (cloud) return;
     void loadUpdates();
     const timer = setInterval(() => void loadUpdates(), REFRESH);
     return () => clearInterval(timer);
-  }, []);
-  if (!info?.available) return null;
+  }, [cloud]);
+  if (cloud || !info?.available) return null;
   return (
     <>
       <button
@@ -162,10 +166,12 @@ export const useUpdateAvailable = () => useUpdates((s) => !!s.info?.available);
 export function UpdateStatus() {
   const info = useUpdates((s) => s.info);
   const checking = useUpdates((s) => s.checking);
+  const cloud = useRuns((s) => !!s.config.cloud);
   const [open, setOpen] = useState(false);
   useEffect(() => {
-    if (!useUpdates.getState().info) void loadUpdates();
-  }, []);
+    if (!cloud && !useUpdates.getState().info) void loadUpdates();
+  }, [cloud]);
+  if (cloud) return <span className="font-sans">{tu.managed}</span>;
   const state = !info
     ? ""
     : info.available

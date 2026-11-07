@@ -15,6 +15,7 @@ import type { AgentRequest } from "./agents/process";
 import { cardsForTask, cardsFromReply, placeOnShelf, relativeInside, reuseFileCards, withMoves } from "./artifacts";
 import { askLeadAside } from "./aside";
 import { changes, snapshot } from "./changes";
+import { cloudBlocked, cloudReport } from "./cloud";
 import { config } from "./config";
 import { editBoard } from "./edits";
 import { changeList, checkpoint } from "./history";
@@ -416,6 +417,10 @@ export async function shutdown(timeoutMs = 4000) {
 async function execute(run: Run, round: number, prompt: string, signal: AbortSignal) {
   let fresh: NodeState[];
   let sight: Sight["blind"] = { claude: false, codex: false };
+  // Every round passes here, whatever started it (the chat, a channel, a schedule), so the plan's limit is checked once.
+  const blocked = cloudBlocked();
+  if (blocked) throw new Error(blocked);
+  cloudReport({ type: "round.started", run: run.id, round });
   try {
     const cards = run.board?.cards ?? [];
     // Answers resume the round's planning, so its prompt is already in the log.
@@ -471,6 +476,7 @@ async function execute(run: Run, round: number, prompt: string, signal: AbortSig
       canvas: canvasNews(getRun(run.id) ?? run),
     });
     if (p.usage) patchRun(run.id, { leadUsage: { ...getRun(run.id)?.leadUsage, [round]: { ...p.usage, at: Date.now() } } });
+    cloudReport({ type: "lead.planned", run: run.id, round, tasks: p.nodes?.length ?? 0, ...(p.usage ? { usage: p.usage } : {}) });
     // The lead has now heard what the person did on the canvas; the next plan only hears what comes after.
     patchRun(run.id, { canvasReadAt: Date.now() });
     // What the lead learned from the message is kept whatever the round turns into: an answer, questions or work.
@@ -806,6 +812,18 @@ async function runNode(run: Run, node: NodeState, blind: boolean, signal: AbortS
     signal.removeEventListener("abort", stopTask);
     closeTeamSession(teamToken);
     closeSecrets(run.id, node.id);
+    const ended = getRun(run.id)?.nodes.find((n) => n.id === node.id);
+    if (ended && (ended.status === "done" || ended.status === "failed" || ended.status === "cancelled"))
+      cloudReport({
+        type: "task.finished",
+        run: run.id,
+        round: node.round ?? 0,
+        task: node.id,
+        agent: node.agent,
+        status: ended.status,
+        ms: Math.max(0, (ended.endedAt ?? Date.now()) - (ended.startedAt ?? Date.now())),
+        ...(ended.usage ? { usage: ended.usage } : {}),
+      });
     if (!collected) await collect();
     // Cards point at the board's folder: a merged branch's files are there now, an unmerged branch's are not.
     const merged = !tree || !getRun(run.id)?.nodes.find((n) => n.id === node.id)?.branch;

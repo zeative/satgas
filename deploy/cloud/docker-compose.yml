@@ -1,0 +1,28 @@
+# One Satgas Cloud workspace, filled in by the control plane per customer (docs/cloud-mode.md).
+# Self-hosting? Use deploy/dokploy/satgas/docker-compose.yml instead.
+services:
+  satgas:
+    image: ghcr.io/zeative/satgas:${SATGAS_VERSION}
+    restart: unless-stopped
+    environment:
+      SATGAS_PUBLIC_URL: https://${SATGAS_CLOUD_INSTANCE}.${SATGAS_CLOUD_DOMAIN}
+      SATGAS_CLOUD: "1"
+      SATGAS_CLOUD_INSTANCE: ${SATGAS_CLOUD_INSTANCE}
+      SATGAS_CLOUD_URL: ${SATGAS_CLOUD_URL}
+      SATGAS_CLOUD_PUBLIC_KEY: ${SATGAS_CLOUD_PUBLIC_KEY}
+      SATGAS_CLOUD_SECRET: ${SATGAS_CLOUD_SECRET}
+      # The plan decides how many agents may work at once.
+      SATGAS_CONCURRENCY: ${SATGAS_CONCURRENCY:-2}
+    volumes:
+      # Boards, settings and the sign-in token: back this up, and nothing else.
+      - data:/data
+      - home:/home/node
+    # Agents run full CLIs and a browser; a plan's size sets these.
+    mem_limit: ${SATGAS_MEMORY:-4g}
+    cpus: ${SATGAS_CPUS:-2}
+    pids_limit: 1024
+    stop_grace_period: 15s
+
+volumes:
+  data: {}
+  home: {}
