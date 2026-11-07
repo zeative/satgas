@@ -17,14 +17,15 @@ A self-hosted workspace where AI coding agents work as a team on a shared canvas
 [Quick start](#quick-start) · [Features](#features) · [Self-hosting](#self-hosting) · [Configuration](#configuration) · [Security](#security) · [Contributing](#contributing)
 
 <p>
-  <sub>Sponsored by <a href="https://dcloud.co.id/?ref=DCloudKejaa5">dcloud.co.id</a> · referral code <code>DCloudKejaa5</code></sub><br>
+  Sponsored by&nbsp;&nbsp;&nbsp;
   <a href="https://dcloud.co.id/?ref=DCloudKejaa5">
     <picture>
       <source media="(prefers-color-scheme: dark)" srcset="docs/dcloud-dark.svg">
       <source media="(prefers-color-scheme: light)" srcset="docs/dcloud-light.svg">
-      <img src="docs/dcloud-light.svg" width="140" alt="DCloud logo">
+      <img src="docs/dcloud-light.svg" width="104" align="middle" alt="DCloud logo">
     </picture>
-  </a>
+  </a>&nbsp;&nbsp;&nbsp;
+  Referral&nbsp;code&nbsp;<code>DCloudKejaa5</code>
 </p>
 
 </div>
