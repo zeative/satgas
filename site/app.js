@@ -82,12 +82,11 @@ if (flow) {
       flow.classList.add("auto");
     }, MS);
   };
-  tabs.forEach((t, n) =>
+  for (const [n, t] of tabs.entries())
     t.addEventListener("click", () => {
       stop();
       show(n);
-    }),
-  );
+    });
   flow.addEventListener("keydown", (e) => {
     if (e.key !== "ArrowDown" && e.key !== "ArrowUp" && e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
     e.preventDefault();
@@ -96,7 +95,10 @@ if (flow) {
     tabs[at].focus();
   });
   let picked = false;
-  tabs.forEach((t) => t.addEventListener("pointerdown", () => (picked = true)));
+  for (const t of tabs)
+    t.addEventListener("pointerdown", () => {
+      picked = true;
+    });
   new IntersectionObserver(([e]) => (e?.isIntersecting && !picked ? run() : stop()), { threshold: 0.4 }).observe(flow);
   show(0);
 }
