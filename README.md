@@ -17,8 +17,8 @@ A self-hosted workspace where AI coding agents work as a team on a shared canvas
 [Quick start](#quick-start) · [Features](#features) · [Self-hosting](#self-hosting) · [Configuration](#configuration) · [Security](#security) · [Contributing](#contributing)
 
 <p>
-  <sub>Sponsored by <a href="https://dcloud.co.id">dcloud.co.id</a></sub><br>
-  <a href="https://dcloud.co.id">
+  <sub>Sponsored by <a href="https://dcloud.co.id/?ref=DCloudKejaa5">dcloud.co.id</a> · referral code <code>DCloudKejaa5</code></sub><br>
+  <a href="https://dcloud.co.id/?ref=DCloudKejaa5">
     <picture>
       <source media="(prefers-color-scheme: dark)" srcset="docs/dcloud-dark.svg">
       <source media="(prefers-color-scheme: light)" srcset="docs/dcloud-light.svg">
