@@ -93,13 +93,16 @@ test("reports a newer release with its notes, and asks GitHub once while the ans
   expect(hits).toBe(2);
 });
 
+// The answer is stamped a moment after start, so the clock has to go past 15 minutes to be sure of crossing it.
+const PAST_TTL = 15 * 60_000 + 1000;
+
 test("asks GitHub again once the answer is 15 minutes old", async () => {
   const start = Date.now();
   await updateInfo();
   setSystemTime(new Date(start + 14 * 60_000));
   await updateInfo();
   expect(hits).toBe(1);
-  setSystemTime(new Date(start + 15 * 60_000));
+  setSystemTime(new Date(start + PAST_TTL));
   await updateInfo();
   expect(hits).toBe(2);
 });
@@ -113,7 +116,7 @@ test("a failed check keeps the release it already found, and tries again on the 
   status = 200;
   await updateInfo();
   expect(hits).toBe(2);
-  setSystemTime(new Date(start + 15 * 60_000));
+  setSystemTime(new Date(start + PAST_TTL));
   expect(await updateInfo()).toMatchObject({ check: "ok", latest: NEXT });
   expect(hits).toBe(3);
 });
