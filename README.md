@@ -175,7 +175,7 @@ SATGAS_DATA_DIR=/var/lib/satgas \
 
 ### With Docker
 
-The image includes Satgas, Claude Code, Codex, curl, git, ripgrep, Chromium with agent-browser, and tools for making documents. Everything runs as an unprivileged user. The container is the boundary here: Docker refuses what Codex's own sandbox needs, so the sandbox setting has no effect and a look-only Codex task is asked, not forced, to change nothing.
+The image includes Satgas, Claude Code, Codex, curl, git, ripgrep, Chromium with agent-browser, RTK, gitleaks, ast-grep, and tools for making documents. Everything runs as an unprivileged user. The container is the boundary here: Docker refuses what Codex's own sandbox needs, so the sandbox setting has no effect and a look-only Codex task is asked, not forced, to change nothing.
 
 ```sh
 cp .env.example .env        # on a server, set SATGAS_PUBLIC_URL and SATGAS_TOKEN
@@ -193,7 +193,7 @@ On Dokploy, the template sets everything up on a generated `http` domain. Find y
 
 Satgas tells you when a new version is out, with an **Update available** button in the sidebar and the release notes. Pressing it downloads the release, checks its SHA-256 and that it runs, then restarts in a moment. Boards and settings stay, and it waits for running agents to finish. You can turn the check off in **Configurations → Settings**.
 
-- **In Docker** the new version lives in the `satgas-data` volume, so no Docker socket is needed. Agents run inside this container and must never hold one. If a new version dies right after starting, the image's own takes over. The bundled Claude Code and Codex update when you pull a newer image.
+- **In Docker** the new version lives in the `satgas-data` volume, so no Docker socket is needed. Agents run inside this container and must never hold one. If a new version dies right after starting, the image's own takes over. The bundled programs, such as Claude Code, Codex and RTK, update when you pull a newer image.
 - **The binary** replaces itself, keeping the old one beside it as `satgas.prev`.
 - **From source**, run `git pull && bun install && bun run build`.
 

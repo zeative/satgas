@@ -43,6 +43,8 @@ jobs:
           docker exec satgas chromium --version
           docker exec satgas pandoc --version
           docker exec satgas python3 -c 'import pptx, docx, openpyxl, reportlab'
+          curl -fsS -H 'x-satgas-token: smoke' http://localhost:4317/api/tools/status | jq -e '.container and (.programs | .rtk and .gitleaks and ."ast-grep" and ."agent-browser")'
+          test "$(docker exec satgas sh -c 'rtk rewrite "git status" 2>/dev/null || true')" = "rtk git status"
           docker restart satgas
           for _ in $(seq 1 30); do curl -fsS -o /dev/null http://localhost:4317/ && break; sleep 2; done
           test "$(curl -s -o /dev/null -w '%{http_code}' -H 'x-satgas-token: smoke' http://localhost:4317/api/runs)" = 200

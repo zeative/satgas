@@ -24,6 +24,7 @@ const ti = t.integrations;
 
 interface ToolStatus {
   programs: Record<string, string | null>;
+  container?: boolean;
   rtk?: { saved: number; pct: number; commands: number };
 }
 
@@ -257,7 +258,11 @@ export function ToolDetail({ settings, id, onBack }: { settings: Settings; id: s
               ) : status ? (
                 <span className="flex flex-col gap-1">
                   {tt.notInstalled}
-                  {def.install && <CopyCommand command={def.install} />}
+                  {status.container ? (
+                    <span className="text-xs text-muted-foreground">{tt.newerImage}</span>
+                  ) : (
+                    def.install && <CopyCommand command={def.install} />
+                  )}
                 </span>
               ) : (
                 <code className="font-mono text-xs">{def.needs}</code>
@@ -280,7 +285,7 @@ export function ToolDetail({ settings, id, onBack }: { settings: Settings; id: s
           <RichText text={def.about[lang]} />
         </p>
       </DetailSection>
-      {def.needs && version === null && def.install && (
+      {def.needs && version === null && def.install && !status?.container && (
         <DetailSection title={tt.install}>
           <p className="text-sm text-muted-foreground">{tt.turnsOn}</p>
           <CopyCommand command={def.install} />

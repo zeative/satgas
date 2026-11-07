@@ -3,6 +3,7 @@ import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import { COMMIT_TRAILER, PR_FOOTER } from "../../shared/commits";
 import { resolveTool, TOOL_CATALOG, type Tool, type ToolWhen } from "../../shared/tools";
+import { config } from "../config";
 import { getSettings } from "../settings";
 
 // Tools that are on and can run here: a missing program leaves its tool off instead of failing every call.
@@ -107,6 +108,8 @@ export function describeTools(): string | null {
 export interface ToolStatus {
   // Each program a tool needs: its version, "installed" when it prints none, or null when it is missing.
   programs: Record<string, string | null>;
+  // Nobody can install a program inside the image, so a missing one comes with a newer image instead.
+  container: boolean;
   // RTK's own count across this machine, when it is installed.
   rtk?: { saved: number; pct: number; commands: number };
 }
@@ -144,13 +147,18 @@ export function toolStatus(refresh = false): Promise<ToolStatus> {
         programs[bin] = out.match(/\d+\.\d+(?:\.\d+)?/)?.[0] ?? "installed";
       }),
     );
-    if (!programs.rtk) return { programs };
+    const container = config.container;
+    if (!programs.rtk) return { programs, container };
     try {
       const s = JSON.parse((await output(["rtk", "gain", "--format", "json"])) ?? "{}").summary;
       if (typeof s?.total_saved === "number")
-        return { programs, rtk: { saved: s.total_saved, pct: Math.round(s.avg_savings_pct ?? 0), commands: s.total_commands ?? 0 } };
+        return {
+          programs,
+          container,
+          rtk: { saved: s.total_saved, pct: Math.round(s.avg_savings_pct ?? 0), commands: s.total_commands ?? 0 },
+        };
     } catch {}
-    return { programs };
+    return { programs, container };
   })();
   hot.__satgasToolStatus = { at: Date.now(), key, status };
   return status;
