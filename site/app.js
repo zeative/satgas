@@ -164,6 +164,14 @@ if (gsap && ST && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
 
   const mm = gsap.matchMedia();
   mm.add("(min-width: 961px)", () => {
+    // Each window rises a little inside its painting while the frame scrolls past; the frame itself never moves.
+    for (const win of document.querySelectorAll(".f-win"))
+      gsap.fromTo(
+        win,
+        { y: 64 },
+        { y: -16, ease: "none", scrollTrigger: { trigger: win.parentElement, start: "top bottom", end: "bottom top", scrub: true } },
+      );
+
     // How it works pins and the scroll walks the four steps, but only when the whole section fits the screen.
     const how = document.getElementById("how");
     if (how && flowCtl && how.offsetHeight < innerHeight) {

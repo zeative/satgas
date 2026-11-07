@@ -217,10 +217,7 @@
 
       <section id="how" class="how-sec" aria-labelledby="how-title">
         <div class="wrap">
-          <div class="head" data-reveal>
-            <h2 id="how-title">From one sentence to a working team</h2>
-            <p class="lede">Ask once. The lead plans, hires and runs the work, and you can step in at any point.</p>
-          </div>
+          <h2 class="say" id="how-title" data-reveal>From one sentence to a working team. <span>Ask once. The lead plans, hires and runs the work, and you can step in at any point.</span></h2>
           <div class="flow" data-flow>
             <div class="flow-list" role="tablist" aria-label="How Satgas works">
               <button class="flow-step on" role="tab" aria-selected="true" aria-controls="flow-ask" id="tab-ask" type="button">
@@ -245,7 +242,7 @@
               </button>
             </div>
 
-            <div class="flow-stage">
+            <div class="flow-stage art" style="--art: url(assets/bg/midnight-silk.jpg)">
               <div class="flow-panel on" role="tabpanel" id="flow-ask" aria-labelledby="tab-ask">
                 <div class="fp-ask">
                   <div class="fp-composer">
@@ -304,13 +301,19 @@
         </div>
       </section>
 
-      <section id="features" class="watch-sec" aria-labelledby="watch-title">
+      <section id="features" class="feat-sec" aria-labelledby="watch-title">
         <div class="wrap">
-          <div class="head" data-reveal>
-            <h2 id="watch-title">Nothing happens out of sight</h2>
-            <p class="lede">Every file an agent reads, every command it runs and every card it makes shows up the moment it happens.</p>
-          </div>
-          <div class="watch2" data-reveal>
+          <div class="frame" data-reveal>
+            <div class="f-copy">
+              <h2 class="say" id="watch-title">Nothing happens out of sight. <span>Every file an agent reads, every command it runs and every card it makes shows up the moment it happens.</span></h2>
+              <ul class="f-points">
+                <li><b>Talk while they work</b><span>Message mid-task and the lead answers at once, then passes it to whoever it changes.</span></li>
+                <li><b>Watch the page take shape</b><span>Live previews sit on the board, at desktop or phone width.</span></li>
+                <li><b>Undo any task</b><span>See what each one changed and take it back.</span></li>
+              </ul>
+            </div>
+            <div class="f-art" style="--art: url(assets/bg/fluted-warm.jpg)"><div class="f-win">
+            <div class="watch2">
             <div class="w-feed">
               <div class="w-head"><img width="20" height="20" src="assets/faces/sinta.svg" alt="" style="background: oklch(0.88 0.05 330)" /><b>Sinta</b><span>Build the landing page</span><span class="spin on" aria-hidden="true"></span></div>
               <div class="rows">
@@ -343,21 +346,20 @@
                         </ol>
                       </div></div></div>
           </div>
-          <div class="w-points">
-            <div data-reveal><b>Talk while they work</b><span>Message mid-task and the lead answers at once, then passes it to whoever it changes.</span></div>
-            <div data-reveal><b>Watch the page take shape</b><span>Live previews sit on the board, at desktop or phone width.</span></div>
-            <div data-reveal><b>Undo any task</b><span>See what each one changed and take it back.</span></div>
+            </div></div>
           </div>
         </div>
       </section>
 
-      <section class="board-sec" aria-labelledby="board-title">
+      <section class="feat-sec" aria-labelledby="board-title">
         <div class="wrap">
-          <div class="head" data-reveal>
-            <h2 id="board-title">The work lands where you can use it</h2>
-            <p class="lede">Results are cards on a canvas, not a wall of chat. Move them, edit them, connect them, and ask the team to build on them.</p>
-          </div>
-          <div class="board" data-reveal><div class="b-row">
+          <div class="frame flip" data-reveal>
+            <div class="f-copy">
+              <h2 class="say" id="board-title">The work lands where you can use it. <span>Results are cards on a canvas, not a wall of chat. Move them, edit them, connect them, and ask the team to build on them.</span></h2>
+              <p class="kinds">Notes, docs, tables, code, images, live page previews, checklists and buttons, pull request status, frames, shapes and drawing</p>
+            </div>
+            <div class="f-art" style="--art: url(assets/bg/ember-flow.jpg)"><div class="f-win">
+            <div class="board"><div class="b-row">
             <div class="card doc">
               <span class="by"><img width="14" height="14" src="assets/faces/raka.svg" alt="" />Raka · Launch brief</span>
               <h5>Launch brief</h5>
@@ -404,20 +406,17 @@
               <p class="quiet" style="font-size: 12px">Send the email to the waitlist when the page is live. <span class="muted">Waits for your Allow</span></p>
             </div>
           </div></div>
-          <p class="kinds">Notes, docs, tables, code, images, live page previews, checklists and buttons, pull request status, frames, shapes and drawing</p>
+            </div></div>
+          </div>
         </div>
       </section>
 
       <section class="eng-sec" aria-labelledby="eng-title">
         <div class="wrap">
-          <div class="head" data-reveal>
-            <h2 id="eng-title">Real files, in a real folder</h2>
-            <p class="lede">The agents are the real Claude Code and Codex CLIs, running where you run Satgas. What they make is ordinary files you own.</p>
-          </div>
-          <div class="eng-list">
-            <article class="eng-item" data-reveal>
-              <div class="eng-copy"><h3>See every change, take back any</h3><p>Every task's changes are kept, with a diff you can read and an undo. This history is Satgas's own and never touches your git.</p></div>
-              <div class="diff">
+          <h2 class="say" id="eng-title" data-reveal>Real files, in a real folder. <span>The agents are the real Claude Code and Codex CLIs, running where you run Satgas. What they make is ordinary files you own.</span></h2>
+          <div class="trio">
+            <div class="cell" data-reveal>
+              <div class="cell-vis"><div class="diff">
                 <div class="fname"><span>launch-email.md</span><span><span class="plus">+3</span> <span class="minus">−2</span></span></div>
                 <div class="l ctx">Subject: Your first bag ships Friday</div>
                 <div class="l del">We are excited to announce our new subscription.</div>
@@ -425,84 +424,86 @@
                 <div class="l del">Plans start at a great price.</div>
                 <div class="l add">Plans start at Rp 89.000 for 200 g a month,</div>
                 <div class="l add">and you can skip any month for free.</div>
-              </div>
-            </article>
-            <article class="eng-item" data-reveal>
-              <div class="eng-copy"><h3>Isolated changes</h3><p>When several tasks write to a clean repository, each gets its own git worktree and merges back as commits. A conflict fails only that task and keeps its branch.</p></div>
-              <svg class="graph" viewBox="0 0 420 150" role="img" aria-label="Two task branches leaving main and merging back">
+              </div></div>
+              <h3>See every change, take back any</h3><p>Every task's changes are kept, with a diff you can read and an undo. This history is Satgas's own and never touches your git.</p>
+            </div>
+            <div class="cell" data-reveal>
+              <div class="cell-vis"><svg class="graph" viewBox="0 0 420 150" role="img" aria-label="Two task branches leaving main and merging back">
                 <path class="g-main" d="M20 75 H400" />
                 <path class="g-br" d="M70 75 C110 75 110 30 150 30 H250 C290 30 290 75 330 75" />
                 <path class="g-br" d="M100 75 C140 75 140 120 180 120 H270 C310 120 310 75 350 75" />
                 <circle class="g-dot main" cx="20" cy="75" r="6" /><circle class="g-dot" cx="200" cy="30" r="5" /><circle class="g-dot" cx="225" cy="120" r="5" /><circle class="g-dot main" cx="330" cy="75" r="6" /><circle class="g-dot main" cx="350" cy="75" r="6" /><circle class="g-dot main" cx="400" cy="75" r="6" />
                 <text x="160" y="18">raka/launch-email</text><text x="190" y="144">sinta/waitlist-form</text><text x="20" y="100">main</text>
-              </svg>
-            </article>
-            <article class="eng-item" data-reveal>
-              <div class="eng-copy"><h3>Pull request watch</h3><p>Link a pull request and the team fixes what reviewers ask for, up to three rounds.</p></div>
-              <ol class="pr-time">
+              </svg></div>
+              <h3>Isolated changes</h3><p>When several tasks write to a clean repository, each gets its own git worktree and merges back as commits. A conflict fails only that task and keeps its branch.</p>
+            </div>
+            <div class="cell" data-reveal>
+              <div class="cell-vis"><ol class="pr-time">
                 <li><svg class="i"><use href="#i-pr" /></svg><span><b>#42 Add the waitlist form</b> opened</span></li>
                 <li><svg class="i"><use href="#i-chat" /></svg><span>Review: the email field needs a label</span></li>
                 <li class="fix"><img width="20" height="20" src="assets/faces/sinta.svg" alt="" style="background: oklch(0.88 0.05 330)" /><span><b>Sinta</b> added the label and pushed</span></li>
                 <li class="ok"><svg class="i"><use href="#i-check" /></svg><span>Checks passing, ready to merge</span></li>
-              </ol>
-            </article>
+              </ol></div>
+              <h3>Pull request watch</h3><p>Link a pull request and the team fixes what reviewers ask for, up to three rounds.</p>
+            </div>
           </div>
         </div>
       </section>
 
       <section class="int-sec" aria-labelledby="int-title">
         <div class="wrap">
-          <div class="head" data-reveal>
-            <h2 id="int-title">Plugs into what you already use</h2>
-            <p class="lede">39 one-click connectors, or any MCP server of your own. Add skills from GitHub, and tools that guard and tidy each agent's work.</p>
+          <div class="frame" data-reveal>
+            <div class="f-copy">
+              <h2 class="say" id="int-title">Plugs into what you already use. <span>39 one-click connectors, or any MCP server of your own. Add skills from GitHub, and tools that guard and tidy each agent's work.</span></h2>
+            </div>
+            <div class="f-chips" aria-label="Some of the connectors">
+              <div class="chip-row"><div class="chip-run"><span class="chip-l"><img width="20" height="20" src="assets/brands/github.png" alt="" />GitHub</span><span class="chip-l"><img width="20" height="20" src="assets/brands/notion.png" alt="" />Notion</span><span class="chip-l"><img width="20" height="20" src="assets/brands/linear.png" alt="" />Linear</span><span class="chip-l"><img width="20" height="20" src="assets/brands/vercel.png" alt="" />Vercel</span><span class="chip-l"><img width="20" height="20" src="assets/brands/supabase.png" alt="" />Supabase</span><span class="chip-l"><img width="20" height="20" src="assets/brands/sentry.png" alt="" />Sentry</span><span class="chip-l"><img width="20" height="20" src="assets/brands/gitlab.png" alt="" />GitLab</span><span class="chip-l" aria-hidden="true"><img width="20" height="20" src="assets/brands/github.png" alt="" />GitHub</span><span class="chip-l" aria-hidden="true"><img width="20" height="20" src="assets/brands/notion.png" alt="" />Notion</span><span class="chip-l" aria-hidden="true"><img width="20" height="20" src="assets/brands/linear.png" alt="" />Linear</span><span class="chip-l" aria-hidden="true"><img width="20" height="20" src="assets/brands/vercel.png" alt="" />Vercel</span><span class="chip-l" aria-hidden="true"><img width="20" height="20" src="assets/brands/supabase.png" alt="" />Supabase</span><span class="chip-l" aria-hidden="true"><img width="20" height="20" src="assets/brands/sentry.png" alt="" />Sentry</span><span class="chip-l" aria-hidden="true"><img width="20" height="20" src="assets/brands/gitlab.png" alt="" />GitLab</span></div></div>
+              <div class="chip-row rev"><div class="chip-run"><span class="chip-l"><img width="20" height="20" src="assets/brands/zapier.png" alt="" />Zapier</span><span class="chip-l"><img width="20" height="20" src="assets/brands/plane.png" alt="" />Plane</span><span class="chip-l"><img width="20" height="20" src="assets/brands/posthog.png" alt="" />PostHog</span><span class="chip-l"><img width="20" height="20" src="assets/brands/cloudflare.jpg" alt="" />Cloudflare</span><span class="chip-l"><img width="20" height="20" src="assets/brands/neon.png" alt="" />Neon</span><span class="chip-l"><img width="20" height="20" src="assets/brands/airtable.png" alt="" />Airtable</span><span class="chip-l"><img width="20" height="20" src="assets/brands/repliz.png" alt="" />Repliz</span><span class="chip-l" aria-hidden="true"><img width="20" height="20" src="assets/brands/zapier.png" alt="" />Zapier</span><span class="chip-l" aria-hidden="true"><img width="20" height="20" src="assets/brands/plane.png" alt="" />Plane</span><span class="chip-l" aria-hidden="true"><img width="20" height="20" src="assets/brands/posthog.png" alt="" />PostHog</span><span class="chip-l" aria-hidden="true"><img width="20" height="20" src="assets/brands/cloudflare.jpg" alt="" />Cloudflare</span><span class="chip-l" aria-hidden="true"><img width="20" height="20" src="assets/brands/neon.png" alt="" />Neon</span><span class="chip-l" aria-hidden="true"><img width="20" height="20" src="assets/brands/airtable.png" alt="" />Airtable</span><span class="chip-l" aria-hidden="true"><img width="20" height="20" src="assets/brands/repliz.png" alt="" />Repliz</span></div></div>
+              <div class="chip-row"><div class="chip-run"><span class="chip-l"><img width="20" height="20" src="assets/brands/vercel.png" alt="" />Vercel</span><span class="chip-l"><img width="20" height="20" src="assets/brands/supabase.png" alt="" />Supabase</span><span class="chip-l"><img width="20" height="20" src="assets/brands/sentry.png" alt="" />Sentry</span><span class="chip-l"><img width="20" height="20" src="assets/brands/gitlab.png" alt="" />GitLab</span><span class="chip-l"><img width="20" height="20" src="assets/brands/zapier.png" alt="" />Zapier</span><span class="chip-l"><img width="20" height="20" src="assets/brands/plane.png" alt="" />Plane</span><span class="chip-l"><img width="20" height="20" src="assets/brands/posthog.png" alt="" />PostHog</span><span class="chip-l"><img width="20" height="20" src="assets/brands/cloudflare.jpg" alt="" />Cloudflare</span><span class="chip-l" aria-hidden="true"><img width="20" height="20" src="assets/brands/vercel.png" alt="" />Vercel</span><span class="chip-l" aria-hidden="true"><img width="20" height="20" src="assets/brands/supabase.png" alt="" />Supabase</span><span class="chip-l" aria-hidden="true"><img width="20" height="20" src="assets/brands/sentry.png" alt="" />Sentry</span><span class="chip-l" aria-hidden="true"><img width="20" height="20" src="assets/brands/gitlab.png" alt="" />GitLab</span><span class="chip-l" aria-hidden="true"><img width="20" height="20" src="assets/brands/zapier.png" alt="" />Zapier</span><span class="chip-l" aria-hidden="true"><img width="20" height="20" src="assets/brands/plane.png" alt="" />Plane</span><span class="chip-l" aria-hidden="true"><img width="20" height="20" src="assets/brands/posthog.png" alt="" />PostHog</span><span class="chip-l" aria-hidden="true"><img width="20" height="20" src="assets/brands/cloudflare.jpg" alt="" />Cloudflare</span></div></div>
+            </div>
           </div>
-          <ul class="logos" data-reveal><li><img width="28" height="28" src="assets/brands/github.png" alt="" />GitHub</li><li><img width="28" height="28" src="assets/brands/notion.png" alt="" />Notion</li><li><img width="28" height="28" src="assets/brands/linear.png" alt="" />Linear</li><li><img width="28" height="28" src="assets/brands/vercel.png" alt="" />Vercel</li><li><img width="28" height="28" src="assets/brands/supabase.png" alt="" />Supabase</li><li><img width="28" height="28" src="assets/brands/sentry.png" alt="" />Sentry</li><li><img width="28" height="28" src="assets/brands/gitlab.png" alt="" />GitLab</li><li><img width="28" height="28" src="assets/brands/zapier.png" alt="" />Zapier</li><li><img width="28" height="28" src="assets/brands/plane.png" alt="" />Plane</li><li><img width="28" height="28" src="assets/brands/posthog.png" alt="" />PostHog</li><li><img width="28" height="28" src="assets/brands/cloudflare.jpg" alt="" />Cloudflare</li><li><img width="28" height="28" src="assets/brands/neon.png" alt="" />Neon</li><li><img width="28" height="28" src="assets/brands/airtable.png" alt="" />Airtable</li><li><img width="28" height="28" src="assets/brands/repliz.png" alt="" />Repliz</li></ul>
-          <div class="int-more">
-            <div data-reveal>
+          <div class="trio two">
+            <div class="cell" data-reveal>
               <h3>On a schedule, or when something happens</h3>
               <div class="sched">
                 <div class="sched-row"><svg class="i" aria-hidden="true"><use href="#i-clock" /></svg>Summarise yesterday's waitlist signups<span class="when">Weekdays 09:00</span></div>
                 <div class="sched-row"><svg class="i" aria-hidden="true"><use href="#i-hook" /></svg>Look into the new error and open a fix<span class="when">When Sentry calls</span></div>
               </div>
             </div>
-            <div data-reveal>
+            <div class="cell" data-reveal>
               <h3>From your phone</h3>
-              <p class="quiet">Message the team from Telegram or WhatsApp and the lead picks it up like any request. Experimental.</p>
+              <p>Message the team from Telegram or WhatsApp and the lead picks it up like any request. Experimental.</p>
               <div class="channel-logos"><img width="24" height="24" src="assets/brands/telegram.svg" alt="Telegram" /><img width="24" height="24" src="assets/brands/whatsapp.svg" alt="WhatsApp" /></div>
             </div>
           </div>
         </div>
       </section>
 
-      <section id="self-host" class="self-sec" aria-labelledby="self-title">
+      <section id="self-host" class="feat-sec" aria-labelledby="self-title">
         <div class="wrap">
-          <div class="head" data-reveal>
-            <h2 id="self-title">Yours to run</h2>
-            <p class="lede">Open source under AGPL-3.0. It runs on your laptop or your server, with your own model sign-in or keys, and everything stays on that machine.</p>
-          </div>
-          <div class="self">
-          <div class="term2" data-reveal>
+          <div class="frame flip" data-reveal>
+            <div class="f-copy">
+              <h2 class="say" id="self-title">Yours to run. <span>Open source under AGPL-3.0. It runs on your laptop or your server, with your own model sign-in or keys, and everything stays on that machine.</span></h2>
+              <div class="ways2">
+                <div><b>Docker</b><span><code>docker compose up -d</code>, with Claude Code, Codex and a browser inside</span></div><div><b>Dokploy</b><span>A template that sets up the service and its sign-in</span></div><div><b>One binary</b><span><code>bun run build</code>, then run <code>dist/satgas</code></span></div>
+              </div>
+            </div>
+            <div class="f-art" style="--art: url(assets/bg/rust-grain.jpg)"><div class="f-win">
+            <div class="term2">
             <div class="bar"><i></i><i></i><i></i><span>~/satgas</span><button class="copy-btn" type="button" data-copy="git clone https://github.com/zeative/satgas.git&#10;cd satgas&#10;bun install&#10;bun run dev"><svg class="i" aria-hidden="true"><use href="#i-copy" /></svg><span>Copy</span></button></div>
             <pre><span data-type><span class="p">$ </span>git clone https://github.com/zeative/satgas.git</span>
 <span data-type><span class="p">$ </span>cd satgas &amp;&amp; bun install</span>
 <span data-type><span class="p">$ </span>bun run dev</span>
 <span data-type class="c">  Satgas is running. Open the sign-in link it printed, once.</span></pre>
           </div>
-          <div class="ways2">
-            <div data-reveal><b>Docker</b><span><code>docker compose up -d</code>, with Claude Code, Codex and a browser inside</span></div>
-            <div data-reveal><b>Dokploy</b><span>A template that sets up the service and its sign-in</span></div>
-            <div data-reveal><b>One binary</b><span><code>bun run build</code>, then run <code>dist/satgas</code></span></div>
-          </div>
+            </div></div>
           </div>
         </div>
       </section>
 
       <section id="cloud" class="cloud-sec" aria-labelledby="cloud-title">
         <div class="wrap">
-          <div class="head" data-reveal>
-            <h2 id="cloud-title">Free to run yourself. Hosted, soon</h2>
-            <p class="lede">The same Satgas either way. Satgas Cloud will run your workspace for you, on its own machine, never shared.</p>
-          </div>
+          <h2 class="say" id="cloud-title" data-reveal>Free to run yourself. Hosted, soon. <span>The same Satgas either way. Satgas Cloud will run your workspace for you, on its own machine, never shared.</span></h2>
           <div class="plans" data-reveal>
             <div class="plan">
               <div class="name">Open source</div>

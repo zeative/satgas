@@ -2315,3 +2315,219 @@ footer .sponsor img {
     transition: none;
   }
 }
+
+/* Statements: the point in white, the explanation in grey, one sentence run. */
+.say {
+  max-width: 880px;
+  margin: 0 0 40px;
+  font: 500 clamp(26px, 3vw, 36px) / 1.22 var(--brand);
+  letter-spacing: -0.02em;
+  color: var(--t1);
+}
+.say span {
+  color: var(--t3);
+}
+
+/* A frame: words on one side, the product sitting on a painting on the other, cropped by the frame. */
+.frame {
+  display: grid;
+  grid-template-columns: minmax(0, 4fr) minmax(0, 8fr);
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: #111112;
+}
+.frame.flip {
+  grid-template-columns: minmax(0, 8fr) minmax(0, 4fr);
+}
+.frame.flip .f-copy {
+  order: 2;
+}
+.f-copy {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 32px;
+  padding: 28px 20px 20px;
+}
+.f-copy .say {
+  margin: 0;
+  font-size: clamp(22px, 2.2vw, 28px);
+}
+.f-art {
+  position: relative;
+  min-height: 560px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--art) center / cover;
+}
+.f-win {
+  position: absolute;
+  top: 56px;
+  left: 56px;
+  width: 960px;
+  border-radius: 12px;
+  box-shadow: 0 30px 80px rgb(0 0 0 / 0.5);
+}
+.f-win > * {
+  background: var(--s1);
+}
+.f-points {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.f-points li {
+  display: grid;
+  gap: 4px;
+  padding-block: 14px;
+  border-top: 1px solid var(--line);
+  font-size: 14px;
+}
+.f-points b {
+  font-weight: 500;
+}
+.f-points span,
+.kinds {
+  color: var(--t3);
+  font-size: 14px;
+  line-height: 1.55;
+}
+.flow-stage.art {
+  background: var(--art) center / cover;
+}
+
+/* Three proofs side by side, split by hairlines. */
+.trio {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-block: 1px solid var(--line);
+}
+.trio.two {
+  margin-top: 40px;
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+}
+.cell {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  padding: 32px 28px;
+  min-width: 0;
+}
+.cell + .cell {
+  border-left: 1px solid var(--line);
+}
+.cell:first-child {
+  padding-left: 0;
+}
+.cell:last-child {
+  padding-right: 0;
+}
+.cell-vis {
+  height: 220px;
+  margin-bottom: 20px;
+  display: grid;
+  align-items: center;
+  min-width: 0;
+}
+.cell-vis .diff {
+  font-size: 11px;
+}
+.cell h3 {
+  font-size: 16px;
+  font-weight: 500;
+}
+.cell p {
+  color: var(--t3);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+/* Connectors as chips drifting in rows, alternate rows the other way. */
+.f-chips {
+  display: grid;
+  align-content: center;
+  gap: 12px;
+  min-height: 320px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--s1);
+  mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+}
+.chip-row {
+  overflow: hidden;
+}
+.chip-run {
+  display: flex;
+  gap: 12px;
+  width: max-content;
+  animation: mq 36s linear infinite;
+}
+.chip-row.rev .chip-run {
+  animation-direction: reverse;
+  animation-duration: 44s;
+}
+.chip-l {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  height: 48px;
+  padding: 0 18px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--s2);
+  font-size: 14px;
+  color: var(--t2);
+  white-space: nowrap;
+}
+.chip-l img {
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  object-fit: contain;
+}
+.ways2 div {
+  padding-block: 14px;
+}
+.ways2 b {
+  font-size: 14px;
+}
+.ways2 span {
+  font-size: 13px;
+  color: var(--t3);
+}
+@media (max-width: 960px) {
+  .frame,
+  .frame.flip,
+  .trio,
+  .trio.two {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .frame.flip .f-copy {
+    order: 0;
+  }
+  .f-art {
+    min-height: 0;
+    padding: 24px 0 0 20px;
+  }
+  .f-win {
+    position: relative;
+    inset: auto;
+    width: 760px;
+  }
+  .cell,
+  .cell:first-child,
+  .cell:last-child {
+    padding: 28px 0;
+  }
+  .cell + .cell {
+    border-left: 0;
+    border-top: 1px solid var(--line);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .chip-run {
+    animation: none;
+  }
+}
