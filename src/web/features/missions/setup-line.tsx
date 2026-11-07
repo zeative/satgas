@@ -1,4 +1,4 @@
-import { KeyRound, Settings2, ShieldAlert } from "lucide-react";
+import { Settings2, ShieldAlert } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,7 @@ import { t } from "@/i18n";
 import { cn } from "@/lib/utils";
 import { decideSetup, setupConnected, undoSetup } from "@/stores/runs";
 import { loadSettings, useSettings } from "@/stores/settings";
-import { byId, catalogOf } from "../../../shared/catalog";
+import { byId, type CatalogItem, catalogOf } from "../../../shared/catalog";
 import type { SetupCommand, SetupRecord } from "../../../shared/setup";
 import { toolDef } from "../../../shared/tools";
 
@@ -141,6 +141,17 @@ export function SetupLine({ runId, round, rec }: { runId: string; round: number;
   );
 }
 
+// The connector's own logo at icon size, so each row says which service it waits for at a glance.
+function ConnectorMark({ logo }: { logo: CatalogItem["logo"] }) {
+  const mark = cn("size-4 shrink-0 object-contain", logo.icon && "rounded-[4px] object-cover");
+  return (
+    <>
+      <img src={logo.src} alt="" draggable={false} className={cn(mark, logo.dark && "dark:hidden")} />
+      {logo.dark && <img src={logo.dark} alt="" draggable={false} className={cn(mark, "hidden dark:block")} />}
+    </>
+  );
+}
+
 function KeyRows({ ids, runId, round }: { ids: string[]; runId: string; round: number }) {
   const settings = useSettings((s) => s.settings);
   if (!settings) return null;
@@ -171,7 +182,7 @@ function KeyRowsFor({
         if (!item) return null;
         return (
           <p key={id} className="flex items-center gap-2 rounded-xl border px-3 py-2">
-            <KeyRound className="size-3.5 shrink-0" aria-hidden="true" />
+            <ConnectorMark logo={item.logo} />
             <span className="min-w-0 flex-1 text-foreground">{ts.needsKey(item.name)}</span>
             {connected.has(id) ? (
               <span className="shrink-0">{ts.keyAdded}</span>
