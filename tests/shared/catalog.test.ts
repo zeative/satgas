@@ -29,7 +29,6 @@ describe("connector catalog", () => {
     for (const c of CATALOG) {
       expect(c.features.length).toBeGreaterThan(0);
       for (const f of c.features) expect([f.title.en, f.title.id, f.text.en, f.text.id].every(Boolean)).toBe(true);
-      expect(c.tools.length).toBeGreaterThan(0);
       expect(new Set(c.tools).size).toBe(c.tools.length);
       expect(c.added).toMatch(/^\d{4}-\d{2}$/);
       for (const url of [c.site, c.docs, c.support, c.privacy]) if (url) expect(url).toStartWith("https://");
@@ -48,6 +47,19 @@ describe("connector catalog", () => {
     if (!github || !c7) throw new Error("missing entries");
     expect(toServer(github, { Authorization: " ghp_x " }, "a").headers).toEqual({ Authorization: "Bearer ghp_x" });
     expect(toServer(c7, { CONTEXT7_API_KEY: "c7_x" }, "b").headers).toEqual({ CONTEXT7_API_KEY: "c7_x" });
+  });
+
+  test("a connector with two keys sends each under its own header", () => {
+    const repliz = byId.get("repliz");
+    if (!repliz) throw new Error("missing entry");
+    expect(toServer(repliz, { "X-Repliz-Access-Key": "a", "X-Repliz-Secret-Key": "s" }, "r").headers).toEqual({
+      "X-Repliz-Access-Key": "a",
+      "X-Repliz-Secret-Key": "s",
+    });
+  });
+
+  test("every short description fits a card on one line", () => {
+    for (const c of CATALOG) for (const text of [c.desc.en, c.desc.id]) expect(text.length).toBeLessThanOrEqual(50);
   });
 
   test("an optional secret left empty is simply omitted", () => {
@@ -74,12 +86,12 @@ describe("connector catalog", () => {
   test("an installed connector no longer in the catalog stays as a custom one", () => {
     const old = {
       id: "n",
-      name: "notion",
-      catalogId: "notion",
+      name: "playwright",
+      catalogId: "playwright",
       enabled: true,
       transport: "stdio" as const,
       command: "npx",
-      args: ["-y", "@notionhq/notion-mcp-server"],
+      args: ["-y", "@playwright/mcp"],
     };
     expect(catalogOf(old)).toBeUndefined();
     expect(typeof sanitizeSettings({ ...base, mcpServers: [old] }, base)).not.toBe("string");

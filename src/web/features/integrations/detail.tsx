@@ -76,7 +76,7 @@ export function ExternalText({ href, children }: { href: string; children: React
   );
 }
 
-export function DetailSection({ title, count, children }: { title: string; count?: number; children: React.ReactNode }) {
+export function DetailSection({ title, count, children }: { title: string; count?: number | string; children: React.ReactNode }) {
   return (
     <section className="flex flex-col gap-3">
       <h2 className="flex items-center gap-2 text-sm font-medium">

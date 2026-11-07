@@ -93,7 +93,7 @@ flowchart LR
 **Set up your way**
 
 - **Model providers.** Pick one model in the composer, and the lead and every task run on it. Claude Code serves your Claude sign-in or subscription token, the Anthropic API, DeepSeek, Qwen, Z.ai, OpenRouter and Ollama. Codex serves your Codex sign-in, the OpenAI API, Groq and LM Studio, though connectors may not reach models on Groq and LM Studio.
-- **Connectors.** One-click GitHub, Context7, Zapi and Monveo, or any MCP server of your own.
+- **Connectors.** One-click GitHub, GitLab, Notion, Linear, Vercel, Supabase, Sentry, Zapier, Repliz and dozens more, or any MCP server of your own.
 - **Skills.** Add them from a GitHub repository, a `.zip` or your own `SKILL.md`. Built-ins cover engineering practice, security audits and interface design.
 - **Tools.** Programs around each agent's work, such as a command guard, auto-format, gitleaks, RTK and agent-browser.
 - **Usage.** Tokens, estimated API cost, plan limits and disk use in one place.

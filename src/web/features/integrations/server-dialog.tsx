@@ -108,7 +108,7 @@ export function ServerDialog({ server, onClose, onSave }: DialogProps) {
                     transport === v && "bg-background text-foreground shadow-xs",
                   )}
                 >
-                  {v === "stdio" ? ti.local : `${ti.remote} · ${ti.claudeOnly}`}
+                  {v === "stdio" ? ti.local : ti.remote}
                 </button>
               ))}
             </div>

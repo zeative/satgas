@@ -43,7 +43,7 @@ function LogoTile({ item }: { item?: CatalogItem }) {
   return <Tile logo={item?.logo} fallback={<Server className="size-5 text-muted-foreground" aria-hidden="true" />} />;
 }
 
-export type Setup = "all" | "nokey" | "key" | "every" | "claude";
+export type Setup = "all" | "nokey" | "key";
 export interface Filter {
   category: Category | null;
   setup: Setup;
@@ -55,8 +55,6 @@ export const SETUP_TEST: Record<Setup, (c: CatalogItem) => boolean> = {
   all: () => true,
   nokey: (c) => !needsKey(c),
   key: needsKey,
-  every: (c) => c.server.transport === "stdio",
-  claude: (c) => c.server.transport === "http",
 };
 
 export const applyFilter = (items: CatalogItem[], f: Filter) =>
@@ -269,7 +267,7 @@ export function Yours({ settings, query, onDiscover, onCustom, onEdit, onOpen }:
                       {ti.signInAgain}
                     </button>
                   ) : (
-                    <p className="text-xs text-muted-foreground">{s.transport === "http" ? `${ti.remote} · ${ti.claudeOnly}` : ti.local}</p>
+                    <p className="text-xs text-muted-foreground">{s.transport === "http" ? ti.remote : ti.local}</p>
                   )}
                 </div>
                 <div className="relative z-10 flex shrink-0 items-center gap-1">
@@ -704,7 +702,6 @@ export function ConnectorDetail({ settings, id, onBack }: { settings: Settings; 
               <code className="font-mono text-xs">{runs}</code>
             </Fact>
             <Fact label={ti.addedOn}>{monthOf(item.added)}</Fact>
-            <Fact label={ti.worksWith}>{item.server.transport === "http" ? ti.worksClaude : ti.worksEvery}</Fact>
             <Fact label={ti.moreInfo}>
               <span className="flex flex-col items-start gap-1">
                 <ExternalText href={item.docs}>{ti.documentation}</ExternalText>
@@ -742,9 +739,11 @@ export function ConnectorDetail({ settings, id, onBack }: { settings: Settings; 
             </ul>
           </DetailSection>
         )}
-        <DetailSection title={ti.toolsLabel} count={item.tools.length}>
-          <ToolChips tools={item.tools} />
-        </DetailSection>
+        {item.tools.length > 0 && (
+          <DetailSection title={ti.toolsLabel} count={`${item.tools.length}${item.moreTools ? "+" : ""}`}>
+            <ToolChips tools={item.tools} />
+          </DetailSection>
+        )}
       </DetailPage>
       {dialog}
       <ConfirmDialog

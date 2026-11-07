@@ -40,7 +40,7 @@ test("describes the agents, puts installed connectors first with what they cover
   const text = describeSystem();
   expect(text).toContain("- Claude Code: on");
   expect(text).toContain("- Codex: off");
-  expect(text).toContain("- github (GitHub): Repositories, issues, pull requests and Actions runs");
+  expect(text).toContain("- github (GitHub): Repos, issues, pull requests and Actions");
   expect(text).toContain("- mine: a custom connector");
   expect(text).not.toContain("- off");
   expect(text).toMatch(/Connectors in the catalog but not installed[^\n]*context7/);

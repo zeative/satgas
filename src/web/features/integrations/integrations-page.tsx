@@ -296,13 +296,11 @@ export function IntegrationsPage() {
 }
 
 const SKELETONS = ["a", "b", "c", "d"];
-const SETUPS: Setup[] = ["all", "nokey", "key", "every", "claude"];
+const SETUPS: Setup[] = ["all", "nokey", "key"];
 const SETUP_LABEL: Record<Setup, string> = {
   all: ti.setupAll,
   nokey: ti.noKey,
   key: ti.withKey,
-  every: ti.everyAgent,
-  claude: ti.worksClaude,
 };
 
 // Categories and setup needs, with counts; the chosen row carries the check, like a store filter.
