@@ -11,28 +11,10 @@ import { describeTools } from "./tools";
 // the agents and models, the connectors the person installed (with what each covers), skills and command-line tools.
 // Never carries a secret: keys, headers and env values stay out.
 
-// Command-line tools worth naming, with what each reaches. They are the fallback: a connector the person installed
-// for the same job comes first.
+// Local command-line tools worth naming. The ones that reach outside accounts are left out: those go through connectors.
 const CLIS: Record<string, string> = {
-  gh: "GitHub",
-  glab: "GitLab",
   git: "git",
   docker: "Docker",
-  kubectl: "Kubernetes",
-  vercel: "Vercel",
-  netlify: "Netlify",
-  wrangler: "Cloudflare",
-  flyctl: "Fly.io",
-  railway: "Railway",
-  supabase: "Supabase",
-  firebase: "Firebase",
-  heroku: "Heroku",
-  doctl: "DigitalOcean",
-  aws: "AWS",
-  gcloud: "Google Cloud",
-  az: "Azure",
-  terraform: "Terraform",
-  stripe: "Stripe",
   node: "Node.js",
   bun: "Bun",
   deno: "Deno",
@@ -105,14 +87,15 @@ export function describeSystem(): string {
     "The Satgas you run in, as the person set it up in Integrations (Connectors, Providers, Skills and Tools tabs):",
     `Agents:\n- ${claudeLine}\n- ${codexLine}`,
     connectors.length
-      ? `Connectors the person installed for agents to use; for their area they come first, before any command-line tool. Their tools carry the connector's name (mcp__github__… in Claude Code, mcp__satgas_github__… in Codex):\n${connectors.join("\n")}`
+      ? `Connectors the person installed for agents to use. Their tools carry the connector's name (mcp__github__… in Claude Code, mcp__satgas_github__… in Codex):\n${connectors.join("\n")}`
       : "Connectors: none installed.",
+    "The person's outside accounts and services (GitHub, Vercel, cloud accounts and the like) are reached only through connectors. With no connector for one, it cannot be used until the person connects it, whatever is signed in on this machine.",
     off.length && `Connectors set up but switched off: ${off.join(", ")}`,
     more.length && `Connectors in the catalog but not installed, by id (recommend one when it would clearly help): ${more.join(", ")}`,
     skills.length && `Skills:\n${skills.join("\n")}`,
     describeTools(),
     `Tool ids: ${TOOL_CATALOG.map((d) => `${d.id} (${d.name}, ${getSettings().tools.some((x) => x.catalogId === d.id && x.enabled) ? "on" : "off"})`).join(", ")}`,
-    tools.length && `Command-line tools on PATH, the fallback when no connector covers the job or one fails: ${tools.join(", ")}`,
+    tools.length && `Local command-line tools on PATH: ${tools.join(", ")}`,
     "</satgas_system>",
   ]
     .filter(Boolean)

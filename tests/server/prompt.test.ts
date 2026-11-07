@@ -39,6 +39,8 @@ test("the shared working rules carry the system overview, and point at the satga
   );
   expect(workingRules(false)).not.toContain("satgas-skills:satgas");
   expect(workingRules(false)).toContain("use the connector first");
+  expect(workingRules(false)).toContain("reached only through connectors");
+  expect(workingRules(false)).not.toContain("fallback");
   expect(workingRules(false)).toContain("```satgas:table <title>```");
 });
 

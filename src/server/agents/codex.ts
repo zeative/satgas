@@ -63,7 +63,20 @@ export function codexArgs(
   // Containers refuse the namespaces Codex's sandbox needs, so every command would fail there; the container is the boundary.
   // The lead runs no commands, so its read-only sandbox never comes into play.
   const sandbox = lead ? "read-only" : config.container ? "danger-full-access" : readOnly ? "read-only" : agents.codex.sandbox;
-  const cmd = [config.codexBin, "exec", "--json", "--ephemeral", "--skip-git-repo-check", "-C", cwd, "-s", sandbox];
+  // A login shell would reorder PATH and put a signed-in CLI back in front of the account guard.
+  const cmd = [
+    config.codexBin,
+    "exec",
+    "--json",
+    "--ephemeral",
+    "--skip-git-repo-check",
+    "-c",
+    "allow_login_shell=false",
+    "-C",
+    cwd,
+    "-s",
+    sandbox,
+  ];
   // Lean mode skips config.toml (MCP servers, profiles); auth still comes from CODEX_HOME. Integrations servers still apply.
   if (config.leanAgents) cmd.push("--ignore-user-config");
   const model = agents.codex.model || (agents.codex.provider === "codex" ? config.codexModel : undefined);

@@ -2,6 +2,7 @@ import { stat } from "node:fs/promises";
 import type { Subprocess } from "bun";
 import type { FileChange } from "../../shared/board";
 import type { LogLine } from "../../shared/types";
+import { accountGuardEnv } from "./account-guard";
 import { commitGuardEnv } from "./commit-guard";
 
 export interface AgentRequest {
@@ -23,6 +24,8 @@ export interface AgentRequest {
   resume?: string;
   // Told as soon as the CLI names its session, so even a task that fails can be continued.
   onSession?: (id: string) => void;
+  // A round a watched pull request started, which may use the GitHub CLI.
+  watchedPull?: boolean;
 }
 
 import type { Usage } from "../../shared/types";
@@ -44,7 +47,14 @@ const KILL_GRACE_MS = 3000;
 // failureReason lets the adapter name what went wrong; CLIs exit non-zero after reporting it, and the exit code says less.
 export async function runJsonl(
   cmd: string[],
-  { prompt, cwd, signal, inbox, onLog }: Pick<AgentRequest, "prompt" | "cwd" | "signal" | "inbox"> & Partial<Pick<AgentRequest, "onLog">>,
+  {
+    prompt,
+    cwd,
+    signal,
+    inbox,
+    onLog,
+    watchedPull,
+  }: Pick<AgentRequest, "prompt" | "cwd" | "signal" | "inbox"> & Partial<Pick<AgentRequest, "onLog" | "watchedPull">>,
   onEvent: (event: any) => void,
   failureReason: () => string | undefined = () => undefined,
   env: EnvChange = { set: {}, unset: [] },
@@ -55,7 +65,8 @@ export async function runJsonl(
     () => false,
   );
   if (!isDir) throw new AgentError(`Working folder not found: \`${cwd}\``);
-  const proc = spawn(cmd, cwd, { ...env, set: { ...(await commitGuardEnv()), ...env.set } });
+  const guard = await accountGuardEnv(watchedPull);
+  const proc = spawn(cmd, cwd, { set: { ...(await commitGuardEnv()), ...guard.set, ...env.set }, unset: [...guard.unset, ...env.unset] });
   let forcing = false;
   const kill = () => {
     signalGroup(proc, "SIGTERM");

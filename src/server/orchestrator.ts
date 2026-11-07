@@ -686,6 +686,7 @@ async function runNode(run: Run, node: NodeState, blind: boolean, signal: AbortS
     ...(session ? { resume: session } : {}),
     onSession: (id) => patchNode(run.id, node.id, { session: id }),
     ...(node.access === "read" ? { readOnly: true } : {}),
+    ...(run.origins?.[round]?.kind === "pull" ? { watchedPull: true } : {}),
     // Codex has no system prompt of its own to add to, so the working rules lead its prompt.
     prompt: session ? (resume?.message ?? "") : node.agent === "codex" ? `${rules}\n\n${prompt}${carried}` : `${prompt}${carried}`,
     cwd: workdir,
