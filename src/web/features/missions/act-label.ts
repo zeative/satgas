@@ -34,6 +34,11 @@ export function actDetail(act: Act): string {
   return act.detail === act.tool ? "" : act.detail;
 }
 
+// Agents open most commands by moving to their folder, which made every row read the same; the row opens to all of it.
+export function commandPart(detail: string): string {
+  return detail.replace(/^cd\s+("[^"]*"|'[^']*'|\S+)\s*(&&|;)\s*/, "") || detail;
+}
+
 // The end of a long path is the part that says what it is, and a one-line row would cut exactly that off.
 export function pathParts(detail: string): { name: string; dir: string } {
   const i = detail.replace(/\/$/, "").lastIndexOf("/");

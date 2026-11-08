@@ -98,7 +98,7 @@ import type { Aside, NodeState, PlanDraft, QueuedPrompt, RoundOrigin, Run } from
 import { keyedSrc } from "../board/context";
 import { requestSnapshot } from "../board/export";
 import { MiniFace } from "../team/face";
-import { actDetail, actVerb, pathParts, shortPath } from "./act-label";
+import { actDetail, actVerb, commandPart, pathParts, shortPath } from "./act-label";
 import { type Act, type Item, summarize, timeline } from "./activity";
 import { AttachmentTiles, attach, SightNote, useFileDrop, useSight } from "./attachments";
 import { BoardName } from "./board-name";
@@ -1114,7 +1114,7 @@ const ACT_ICON = {
   secret: KeyRound,
 };
 const SHOWS_PATH = new Set<Act["kind"]>(["read", "image", "edit", "attached"]);
-const ROWS_SHOWN = 12;
+const ROWS_SHOWN = 6;
 type Row = Exclude<Item, { type: "group" }> | { type: "act"; act: Act };
 
 // Everything an agent did, one row each and newest last, so nothing it read or ran hides behind a count.
@@ -1123,12 +1123,12 @@ function ActivityRows({ items, live, cwd }: { items: Item[]; live: boolean; cwd?
   const rows = useMemo(() => items.flatMap<Row>((i) => (i.type === "group" ? i.acts.map((act) => ({ type: "act", act })) : [i])), [items]);
   const hidden = all ? 0 : Math.max(0, rows.length - ROWS_SHOWN);
   return (
-    <div className="flex flex-col gap-0.5">
+    <div className="flex flex-col">
       {hidden > 0 && (
         <button
           type="button"
           onClick={() => setAll(true)}
-          className="flex min-h-6 items-center gap-2 rounded-md text-start text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+          className="flex min-h-5 items-center gap-2 rounded-md text-start text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
         >
           <ChevronUp className="size-3.5 shrink-0" aria-hidden="true" />
           {t.actlog.earlier(hidden)}
@@ -1204,8 +1204,11 @@ function ActRow({ act, live, cwd }: { act: Act; live: boolean; cwd?: string }) {
         path ? (
           <>
             <span className="font-mono text-[11px] text-foreground/80">{path.name}</span>
-            {path.dir && <span className="ms-1.5 font-mono text-[11px]">{path.dir}</span>}
+            {/* A folder inside the board helps tell files apart; a long one outside it stays behind the opened row. */}
+            {path.dir && !path.dir.startsWith("/") && <span className="ms-1.5 font-mono text-[11px]">{path.dir}</span>}
           </>
+        ) : act.kind === "command" ? (
+          <span className="font-mono text-[11px]">{commandPart(short)}</span>
         ) : undefined
       }
     />
@@ -1235,16 +1238,16 @@ function TraceRow({
       type="button"
       aria-expanded={open}
       onClick={() => setOpen((v) => !v)}
-      className="group flex min-h-6 w-full items-start gap-2 rounded-md text-start text-xs leading-6 text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+      className="group flex min-h-5 w-full items-start gap-2 rounded-md text-start text-xs leading-5 text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
     >
-      <Icon className="mt-[5px] size-3.5 shrink-0" aria-hidden="true" />
+      <Icon className="mt-[3px] size-3.5 shrink-0" aria-hidden="true" />
       <span className={cn("min-w-0 flex-1", open ? "whitespace-pre-wrap [overflow-wrap:anywhere]" : "truncate", live && "satgas-shimmer")}>
         {verb && <span className={cn(body && "me-1.5")}>{verb}</span>}
         {open || !line ? <span className={cn(verb !== undefined && "font-mono text-[11px]")}>{body}</span> : line}
       </span>
       <ChevronRight
         className={cn(
-          "mt-[6px] size-3 shrink-0 opacity-0 transition-[transform,opacity] group-hover:opacity-100",
+          "mt-1 size-3 shrink-0 opacity-0 transition-[transform,opacity] group-hover:opacity-100",
           open && "rotate-90 opacity-100",
         )}
       />
