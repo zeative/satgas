@@ -68,6 +68,17 @@ test("a page needs the person signed in until they share it, and the key opens o
   expect((await serveApp(get(wrong, page), noUpgrade, true))?.status).toBe(404);
 });
 
+// A sandboxed page loads its module scripts from an opaque origin; without this the browser refuses them and the card
+// stays blank even though every request answers 200.
+test("the sandboxed page may load its own scripts, and nothing else gets the opening", async () => {
+  const asset = `${appPath(runId, "game")}main.js`;
+  const fromPage = await serveApp(get(asset, { "sec-fetch-dest": "script", origin: "null" }), noUpgrade, false);
+  expect(fromPage?.status).toBe(200);
+  expect(fromPage?.headers.get("access-control-allow-origin")).toBe("*");
+  const fromElsewhere = await serveApp(get(asset, { "sec-fetch-dest": "script", origin: "https://evil.example" }), noUpgrade, false);
+  expect(fromElsewhere?.headers.get("access-control-allow-origin")).toBeNull();
+});
+
 test("a stopped app shows as stopped, and a visit starts it again", async () => {
   await stopApp(runId, "game");
   expect(getRun(runId)?.apps?.game?.status).toBe("stopped");

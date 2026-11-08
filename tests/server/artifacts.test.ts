@@ -308,3 +308,11 @@ test("a page a second task rewrites keeps its one card and reloads; a new file s
     { op: "patch", id: "a:readme", patch: { text: "new" } },
   ]);
 });
+
+test("a bundler's entry page gets no blank preview, while a plain page with module scripts still does", async () => {
+  const { bundlerEntry } = await import("../../src/server/artifacts");
+  expect(bundlerEntry('<div id="root"></div><script type="module" src="/src/main.jsx"></script>')).toBe(true);
+  expect(bundlerEntry('<script type="module" src="/src/main.tsx?t=1"></script>')).toBe(true);
+  expect(bundlerEntry('<script type="module" src="./app.js"></script>')).toBe(false);
+  expect(bundlerEntry("<h1>Kopi Senja</h1>")).toBe(false);
+});

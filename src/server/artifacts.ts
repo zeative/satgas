@@ -80,6 +80,8 @@ async function pictureSize(path: string): Promise<{ w: number; h: number }> {
   }
 }
 
+export const bundlerEntry = (html: string) => /<script\b[^>]*\bsrc=["'][^"']+\.(?:jsx|tsx|ts|vue|svelte)(?:\?[^"']*)?["']/i.test(html);
+
 // Turns what a task wrote into cards: images, pages, sheets and docs get their own card. The rest stays off the canvas;
 // the task's `changes` lists every file, and the Changes tab shows them with their diffs.
 export async function cardsForTask(
@@ -106,6 +108,9 @@ export async function cardsForTask(
     const id = `${node.id.slice(0, 40)}:${pathHash(f.path)}`;
     const full = resolve(run.cwd, f.path);
     if (kind === "image" || kind === "preview") {
+      // A bundler's entry page (Vite and the like) loads source files no browser runs, so its preview would stay blank;
+      // the app shows through its own card from app_start instead.
+      if (kind === "preview" && /\.html?$/i.test(f.path) && bundlerEntry((await readCapped(full, MAX_TEXT_BYTES)) ?? "")) continue;
       const src = fileUrl(run.id, f.path);
       // A link cut to fit would point nowhere, so such a file gets no card.
       if (src.length <= LIMITS.str)

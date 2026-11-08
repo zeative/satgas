@@ -338,6 +338,9 @@ export async function serveApp(
   out.delete("content-encoding");
   const location = out.get("location");
   if (location?.startsWith(`http://127.0.0.1:${port}`)) out.set("location", location.slice(`http://127.0.0.1:${port}`.length) || "/");
+  // The page runs sandboxed, in an opaque origin, so its module scripts and fetches arrive with Origin: null and are
+  // refused unless allowed here. They carry no credentials, and the key in the path already gates them.
+  if (req.headers.get("origin") === "null") out.set("access-control-allow-origin", "*");
   if (!(out.get("content-type") ?? "").includes("text/html")) return new Response(res.body, { status: res.status, headers: out });
   out.set("content-security-policy", SANDBOX);
   out.delete("content-length");
