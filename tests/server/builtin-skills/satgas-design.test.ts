@@ -82,6 +82,7 @@ describe("the satgas-design skill", () => {
   test("spends the richness on one moment, approved alone before the rest is built", () => {
     const skill = files["SKILL.md"] ?? "";
     expect(skill).toContain("Moment:");
+    expect(skill).toContain("where people spend the most time");
     expect(skill).toContain("Round two: the moment alone, then stop");
     expect(skill).toContain("design/moment.html");
     expect(skill).toContain("Round three: the rest, kept quiet");

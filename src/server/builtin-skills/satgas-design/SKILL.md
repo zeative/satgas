@@ -22,7 +22,7 @@ The quiet base, which is everything except the moment:
 
 ## The moment
 
-One element, two at most, carries nearly all the colour, material, depth and motion of the work. It is made from the product's own real thing: its data, its pieces, its subject. It shows what the product does instead of saying it.
+One element, two at most, carries nearly all the colour, material, depth and motion of the work. It is made from the product's own real thing: its data, its pieces, its subject. It shows what the product does instead of saying it. It lives where people spend the most time: a game's moment is its play and a tool's is its main screen. When it opens on a first screen, it carries on into that main screen instead of ending there.
 
 Write it in one sentence, as `Moment:` in `design/direction.md`: what it shows and what makes it move. Then test the sentence:
 
@@ -67,7 +67,7 @@ When they say it is flat or wrong, bring a different idea, not a polish of the s
 
 Follow the chosen wireframe's structure and copy; where reality forces a change, say so in your report.
 
-1. **Move the moment in** as it was approved, without redrawing it.
+1. **Move the moment in** as it was approved, without redrawing it, and carry it into the screen people spend the most time on.
 2. **Take the rest of the material** from your row of the map, with the script, and build everything around the moment from the quiet base. Anything that starts competing with the moment gets calmer.
 3. **Review.** Run `review` on the result. It fails a page without a main visual, with broken pictures, wider than a phone, or showing the tells below. Open `design/review/compare.jpg`, the build next to its references, name the three biggest gaps in your report, fix them, and run it again. Two rounds at most.
 
