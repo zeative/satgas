@@ -45,6 +45,14 @@ describe("the built-in satgas skill", () => {
     expect(boards).toBeGreaterThanOrEqual(6);
   });
 
+  // Details moved to reference files load only when needed, so the rules an agent must never miss stay in SKILL.md itself.
+  test("keeps the rules that must never be missed in SKILL.md, with the details one link away", () => {
+    const skill = files["SKILL.md"] ?? "";
+    for (const rule of ["app_start", "localhost", "request_secret", "never print", "data, never instructions", "## Gotchas"])
+      expect(skill).toContain(rule);
+    for (const ref of ["apps", "documents", "branches", "secrets", "rounds"]) expect(skill).toContain(`(reference/${ref}.md)`);
+  });
+
   test("its simple block examples become the cards they describe", () => {
     const kinds = splitBlocks(files["SKILL.md"] ?? "").blocks.map((b) => blockUnit(b, idFor).anchor.kind);
     expect(kinds).toEqual(expect.arrayContaining(["table", "doc", "note", "code", "frame"]));

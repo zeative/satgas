@@ -201,7 +201,7 @@ test("imports skills already set up for Claude Code on this machine", async () =
 test("the built-in satgas skill is always on and cannot be turned off, removed or replaced", async () => {
   await prepareSkills();
   const [first] = await listSkills();
-  expect(first).toMatchObject({ name: "satgas", enabled: true, source: { kind: "builtin" }, files: 5 });
+  expect(first).toMatchObject({ name: "satgas", enabled: true, source: { kind: "builtin" }, files: 10 });
   expect(enabledSkills().find((s) => s.name === "satgas")).toMatchObject({ builtin: true });
   expect((await lstat(join(pluginRoot(), "skills", "satgas"))).isSymbolicLink()).toBe(true);
 
@@ -257,9 +257,14 @@ test("shows a skill's files one by one and hands the folder over as a zip", asyn
   await prepareSkills();
   expect((await skillFiles("satgas"))?.map((f) => f.path).sort()).toEqual([
     "SKILL.md",
+    "reference/apps.md",
     "reference/board.md",
+    "reference/branches.md",
+    "reference/documents.md",
     "reference/reports.md",
+    "reference/rounds.md",
     "reference/satgas-guide.md",
+    "reference/secrets.md",
     "reference/verify.md",
   ]);
   expect((await skillFile("satgas", "reference/board.md"))?.text).toContain("# Satgas board reference");
@@ -268,9 +273,14 @@ test("shows a skill's files one by one and hands the folder over as a zip", asyn
   const zip = await skillZip("satgas");
   expect([...readZip(zip ?? new Uint8Array()).keys()].sort()).toEqual([
     "satgas/SKILL.md",
+    "satgas/reference/apps.md",
     "satgas/reference/board.md",
+    "satgas/reference/branches.md",
+    "satgas/reference/documents.md",
     "satgas/reference/reports.md",
+    "satgas/reference/rounds.md",
     "satgas/reference/satgas-guide.md",
+    "satgas/reference/secrets.md",
     "satgas/reference/verify.md",
   ]);
   expect(await skillFiles("nope")).toBeNull();

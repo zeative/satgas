@@ -2,8 +2,13 @@ import guide from "../../../README.md" with { type: "text" };
 import type { PackId } from "../../shared/skills";
 import { AGENT_SKILLS } from "./agent-skills.gen";
 import { HALLMARK } from "./hallmark.gen";
+import apps from "./satgas/reference/apps.md" with { type: "text" };
 import board from "./satgas/reference/board.md" with { type: "text" };
+import branches from "./satgas/reference/branches.md" with { type: "text" };
+import documents from "./satgas/reference/documents.md" with { type: "text" };
 import reports from "./satgas/reference/reports.md" with { type: "text" };
+import rounds from "./satgas/reference/rounds.md" with { type: "text" };
+import secrets from "./satgas/reference/secrets.md" with { type: "text" };
 import verify from "./satgas/reference/verify.md" with { type: "text" };
 import satgas from "./satgas/SKILL.md" with { type: "text" };
 import { SECURITY_AUDIT } from "./security-audit.gen";
@@ -20,6 +25,11 @@ export const BUILTIN: Record<string, Record<string, string>> = {
     "reference/board.md": board,
     "reference/verify.md": verify,
     "reference/reports.md": reports,
+    "reference/apps.md": apps,
+    "reference/documents.md": documents,
+    "reference/branches.md": branches,
+    "reference/secrets.md": secrets,
+    "reference/rounds.md": rounds,
     // The README itself, so the steps agents give about Satgas are the ones its docs give, in any install.
     "reference/satgas-guide.md": guideOf(guide),
   },
