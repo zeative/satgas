@@ -1,6 +1,7 @@
 import { Eye, EyeOff, FileText, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { ImageZoom } from "@/components/image-zoom";
 import { t } from "@/i18n";
 import type { Draft, DraftFile } from "@/lib/drafts";
 import { MAX_FILES } from "@/lib/drafts";
@@ -87,7 +88,17 @@ function Tile({ file, onRemove, compact }: { file: DraftFile; onRemove: () => vo
   return (
     <div className={cn("group relative overflow-hidden rounded-xl border bg-muted/40", compact ? "size-24" : "size-30")} title={file.name}>
       {image ? (
-        url && <img src={url} alt={file.name} className="size-full object-cover" />
+        url && (
+          <ImageZoom src={url} name={file.name}>
+            <button
+              type="button"
+              aria-label={t.attach.view(file.name)}
+              className="block size-full cursor-zoom-in focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-inset"
+            >
+              <img src={url} alt="" className="size-full object-cover" />
+            </button>
+          </ImageZoom>
+        )
       ) : (
         <div className="flex size-full flex-col gap-1 p-2.5">
           <p className="line-clamp-2 text-sm leading-5 font-medium break-all">{file.name}</p>

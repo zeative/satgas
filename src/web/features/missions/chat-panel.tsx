@@ -57,6 +57,7 @@ import {
 } from "react";
 import { toast } from "sonner";
 import { ClaudeMark, CodexMark } from "@/components/brand-marks";
+import { ImageZoom } from "@/components/image-zoom";
 import { Markdown } from "@/components/markdown";
 import { OutboundLink } from "@/components/outbound-link";
 import { RichText } from "@/components/rich-text";
@@ -1175,12 +1176,20 @@ function ActRow({ act, live, cwd }: { act: Act; live: boolean; cwd?: string }) {
           </pre>
         )}
         {act.image && runId && (
-          <img
-            src={`/api/runs/${runId}/assets/${act.image}`}
-            alt=""
-            loading="lazy"
-            className="max-h-64 w-fit max-w-full rounded-md border object-contain"
-          />
+          <ImageZoom src={`/api/runs/${runId}/assets/${act.image}`} name={act.image}>
+            <button
+              type="button"
+              aria-label={t.attach.view(act.image)}
+              className="w-fit max-w-full cursor-zoom-in rounded-md focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+            >
+              <img
+                src={`/api/runs/${runId}/assets/${act.image}`}
+                alt=""
+                loading="lazy"
+                className="max-h-64 w-fit max-w-full rounded-md border object-contain"
+              />
+            </button>
+          </ImageZoom>
         )}
       </div>
     ) : undefined;
@@ -1280,7 +1289,7 @@ function LeadTrace({ round, planning, cwd }: { round: number; planning: boolean;
 }
 
 // Long prompts fold to a few lines, like the reference chat; the full text is one click away.
-// What was attached to a prompt, under its bubble: thumbnails for images, names for the rest; each opens in a tab.
+// What was attached to a prompt, under its bubble: thumbnails that open large, names for the rest that open in a tab.
 function SentFiles({ run, files }: { run: Run; files: string[] }) {
   // Said once under the files when a vision model read the images for a model that cannot see.
   const notes = files.flatMap((f) => (run.imageNotes?.[f] ? [run.imageNotes[f]] : []));
@@ -1308,23 +1317,27 @@ function SentList({ run, files }: { run: Run; files: string[] }) {
         const image = /\.(png|jpe?g|gif|webp|avif|svg)$/i.test(name);
         return (
           <li key={path}>
-            <OutboundLink
-              href={href}
-              title={name}
-              className={cn(
-                "flex overflow-hidden rounded-lg border bg-muted text-xs transition-colors hover:border-foreground/25 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
-                image ? "size-14" : "h-7 max-w-48 items-center gap-1.5 px-2",
-              )}
-            >
-              {image ? (
-                <img src={href} alt={name} loading="lazy" className="size-full object-cover" />
-              ) : (
-                <>
-                  <FileText className="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
-                  <span className="truncate">{name}</span>
-                </>
-              )}
-            </OutboundLink>
+            {image && href ? (
+              <ImageZoom src={href} name={name} href={href}>
+                <button
+                  type="button"
+                  title={name}
+                  aria-label={t.attach.view(name)}
+                  className="flex size-14 cursor-zoom-in overflow-hidden rounded-lg border bg-muted transition-colors hover:border-foreground/25 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                >
+                  <img src={href} alt="" loading="lazy" className="size-full object-cover" />
+                </button>
+              </ImageZoom>
+            ) : (
+              <OutboundLink
+                href={href}
+                title={name}
+                className="flex h-7 max-w-48 items-center gap-1.5 overflow-hidden rounded-lg border bg-muted px-2 text-xs transition-colors hover:border-foreground/25 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+              >
+                <FileText className="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
+                <span className="truncate">{name}</span>
+              </OutboundLink>
+            )}
           </li>
         );
       })}

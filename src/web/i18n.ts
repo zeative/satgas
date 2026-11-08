@@ -55,6 +55,7 @@ const en = {
   missionsEmpty: "No boards yet. Launch a mission and its board shows up here.",
   missionsError: "Could not load boards",
   retry: "Retry",
+  close: "Close",
   continue: "Continue",
 
   composeTitle: "What should we build?",
@@ -1015,6 +1016,8 @@ const en = {
     label: "Attached files",
     add: "Add files",
     remove: (name: string) => `Remove ${name}`,
+    view: (name: string) => `View ${name}`,
+    openOriginal: "Open original",
     lines: (n: number) => `${n} line${n === 1 ? "" : "s"}`,
     drop: "Drop files to attach",
     tooBig: (names: string) => `Over 25 MB, not attached: ${names}`,
@@ -1649,6 +1652,7 @@ const id: typeof en = {
   missionsEmpty: "Belum ada board. Kerahkan misi dan board-nya muncul di sini.",
   missionsError: "Daftar board gagal dimuat",
   retry: "Coba lagi",
+  close: "Tutup",
   continue: "Lanjutkan",
 
   composeTitle: "Apa yang mau kita bangun?",
@@ -2610,6 +2614,8 @@ const id: typeof en = {
     label: "File terlampir",
     add: "Tambah file",
     remove: (name) => `Hapus ${name}`,
+    view: (name) => `Lihat ${name}`,
+    openOriginal: "Buka file asli",
     lines: (n) => `${n} baris`,
     drop: "Lepas file untuk melampirkan",
     tooBig: (names) => `Lebih dari 25 MB, tidak dilampirkan: ${names}`,
