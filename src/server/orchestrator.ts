@@ -174,6 +174,15 @@ export function queuePrompt(
 
 const ASIDE_MS = 120_000;
 
+const once = (fn: () => void) => {
+  let done = false;
+  return () => {
+    if (done) return;
+    done = true;
+    fn();
+  };
+};
+
 // The lead answers a message sent mid-work, then it reaches the teammates the lead chose. One that asks for new work
 // stays queued for the next round; one that does not becomes an aside of this round. If the lead cannot answer, the
 // message goes the old way: to every running teammate, then the next round.
@@ -454,8 +463,11 @@ async function execute(run: Run, round: number, prompt: string, signal: AbortSig
       memory: hasMemoryFor(getMemory().entries, run.cwd),
       files: attached?.[round] ?? [],
     });
+    // It all arrives in one prompt, so it shows when the lead starts answering, not as steps before it has read anything.
     // Answers resume the round, and what the lead was handed is already on its log.
-    if (!run.asks?.[round]?.answers) for (const text of leadSees) lead({ kind: "tool", text });
+    const showSeen = once(() => {
+      if (!run.asks?.[round]?.answers) for (const text of leadSees) lead({ kind: "tool", text });
+    });
     const p = await plan({
       mission: prompt,
       pointed: describeRefs(run, refs, config.upstreamChars),
@@ -471,11 +483,18 @@ async function execute(run: Run, round: number, prompt: string, signal: AbortSig
       steered: getRun(run.id)?.steered?.[round],
       cwd: run.cwd,
       signal,
-      onLog: lead,
-      onDraft: (d) => patchRun(run.id, { draft: { ...d, round } }),
+      onLog: (l) => {
+        showSeen();
+        lead(l);
+      },
+      onDraft: (d) => {
+        showSeen();
+        patchRun(run.id, { draft: { ...d, round } });
+      },
       memory: { text: describeForLead(getMemory().entries, run.cwd), learn: getMemory().auto && !getRun(run.id)?.noMemory },
       canvas: canvasNews(getRun(run.id) ?? run),
     });
+    showSeen();
     if (p.usage) patchRun(run.id, { leadUsage: { ...getRun(run.id)?.leadUsage, [round]: { ...p.usage, at: Date.now() } } });
     cloudReport({ type: "lead.planned", run: run.id, round, tasks: p.nodes?.length ?? 0, ...(p.usage ? { usage: p.usage } : {}) });
     // The lead has now heard what the person did on the canvas; the next plan only hears what comes after.
@@ -736,12 +755,15 @@ async function runNode(
   });
   const current = getRun(run.id) ?? run;
   const upstreamTitles = [...node.dependsOn, ...(node.after ?? [])].flatMap((d) => current.nodes.find((n) => n.id === d)?.title ?? []);
-  for (const text of contextLines(current, node.round ?? 0, {
+  const handed = contextLines(current, node.round ?? 0, {
     memory: !!(remembered.person || remembered.rules),
     upstream: upstreamTitles,
     saved: savedSecrets(current),
-  }))
-    log({ kind: "tool", text });
+  });
+  // Same as the lead: what it was handed shows once it starts working, not ahead of its first real step.
+  const showHanded = once(() => {
+    for (const text of handed) log({ kind: "tool", text });
+  });
   // Every task gets the built-in connector for asking the person a secret; teammates working the same round also get
   // its talk channels, while a task working alone has nobody to talk to.
   const round = node.round ?? 0;
@@ -770,7 +792,10 @@ async function runNode(
     prompt: session ? (resume?.message ?? "") : node.agent === "codex" ? `${rules}\n\n${prompt}${carried}` : `${prompt}${carried}`,
     cwd: workdir,
     signal: task.signal,
-    onLog: log,
+    onLog: (l) => {
+      showHanded();
+      log(l);
+    },
     // Claude Code takes messages mid-task; Codex runs in one go, so what is sent meanwhile waits for the next round.
     ...(node.agent === "claude" ? { inbox: inboxFor(run.id, node.id) } : {}),
     // A file created and then edited in the same task is still new.

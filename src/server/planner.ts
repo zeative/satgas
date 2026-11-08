@@ -456,7 +456,6 @@ export async function plan(
     ? `\n\n<memory>\n${req.memory.text}${req.memory.learn ? "" : "\nSaving memory is off for this board: leave memory empty."}\n</memory>`
     : "";
   const prompt = `${ask}${steered}${attached}${pointed}${roster}${canvas}${remembered}\n\n${describeSystem()}${replied}${asking}${hint}\n\nWorking directory: ${req.cwd}\nTop-level entries:\n${listing}`;
-  req.onLog({ kind: "info", text: req.asked?.answers ? "Planning with your answers" : "Reading the mission and drafting a plan" });
   const agents = taskAgents();
   if (!agents.length) throw new AgentError("Turn on at least one agent in Integrations.");
   const rule = req.only

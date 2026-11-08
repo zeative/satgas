@@ -18,7 +18,7 @@ import {
 } from "../../src/server/orchestrator";
 import { getSettings, saveSettings } from "../../src/server/settings";
 import { decideSetup, undoSetup } from "../../src/server/setup";
-import { boardOps, flushAll, getRun, patchRun } from "../../src/server/store";
+import { boardOps, flushAll, getLogs, getRun, patchRun } from "../../src/server/store";
 import { jsonl, makeFakeCli, setFake } from "../helpers/fake-cli";
 
 const original = { bin: config.claudeBin, codexBin: config.codexBin, dataDir: config.dataDir };
@@ -625,4 +625,22 @@ test("in Satgas Cloud, a plan that says no stops a new round before any agent ru
     useReporter(null, null);
     (config as { cloud: typeof config.cloud }).cloud = null;
   }
+});
+
+test("what the lead was handed shows only once it starts answering, and no canned line comes before it", async () => {
+  setFake({ FAKE_CLI_OUTPUT: planned({ title: "Note", summary: "One note", reply: "Done.", nodes: [] }) });
+  const { id } = startRun("Say something", dir);
+  await until(() => getRun(id)?.status === "done");
+  boardOps(id, [{ op: "put", card: { id: "n1", kind: "note", text: "hi", x: 0, y: 0, w: 100, h: 100, createdAt: 1 } }]);
+  // The fake lead stays silent long enough to look at the log before its first word.
+  setFake({ FAKE_CLI_SLEEP: "2000", FAKE_CLI_OUTPUT: planned({ title: "Note", summary: "One note", reply: "Done again.", nodes: [] }) });
+  const round = (getRun(id)?.rounds?.length ?? 0) + 1;
+  continueRun(id, "And now?");
+  await until(() => getRun(id)?.status === "planning");
+  await Bun.sleep(800);
+  const lines = () => (getLogs(id).planner ?? []).filter((l) => l.round === round);
+  expect(lines().map((l) => l.text)).toEqual([]);
+  await until(() => getRun(id)?.status === "done");
+  expect(lines().some((l) => l.kind === "tool" && l.text?.startsWith("canvas "))).toBe(true);
+  expect(lines().some((l) => l.text?.includes("drafting a plan"))).toBe(false);
 });
