@@ -39,8 +39,14 @@ interface Live {
   log: string[];
 }
 
-const live = new Map<string, Live>();
+// Kept on globalThis so a `bun --hot` reload does not lose track of apps that keep running.
+const g = globalThis as typeof globalThis & { __satgasApps?: Map<string, Live> };
+g.__satgasApps ??= new Map();
+const live = g.__satgasApps;
 const keyOf = (runId: string, name: string) => `${runId}/${name}`;
+
+// The watcher waits on a pipe only Satgas writes to, so when Satgas dies in any way, even a crash, the app's group goes too.
+const WATCHED = `exec 3<&0; sh -c "$1" </dev/null & app=$!; (trap '' TERM; cat <&3 >/dev/null; kill 0; sleep 3; kill -9 0) >/dev/null 2>&1 & exec 3<&-; wait $app`;
 
 export const cleanAppName = (v: unknown) =>
   typeof v === "string" && /^[a-z0-9][a-z0-9-]{0,23}$/.test(v.trim().toLowerCase()) ? v.trim().toLowerCase() : null;
@@ -153,11 +159,19 @@ export async function startApp(runId: string, name: string, command?: string, di
     },
     unset: HIDDEN_ENV,
   });
-  const proc = Bun.spawn(["sh", "-c", cmd], { cwd: folder, env, stdin: "ignore", stdout: "pipe", stderr: "pipe", detached: true });
+  const proc = Bun.spawn(["sh", "-c", WATCHED, "sh", cmd], {
+    cwd: folder,
+    env,
+    stdin: "pipe",
+    stdout: "pipe",
+    stderr: "pipe",
+    detached: true,
+  });
   const entry: Live = { proc, port, lastHit: Date.now(), log };
   live.set(keyOf(runId, name), entry);
   const read = Promise.all([pipe(proc.stdout, log), pipe(proc.stderr, log)]);
   void proc.exited.then(async (code) => {
+    proc.stdin.end();
     // What it printed last is the reason it stopped; read all of it before saying so.
     await read.catch(() => {});
     if (live.get(keyOf(runId, name))?.proc !== proc) return;
@@ -224,12 +238,12 @@ export function sweepIdleApps(now = Date.now()) {
   for (const [key, app] of live) if (now - app.lastHit > IDLE_MS) void stopApp(...(key.split("/") as [string, string]));
 }
 
-// On Satgas's own start, nothing from before still runs: what was running shows as stopped.
+// On Satgas's own start, nothing from before still runs: what was running shows as stopped. A hot reload keeps its apps.
 export function settleApps(ids: string[]) {
   for (const id of ids) {
     const apps = getRun(id)?.apps;
     if (!apps) continue;
-    const stale = Object.values(apps).filter((a) => a.status === "running" || a.status === "starting");
+    const stale = Object.values(apps).filter((a) => (a.status === "running" || a.status === "starting") && !live.has(keyOf(id, a.name)));
     if (stale.length)
       patchRun(id, { apps: { ...apps, ...Object.fromEntries(stale.map((a) => [a.name, { ...a, status: "stopped" as const }])) } });
   }

@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { appPath, cleanAppName, serveApp, settleApps, shareApp, startApp, stopAllApps, stopApp } from "../../src/server/apps";
 import { loadToken } from "../../src/server/auth";
 import { config } from "../../src/server/config";
-import { createRun, flushAll, getRun } from "../../src/server/store";
+import { createRun, flushAll, getRun, patchRun } from "../../src/server/store";
 
 const original = config.dataDir;
 let dir = "";
@@ -88,11 +88,56 @@ test("a stopped app shows as stopped, and a visit starts it again", async () => 
   expect(getRun(runId)?.apps?.game?.status).toBe("running");
 });
 
-test("a command that exits fails with what it printed, and a restart of Satgas leaves nothing marked running", async () => {
+test("a command that exits fails with what it printed", async () => {
   const r = await startApp(runId, "broken", "echo 'missing script dev' && exit 1");
   expect(r.ok).toBe(false);
   expect(r.ok ? "" : r.error).toContain("missing script dev");
   expect(getRun(runId)?.apps?.broken?.status).toBe("failed");
-  settleApps([runId]);
-  expect(getRun(runId)?.apps?.game?.status).toBe("stopped");
 });
+
+test("settling marks only apps from before as stopped, so a hot reload keeps the ones still running", async () => {
+  const apps = getRun(runId)?.apps ?? {};
+  const before = { name: "before", command: "x", dir: ".", status: "running" as const, startedAt: 1, path: "/x" };
+  patchRun(runId, { apps: { ...apps, before } });
+  expect(getRun(runId)?.apps?.game?.status).toBe("running");
+  settleApps([runId]);
+  expect(getRun(runId)?.apps?.before?.status).toBe("stopped");
+  expect(getRun(runId)?.apps?.game?.status).toBe("running");
+});
+
+test("an app stops with Satgas, even when Satgas is killed outright", async () => {
+  const cwd = join(dir, "workspaces", "host");
+  await mkdir(cwd, { recursive: true });
+  const host = Bun.spawn(["bun", join(import.meta.dir, "../fixtures/app-host.ts"), SERVER, cwd], {
+    env: { ...process.env, SATGAS_DATA_DIR: join(dir, "host-data") },
+    stdout: "pipe",
+    stderr: "ignore",
+  });
+  const { value } = await host.stdout.getReader().read();
+  const port = Number(new TextDecoder().decode(value).trim());
+  expect(port).toBeGreaterThan(0);
+  const answers = () =>
+    fetch(`http://127.0.0.1:${port}/`).then(
+      () => true,
+      () => false,
+    );
+  expect(await answers()).toBe(true);
+  Bun.gc(true);
+  await Bun.sleep(500);
+  expect(await answers()).toBe(true);
+  host.kill(9);
+  let alive = true;
+  for (let i = 0; i < 40 && alive; i++) {
+    await Bun.sleep(250);
+    alive = await answers();
+  }
+  expect(alive).toBe(false);
+}, 30_000);
+
+test("an app that exits by itself still reports its own exit code", async () => {
+  const r = await startApp(runId, "short", `${SERVER} & pid=$!; sleep 1; kill $pid; exit 3`);
+  expect(r.ok).toBe(true);
+  for (let i = 0; i < 40 && getRun(runId)?.apps?.short?.status === "running"; i++) await Bun.sleep(250);
+  expect(getRun(runId)?.apps?.short?.status).toBe("failed");
+  expect(getRun(runId)?.apps?.short?.error).toContain("code 3");
+}, 30_000);
