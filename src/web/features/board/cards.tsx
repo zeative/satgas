@@ -1,5 +1,5 @@
 import { Handle, type Node, type NodeProps, NodeResizer, Position, type ReactFlowState, useStore } from "@xyflow/react";
-import { Download, ExternalLink, Globe, Link2, Lock, Maximize2, Monitor, RotateCw, Smartphone } from "lucide-react";
+import { Check, Download, ExternalLink, Globe, Link2, Lock, Maximize2, Monitor, RotateCw, Smartphone } from "lucide-react";
 import {
   type CSSProperties,
   lazy,
@@ -893,45 +893,47 @@ function AppShare({ runId, name, shared, path }: { runId: string; name: string; 
           {t.board.app.share}
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="nodrag w-80 p-4">
-        <p className="text-sm font-medium">{t.board.app.shareTitle(name)}</p>
-        <p className="mt-4 text-xs text-muted-foreground">{t.board.app.access}</p>
-        <div className="mt-2 flex flex-col gap-1">
+      <PopoverContent align="end" className="nodrag w-72 p-1">
+        <div className="flex h-9 items-center justify-between gap-2 ps-2">
+          <p className="truncate text-sm font-medium">{t.board.app.shareTitle(name)}</p>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 shrink-0 gap-1.5 px-2 text-xs text-muted-foreground hover:text-foreground"
+            onClick={() =>
+              void navigator.clipboard
+                ?.writeText(link)
+                .then(() => toast.success(t.board.app.copied))
+                .catch(() => toast.error(link))
+            }
+          >
+            <Link2 className="size-3.5" aria-hidden="true" />
+            {t.board.app.copyLink}
+          </Button>
+        </div>
+        <div role="radiogroup" aria-label={t.board.app.access} className="flex flex-col">
           {[false, true].map((on) => (
             <button
               key={String(on)}
               type="button"
-              aria-pressed={shared === on}
+              role="radio"
+              aria-checked={shared === on}
               onClick={() => set(on)}
-              className={cn(
-                "flex items-start gap-3 rounded-md px-2 py-2 text-start transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
-                shared === on && "bg-muted",
-              )}
+              className="flex min-h-11 items-center gap-2.5 rounded-md px-2 py-1.5 text-start transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
             >
-              <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
-                {on ? <Globe className="size-3.5" /> : <Lock className="size-3.5" />}
-              </span>
-              <span className="flex min-w-0 flex-col">
+              {on ? (
+                <Globe className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+              ) : (
+                <Lock className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+              )}
+              <span className="flex min-w-0 flex-1 flex-col">
                 <span className="text-sm">{on ? t.board.app.anyone : t.board.app.restricted}</span>
-                <span className="text-xs text-muted-foreground">{on ? t.board.app.anyoneHint : t.board.app.restrictedHint}</span>
+                <span className="truncate text-xs text-muted-foreground">{on ? t.board.app.anyoneHint : t.board.app.restrictedHint}</span>
               </span>
+              <Check className={cn("size-4 shrink-0", shared !== on && "invisible")} aria-hidden="true" />
             </button>
           ))}
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          className="mt-4 gap-1.5"
-          onClick={() =>
-            void navigator.clipboard
-              ?.writeText(link)
-              .then(() => toast.success(t.board.app.copied))
-              .catch(() => toast.error(link))
-          }
-        >
-          <Link2 className="size-3.5" aria-hidden="true" />
-          {t.board.app.copyLink}
-        </Button>
       </PopoverContent>
     </Popover>
   );
