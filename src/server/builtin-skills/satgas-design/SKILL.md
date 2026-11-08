@@ -1,6 +1,6 @@
 ---
 name: satgas-design
-description: "How anything visual gets made in Satgas so it looks like a professional made it: two grey wireframes the person approves first, then the build from real references and real material (photos, logos, fonts, icons, animations, motion libraries, colour scales) taken from licensed sources by a script that saves the files, then a review that fails the tells of generated work. Load it for anything people look at, before the first line of markup, even when the request never mentions design: a website, landing page, app screen, dashboard, game, deck, poster, social graphic, banner, illustration, a document with visuals, an HTML page on the board."
+description: "How anything visual gets made in Satgas so it looks like a professional made it: two grey wireframes the person approves first, then its one memorable moment built alone and approved, then the quiet rest from real references and real material (photos, logos, fonts, icons, animations, motion libraries, colour scales) taken from licensed sources by a script that saves the files, then a review that fails the tells of generated work. Load it for anything people look at, before the first line of markup, even when the request never mentions design: a website, landing page, app screen, dashboard, game, deck, poster, social graphic, banner, illustration, a document with visuals, an HTML page on the board."
 ---
 
 # Satgas design
@@ -9,37 +9,66 @@ The goal is work a professional would sign: it looks made by someone who knows t
 
 ## The default look: modern, current, elegant
 
-Unless the person asks for another style, everything looks like what a top product or studio would ship today. The test: would it sit comfortably next to Linear, Stripe, Apple, Aesop or Nothing? If not, it is not done.
+Unless the person asks for another style, everything looks like what a top product or studio would ship today, and it has one thing people remember. Slop spreads colour and effects over everything. Flat work has none anywhere. Good work keeps almost everything quiet and spends it all on one moment.
+
+The quiet base, which is everything except the moment:
 
 - **Surfaces:** near-white, near-black, or one confident flat colour, from one neutral ramp, with a single accent.
-- **Type:** a contemporary grotesk or a refined modern serif, set large and tight, at normal weights.
-- **Layout:** a strict grid, generous space, large pictures running edge to edge, hairlines instead of boxes.
-- **Pictures:** current, well lit, cropped with intent, no filters.
+- **Type:** a contemporary grotesk or a refined modern serif, at normal weights, with a real jump between sizes.
+- **Layout:** a strict grid, generous space, hairlines instead of boxes.
 - **Motion:** quick and subtle.
 - **Never, unless asked:** retro, vintage, rustic, kitsch, childish or cartoon looks, paper and print textures, slab, ornamental, blackletter, pixel or handwritten faces, even when the subject is old or traditional. A traditional coffee shop still gets a modern site.
-- **Hallmark themes:** do not deal one. Pick from `cobalt`, `console`, `dusk`, `grid`, `ink`, `midnight`, `refract`, `ribbon`, `rim`, `studio`, `vantage`, whichever fits the work; a game or a playful brief picks from them too and brings its play through the pieces and motion.
+- **Hallmark themes:** do not deal one. Pick from `cobalt`, `console`, `dusk`, `grid`, `ink`, `midnight`, `refract`, `ribbon`, `rim`, `studio`, `vantage`, whichever fits the work; a game or a playful brief picks from them too.
 
-## Two rounds
+## The moment
 
-Something new that people look at goes in two rounds. The person approves the structure before anything is styled.
+One element, two at most, carries nearly all the colour, material, depth and motion of the work. It is made from the product's own real thing: its data, its pieces, its subject. It shows what the product does instead of saying it.
+
+Write it in one sentence, as `Moment:` in `design/direction.md`: what it shows and what makes it move. Then test the sentence:
+
+- **Swap the name.** Put another product's name in the sentence. If it still fits, it is decoration; think again.
+- **Say it to a stranger.** If they would not ask to see it, it is not the moment.
+- **Take it away.** If the page would be just as good without it, it is not the moment.
+
+What does not count: a bigger heading, a photo in a box, a gradient or grain backdrop, floating cards, a tilted screenshot, a glow, a nicely styled table that just sits there.
+
+The shape of an answer, never to be copied: a billing product whose overdue row turns into a sent message, gets its reply and pays itself, with the total falling beside it; a typing race where each right letter pushes your car past the others; a fleet map where a truck running late lights its route and raises the alert; an architect's site where a villa photo folds into its floor plan as you scroll.
+
+How to make it rich, with no image generator: real photos used large, and everything else built in code. Give it depth with layers, real light and shadow, and a scale several times anything around it. Tie its motion to what is happening, so every move means something, and let it play by itself so it shows on a small card. Spend the time here: it gets more care than the rest of the page together.
+
+## Three rounds
+
+Something new that people look at goes in three rounds, and each ends by asking the person. The structure is approved first, then the moment, and only then the rest, so a weak idea costs one piece and not a whole site.
+
+A change to something that exists skips the wireframes. When it asks for more life, a new look, or says the work is flat or plain, it starts at round two.
 
 ## Round one: wireframes, then stop
 
 Build nothing else in this round: no colours, no pictures, no fonts, no page in the project's real files.
 
 1. **Study.** Search for three sites or pieces clearly better than average in the same field, and shoot them with `ref`.
-2. **Write `design/direction.md`:** what each reference does that we take (specific: "menu as a plain price list in two columns", never "clean and modern"), the kind of picture the work will use and where it comes from, the palette as hex values, and the type pair.
-3. **Make two wireframes** with `wireframe a b`, then edit them. They are only grey and white blocks, with no text, pictures or icons at all: `.h1`, `.h2`, `.h3` and `.line` bars where words go, `.img` where a picture goes, `.btn` for actions, `.card` and `.tint` for surfaces. Size and place each block as it will really be. The two options differ in structure, not decoration: another order of sections, another hero, another way to show the main thing. A game shows its screens one under the other (start, playing, win). A poster shows its real proportions. Run `wireframe check` on both before you report.
-4. **Stop and ask.** The words live in your report, since the wireframes have none: name the two options, say section by section what each block will hold and how they differ, say which you recommend, and ask the person to pick one or say what to change. The wireframes show on the board by themselves.
+2. **Write `design/direction.md`:** what each reference does that we take (specific: "menu as a plain price list in two columns", never "clean and modern"), the kind of picture the work will use and where it comes from, the palette as hex values, the type pair, and the `Moment:` line.
+3. **Make two wireframes** with `wireframe a b`, then edit them. They are only grey and white blocks, with no text, pictures or icons at all: `.h1`, `.h2`, `.h3` and `.line` bars where words go, `.img` where a picture goes, `.btn` for actions, `.card` and `.tint` for surfaces. Size and place each block as it will really be, the moment's block largest of all. The two options differ in structure, not decoration: another order of sections, another hero, another way to show the main thing. A game shows its screens one under the other (start, playing, win). A poster shows its real proportions. Run `wireframe check` on both before you report.
+4. **Stop and ask.** The words live in your report, since the wireframes have none: name the two options, say section by section what each block will hold and how they differ, state the moment, say which you recommend, and ask the person to pick one or say what to change. The wireframes show on the board by themselves.
 
 When they ask for changes, change the wireframes and ask again.
 
-## Round two: build what they approved
+## Round two: the moment alone, then stop
+
+Build only the moment, as `design/moment.html`: one file that runs by itself with no build step, at its real size, with its real type, colours, material and motion, on the page's real background. Everything around it stays out. A game makes it a real slice that plays itself until someone touches it.
+
+1. **Take its material** from your row of the map below, with the script.
+2. **Build it, then look.** Shoot it at rest and in the middle of its motion, and open both. Fix what looks cheap: thin depth, stiff timing, a corner that gives away it was generated. Do this at least twice.
+3. **Stop and ask.** Say in your report what it shows and ask the person whether this is the feeling they want. It shows on the board by itself.
+
+When they say it is flat or wrong, bring a different idea, not a polish of the same one. Build nothing else until they approve.
+
+## Round three: the rest, kept quiet
 
 Follow the chosen wireframe's structure and copy; where reality forces a change, say so in your report.
 
-1. **Take the material** from your row of the map below, with the script.
-2. **Build** the page, and the first screen's main picture first.
+1. **Move the moment in** as it was approved, without redrawing it.
+2. **Take the rest of the material** from your row of the map, with the script, and build everything around the moment from the quiet base. Anything that starts competing with the moment gets calmer.
 3. **Review.** Run `review` on the result. It fails a page without a main visual, with broken pictures, wider than a phone, or showing the tells below. Open `design/review/compare.jpg`, the build next to its references, name the three biggest gaps in your report, fix them, and run it again. Two rounds at most.
 
 ## What you are making, and where its material comes from
@@ -66,7 +95,7 @@ These are what make work read as generated. `review` fails the ones it can measu
 - **Fat display headings:** weight 800 or 900. Hierarchy comes from size and colour, at 400 to 600.
 - **Tracked uppercase labels** above headings (`KEDAI KOPI LOKAL`), and a label above every section.
 - **The template hero:** a big headline with two buttons on the left and one picture in a rounded box on the right, or a small card floating over the hero.
-- **Shapes standing in for a picture:** a sun drawn from CSS, blobs, circles, decorative lines.
+- **Shapes standing in for a picture:** a sun drawn from CSS, blobs, circles, decorative lines. A moment drawn in code is fine when it shows the product's real thing.
 - **Neo-brutalism by default:** thick black borders with hard offset shadows, every control a pill.
 - **Equal cards in a row,** each with an icon, a title and a vague line.
 - **Copy that fits any business:** exclamation marks, hype words, invented numbers and claims.
@@ -105,6 +134,7 @@ Components come from their own tools: `bunx shadcn@latest add <component>` in a 
 
 ## Gotchas
 
+- **`design/moment.html` loads material by relative path:** `../assets/...`, since it sits inside `design/`.
 - **Fonts and icons alone are not material.** A page whose `design/sources.md` holds only fonts and icons has skipped the map; go back to your row.
 - **Credit the photos.** Openverse photos carry a license that asks for a credit; put the lines `design/sources.md` lists in the page's footer.
 - **Check every photo before using it.** Search results can be off topic or low quality; open each one, and search again with other words when it does not fit.

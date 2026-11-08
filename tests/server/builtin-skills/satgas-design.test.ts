@@ -79,6 +79,15 @@ describe("the satgas-design skill", () => {
     for (const t of themes) expect(BUILTIN.hallmark?.[`references/themes/${t}.md`]).toBeDefined();
   });
 
+  test("spends the richness on one moment, approved alone before the rest is built", () => {
+    const skill = files["SKILL.md"] ?? "";
+    expect(skill).toContain("Moment:");
+    expect(skill).toContain("Round two: the moment alone, then stop");
+    expect(skill).toContain("design/moment.html");
+    expect(skill).toContain("Round three: the rest, kept quiet");
+    expect(skill.indexOf("Round two: the moment")).toBeGreaterThan(skill.indexOf("Round one: wireframes"));
+  });
+
   test("asks the person to approve wireframes before anything is built", () => {
     const skill = files["SKILL.md"] ?? "";
     expect(skill).toContain("Round one: wireframes, then stop");
