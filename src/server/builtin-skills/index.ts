@@ -11,6 +11,9 @@ import rounds from "./satgas/reference/rounds.md" with { type: "text" };
 import secrets from "./satgas/reference/secrets.md" with { type: "text" };
 import verify from "./satgas/reference/verify.md" with { type: "text" };
 import satgas from "./satgas/SKILL.md" with { type: "text" };
+import designSkill from "./satgas-design/SKILL.md" with { type: "text" };
+import designScript from "./satgas-design/scripts/source.mjs.txt" with { type: "text" };
+import designSources from "./satgas-design/sources.json";
 import { SECURITY_AUDIT } from "./security-audit.gen";
 
 // The README links its neighbours by relative path, which point nowhere inside the skill, so they go to the repository.
@@ -33,6 +36,12 @@ export const BUILTIN: Record<string, Record<string, string>> = {
     // The README itself, so the steps agents give about Satgas are the ones its docs give, in any install.
     "reference/satgas-guide.md": guideOf(guide),
   },
+  // Satgas's own: where a page's material comes from, with a script that takes the real files from licensed sources.
+  "satgas-design": {
+    "SKILL.md": designSkill,
+    "sources.json": `${JSON.stringify(designSources, null, 2)}\n`,
+    "scripts/source.mjs": designScript,
+  },
   // Addy Osmani's agent-skills (MIT): the engineering workflow every task follows, from spec to ship.
   ...AGENT_SKILLS,
   // Cloudflare's security-audit (MIT): defensive reviews and full audits when a task asks for them.
@@ -43,6 +52,7 @@ export const BUILTIN: Record<string, Record<string, string>> = {
 
 // Built-in skills the person may switch off, with the repo each came from for the credit on its card.
 export const OPTIONAL: Record<string, { repo: string }> = Object.fromEntries([
+  ["satgas-design", { repo: "zeative/satgas" }],
   ...Object.keys(SECURITY_AUDIT).map((name) => [name, { repo: "cloudflare/security-audit-skill" }]),
   ...Object.keys(HALLMARK).map((name) => [name, { repo: "Nutlope/hallmark" }]),
 ]);

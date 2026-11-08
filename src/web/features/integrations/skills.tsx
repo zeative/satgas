@@ -49,7 +49,16 @@ import {
   skillZipUrl,
   useSkills,
 } from "@/stores/skills";
-import { PACKS, type PackId, readSkillFile, type Skill, validSkillName } from "../../../shared/skills";
+import {
+  type MaterialSource,
+  PACKS,
+  type PackId,
+  readSkillFile,
+  readSources,
+  type Skill,
+  SOURCE_CATEGORIES,
+  validSkillName,
+} from "../../../shared/skills";
 
 const ts = t.skills;
 
@@ -857,7 +866,8 @@ type Shown = { path: string; size: number; text?: string } | "error" | null;
 // One skill's page: what it does and its files, the way a plugin listing shows them.
 export function SkillDetail({ name, onBack, onOpen }: { name: string; onBack: () => void; onOpen: (d: SkillDialog) => void }) {
   const skills = useSkills((s) => s.skills);
-  const [tab, setTab] = useState<"overview" | "contents">("overview");
+  const [tab, setTab] = useState<"overview" | "contents" | "sources">("overview");
+  const [sources, setSources] = useState<ReturnType<typeof readSources>>(null);
   const [files, setFiles] = useState<SkillFileInfo[] | null>(null);
   const [current, setCurrent] = useState("SKILL.md");
   const [shown, setShown] = useState<Shown>(null);
@@ -868,8 +878,16 @@ export function SkillDetail({ name, onBack, onOpen }: { name: string; onBack: ()
 
   useEffect(() => {
     if (!useSkills.getState().skills) void loadSkills();
+    setSources(null);
     listSkillFiles(name)
-      .then(setFiles)
+      .then((list) => {
+        setFiles(list);
+        // A skill that ships sources.json gets a tab listing where its material comes from.
+        if (list.some((f) => f.path === "sources.json"))
+          void readSkillFileText(name, "sources.json")
+            .then((f) => setSources(f.text ? readSources(f.text) : null))
+            .catch(() => setSources(null));
+      })
       .catch(() => setFiles([]));
     readSkillFileText(name, "SKILL.md")
       .then((f) => setMain(f.text ?? ""))
@@ -937,10 +955,16 @@ export function SkillDetail({ name, onBack, onOpen }: { name: string; onBack: ()
         )}
       </header>
 
-      <Tabs value={tab} onValueChange={(v) => setTab(v === "contents" ? "contents" : "overview")} className="gap-6">
+      <Tabs value={tab} onValueChange={(v) => setTab(v === "contents" || v === "sources" ? v : "overview")} className="gap-6">
         <div className="flex items-center justify-between gap-3">
           <TabsList>
             <TabsTrigger value="overview">{ts.overview}</TabsTrigger>
+            {sources && sources.sources.length > 0 && (
+              <TabsTrigger value="sources">
+                {ts.sourcesTab}
+                <span className="font-mono text-xs text-muted-foreground tabular-nums">{sources.sources.length}</span>
+              </TabsTrigger>
+            )}
             <TabsTrigger value="contents">
               {ts.contents}
               {files && <span className="font-mono text-xs text-muted-foreground tabular-nums">{files.length}</span>}
@@ -972,6 +996,12 @@ export function SkillDetail({ name, onBack, onOpen }: { name: string; onBack: ()
             </>
           )}
         </TabsContent>
+
+        {sources && (
+          <TabsContent value="sources">
+            <SourceList checked={sources.checked} sources={sources.sources} />
+          </TabsContent>
+        )}
 
         <TabsContent value="contents">
           <div className="grid overflow-hidden rounded-xl border md:grid-cols-[15rem_minmax(0,1fr)]">
@@ -1034,6 +1064,55 @@ export function SkillDetail({ name, onBack, onOpen }: { name: string; onBack: ()
           }
         }}
       />
+    </div>
+  );
+}
+
+// Where a skill's material comes from, grouped like a designer's shelf: each source with its real icon, what it gives,
+// and whether agents make, fetch or only study from it. The license shows on hover.
+function SourceList({ checked, sources }: { checked?: string; sources: MaterialSource[] }) {
+  return (
+    <div className="flex max-w-4xl flex-col gap-6">
+      <p className="text-sm text-muted-foreground">
+        <RichText text={ts.sourcesIntro} />
+        {checked && <span className="whitespace-nowrap">{` · ${ts.sourcesChecked(day.format(new Date(checked)))}`}</span>}
+      </p>
+      {SOURCE_CATEGORIES.map((category) => {
+        const group = sources.filter((s) => s.category === category);
+        if (!group.length) return null;
+        return (
+          <section key={category} aria-label={ts.sourceCategory[category]} className="flex flex-col gap-2">
+            <h3 className="text-xs text-muted-foreground">{ts.sourceCategory[category]}</h3>
+            <ul className="grid gap-x-4 gap-y-1 sm:grid-cols-2">
+              {group.map((s) => (
+                <li key={s.id}>
+                  <OutboundLink
+                    href={s.url}
+                    title={`${s.name} · ${s.license}`}
+                    className="flex min-h-12 items-center gap-3 rounded-lg px-2 py-1.5 transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                  >
+                    {/* A light tile, so a black mark stays visible in the dark theme, as an app icon would. */}
+                    <span className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-lg border bg-white">
+                      {s.icon ? (
+                        <img src={s.icon} alt="" loading="lazy" draggable={false} className="size-full object-contain p-1" />
+                      ) : (
+                        <span className="text-xs font-medium text-neutral-500">{s.name.slice(0, 1)}</span>
+                      )}
+                    </span>
+                    <span className="flex min-w-0 flex-1 flex-col">
+                      <span className="truncate text-sm font-medium">{s.name}</span>
+                      <span className="truncate text-xs text-muted-foreground">
+                        {s.needsKey ? `${s.gives} · ${ts.sourceKey}` : s.gives}
+                      </span>
+                    </span>
+                    <span className="shrink-0 text-xs text-muted-foreground">{ts.sourceUse[s.use]}</span>
+                  </OutboundLink>
+                </li>
+              ))}
+            </ul>
+          </section>
+        );
+      })}
     </div>
   );
 }

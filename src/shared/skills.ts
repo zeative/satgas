@@ -102,3 +102,68 @@ export function parseGithubSource(input: string): { owner: string; repo: string;
     .replace(/(^|\/)SKILL\.md$/i, "");
   return { owner: m[1], repo: m[2], ...(m[3] ? { ref: m[3] } : {}), ...(path ? { path } : {}) };
 }
+
+// A skill may ship sources.json: the outside sources its script takes real material from. The skill's page lists them.
+export const SOURCE_CATEGORIES = [
+  "backgrounds",
+  "patterns",
+  "icons",
+  "logos",
+  "type",
+  "illustrations",
+  "photos",
+  "colour",
+  "motion",
+  "components",
+  "references",
+] as const;
+export type SourceCategory = (typeof SOURCE_CATEGORIES)[number];
+export interface MaterialSource {
+  id: string;
+  name: string;
+  url: string;
+  category: SourceCategory;
+  gives: string;
+  license: string;
+  // generate: agents make a file from it; download: agents fetch its files; reference: agents study it.
+  use: "generate" | "download" | "reference";
+  icon?: string;
+  needsKey?: string;
+}
+
+// Only well-formed entries with a known category and an https link; a skill's own file is never trusted blindly.
+export function readSources(text: string): { checked?: string; sources: MaterialSource[] } | null {
+  let data: unknown;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    return null;
+  }
+  const list = (data as { sources?: unknown })?.sources;
+  if (!Array.isArray(list)) return null;
+  const str = (v: unknown) => (typeof v === "string" ? v : "");
+  const sources = list.flatMap((raw): MaterialSource[] => {
+    const r = raw as Record<string, unknown>;
+    const category = str(r.category) as SourceCategory;
+    const use = str(r.use);
+    if (!str(r.id) || !str(r.name) || !/^https:\/\//.test(str(r.url)) || !SOURCE_CATEGORIES.includes(category)) return [];
+    if (use !== "generate" && use !== "download" && use !== "reference") return [];
+    const icon = str(r.icon);
+    return [
+      {
+        id: str(r.id),
+        name: str(r.name),
+        url: str(r.url),
+        category,
+        gives: str(r.gives),
+        license: str(r.license),
+        use,
+        // Only the app's own bundled pictures, so a skill cannot make the page load from anywhere.
+        ...(/^\/sources\/[\w.-]+\.(png|svg)$/.test(icon) ? { icon } : {}),
+        ...(str(r.needsKey) ? { needsKey: str(r.needsKey) } : {}),
+      },
+    ];
+  });
+  const checked = str((data as { checked?: unknown }).checked);
+  return { ...(checked ? { checked } : {}), sources };
+}

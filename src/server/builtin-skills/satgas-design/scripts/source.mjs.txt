@@ -1,0 +1,639 @@
+#!/usr/bin/env node
+// Takes real material from the sources in ../sources.json and saves it into the project: generated backgrounds and
+// patterns, icons, logos, fonts, avatars, photos, animations, colour scales, motion libraries and reference shots.
+// Every file it writes is recorded in design/sources.md with where it came from and its license.
+import { spawnSync } from "node:child_process";
+import { appendFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join, relative, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const HERE = dirname(fileURLToPath(import.meta.url));
+const CATALOG = JSON.parse(readFileSync(join(HERE, "..", "sources.json"), "utf8"));
+const SOURCES = new Map(CATALOG.sources.map((s) => [s.id, s]));
+const LEDGER = "design/sources.md";
+const UA = "Mozilla/5.0 (satgas-design source)";
+
+class Fail extends Error {}
+
+// --- arguments -------------------------------------------------------------------------------------------------------
+
+function parse(argv) {
+  const words = [];
+  const flags = {};
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
+    if (!a.startsWith("--")) {
+      words.push(a);
+      continue;
+    }
+    const [key, inline] = a.slice(2).split("=", 2);
+    if (inline !== undefined) flags[key] = inline;
+    else if (argv[i + 1] !== undefined && !argv[i + 1].startsWith("--")) flags[key] = argv[++i];
+    else flags[key] = true;
+  }
+  return { words, flags };
+}
+
+const HEX = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i;
+function colours(value, min, max) {
+  const list = String(value ?? "")
+    .split(/[\s,]+/)
+    .filter(Boolean)
+    .map((c) => (c.startsWith("#") ? c : `#${c}`));
+  if (list.length < min || list.length > max || !list.every((c) => HEX.test(c)))
+    throw new Fail(`Give --colors as ${min} to ${max} hex colours, like --colors "#0b0b0f,#3a1a0c,#d0561d"`);
+  return list;
+}
+
+function size(value, fallback) {
+  const m = /^(\d{2,5})x(\d{2,5})$/.exec(String(value ?? fallback));
+  if (!m) throw new Fail("Give --size as WIDTHxHEIGHT, like --size 1920x1080");
+  const [w, h] = [Number(m[1]), Number(m[2])];
+  if (w > 4096 || h > 4096) throw new Fail("--size is at most 4096 on each side");
+  return [w, h];
+}
+
+const slug = (s) =>
+  String(s)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+
+// --- network ---------------------------------------------------------------------------------------------------------
+
+async function get(url, { headers = {}, kind = "text", body, method } = {}) {
+  let res;
+  try {
+    res = await fetch(url, { method, body, headers: { "user-agent": UA, ...headers }, signal: AbortSignal.timeout(30_000) });
+  } catch (e) {
+    throw new Fail(`Could not reach ${new URL(url).host}: ${e.message}`);
+  }
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Fail(`${new URL(url).host} answered ${res.status} for ${url}`);
+  if (kind === "json") return res.json();
+  if (kind === "bytes") return Buffer.from(await res.arrayBuffer());
+  return res.text();
+}
+
+// The newest version of an npm package, so every file names the exact version it came from.
+async function npmVersion(pkg) {
+  const data = await get(`https://data.jsdelivr.com/v1/packages/npm/${pkg}/resolved?specifier=latest`, { kind: "json" });
+  if (!data?.version) throw new Fail(`Could not find the current version of ${pkg}`);
+  return data.version;
+}
+
+// --- files and the ledger --------------------------------------------------------------------------------------------
+
+function save(path, data) {
+  mkdirSync(dirname(resolve(path)), { recursive: true });
+  writeFileSync(path, data);
+  return path;
+}
+
+const saved = [];
+function ledger() {
+  if (existsSync(LEDGER)) return;
+  save(
+    LEDGER,
+    "# Sources\n\nEvery file below was taken from its source by `satgas-design`. Credit the ones marked to credit.\n\n| File | Source | License | From |\n| --- | --- | --- | --- |\n",
+  );
+}
+function record(sourceId, files, from) {
+  const s = SOURCES.get(sourceId);
+  ledger();
+  for (const f of files) {
+    const rel = relative(process.cwd(), resolve(f));
+    appendFileSync(LEDGER, `| \`${rel}\` | [${s.name}](${s.url}) | ${s.license}${s.credit ? " (credit)" : ""} | ${from ?? s.url} |\n`);
+    saved.push(rel);
+  }
+  console.log(`From ${s.name} (${s.url}) · ${s.license}`);
+  if (s.credit) console.log(`Credit it: ${s.credit}`);
+}
+
+// --- the browser, for what has to be rendered ------------------------------------------------------------------------
+
+function browser(session, args, timeout = 90_000) {
+  const r = spawnSync("agent-browser", ["--session", session, ...args], { encoding: "utf8", timeout });
+  if (r.error?.code === "ENOENT") throw new Fail("agent-browser is not installed, so this source cannot be rendered here");
+  if (r.status !== 0) throw new Fail(`agent-browser ${args[0]} failed: ${(r.stderr || r.stdout || "").trim().slice(0, 300)}`);
+  return r.stdout;
+}
+
+// Runs steps in a browser session of its own and always closes it, so no browser is left running.
+async function withBrowser(fn) {
+  const session = `satgas-source-${process.pid}-${Math.random().toString(36).slice(2, 7)}`;
+  try {
+    return await fn((args, timeout) => browser(session, args, timeout));
+  } finally {
+    spawnSync("agent-browser", ["--session", session, "close"], { timeout: 20_000 });
+  }
+}
+
+const shotFormat = (out) => (/\.jpe?g$/i.test(out) ? ["--screenshot-format", "jpeg", "--screenshot-quality", "82"] : []);
+
+// Renders a page to an image of exactly w×h.
+async function render(html, w, h, out, ready = "window.__ready === true") {
+  const dir = join(tmpdir(), `satgas-source-${process.pid}`);
+  mkdirSync(dir, { recursive: true });
+  const page = join(dir, "page.html");
+  writeFileSync(page, html);
+  try {
+    await withBrowser(async (ab) => {
+      ab(["--allow-file-access", "set", "viewport", String(w), String(h), "1"]);
+      ab(["--allow-file-access", "open", `file://${page}`]);
+      ab(["wait", "--fn", ready], 60_000);
+      ab(["wait", "400"]);
+      mkdirSync(dirname(resolve(out)), { recursive: true });
+      ab([...shotFormat(out), "screenshot", resolve(out)]);
+    });
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+  if (!existsSync(out)) throw new Fail("The browser did not write the image");
+  return out;
+}
+
+// --- commands --------------------------------------------------------------------------------------------------------
+
+const LABELS = {
+  backgrounds: "Backgrounds",
+  patterns: "Patterns",
+  icons: "Icons",
+  logos: "Logos",
+  type: "Type",
+  illustrations: "Illustrations and avatars",
+  photos: "Photos",
+  colour: "Colour",
+  motion: "Motion",
+  components: "Components",
+  references: "Layout references",
+};
+
+function list([category]) {
+  for (const [cat, label] of Object.entries(LABELS)) {
+    if (category && cat !== category) continue;
+    console.log(`\n${label}`);
+    for (const s of CATALOG.sources.filter((x) => x.category === cat)) {
+      const how = s.command ? `source.mjs ${s.command}` : s.use;
+      console.log(`  ${s.name.padEnd(18)} ${s.gives}. ${s.license}. ${how}${s.needsKey ? ` (needs ${s.needsKey})` : ""}`);
+    }
+  }
+}
+
+// Paper Shaders' mesh gradient, rendered at the exact size in the brief's colours.
+async function bgMesh(flags) {
+  const list = colours(flags.colors, 2, 10);
+  const [w, h] = size(flags.size, "1920x1080");
+  const seed = Number(flags.seed ?? Math.floor(Math.random() * 10_000));
+  const num = (k, d) => (flags[k] === undefined ? d : Number(flags[k]));
+  const out = flags.out ?? `assets/bg-mesh-${seed}.jpg`;
+  const version = await npmVersion("@paper-design/shaders");
+  const uniforms = {
+    u_colorsCount: list.length,
+    u_distortion: num("distortion", 0.8),
+    u_swirl: num("swirl", 0.1),
+    u_grainMixer: 0,
+    u_grainOverlay: num("grain", 0.08),
+  };
+  const html = `<!doctype html><html><body style="margin:0;background:${list[0]}"><div id="s" style="width:100vw;height:100vh"></div>
+<script type="module">
+import { ShaderMount, meshGradientFragmentShader, getShaderColorFromString, defaultPatternSizing, ShaderFitOptions } from "https://cdn.jsdelivr.net/npm/@paper-design/shaders@${version}/+esm";
+const sizing = Object.fromEntries(Object.entries(defaultPatternSizing).map(([k, v]) => ["u_" + k, k === "fit" ? ShaderFitOptions[v] : v]));
+new ShaderMount(document.getElementById("s"), meshGradientFragmentShader, { u_colors: ${JSON.stringify(list)}.map(getShaderColorFromString), ...${JSON.stringify(uniforms)}, ...sizing }, undefined, 0, ${seed});
+requestAnimationFrame(() => requestAnimationFrame(() => { window.__ready = true; }));
+</script></body></html>`;
+  await render(html, w, h, out);
+  record("paper-shaders", [out], `@paper-design/shaders@${version}, mesh gradient, seed ${seed}`);
+  console.log(`Run again with --seed ${seed} for the same image, or another seed for a different one`);
+}
+
+// fffuel's generators draw an SVG in the page; set the colours, then keep that SVG.
+// Only the generators whose SVG was checked to carry the palette; llline, ppperspective and hhholographic were not.
+const FFFUEL = ["gggrain", "nnnoise", "ffflux", "sssurf", "uuunion", "ssspot", "bbburst"];
+async function bgFffuel([tool], flags) {
+  if (!FFFUEL.includes(tool)) throw new Fail(`Pick one of fffuel's generators: ${FFFUEL.join(", ")}`);
+  const list = flags.colors ? colours(flags.colors, 1, 4) : [];
+  const out = flags.out ?? `assets/bg-${tool}.svg`;
+  const svg = await withBrowser(async (ab) => {
+    ab(["set", "viewport", "1280", "800"]);
+    ab(["open", `https://www.fffuel.co/${tool}/`]);
+    ab(["wait", "--fn", "document.querySelector('main svg, svg[id]') !== null"], 45_000);
+    if (list.length) {
+      const set = `(() => { const want = ${JSON.stringify(list)}; const inputs = [...document.querySelectorAll('input[type=text], input[type=color]')].filter((i) => i.type === 'color' || /^\\s*(#[0-9a-f]{3,8}|hsla?\\(|rgba?\\()/i.test(i.value)); inputs.slice(0, want.length).forEach((input, n) => { const d = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value'); d.set.call(input, want[n]); input.dispatchEvent(new Event('input', { bubbles: true })); input.dispatchEvent(new Event('change', { bubbles: true })); }); return inputs.length; })()`;
+      const found = Number(JSON.parse(ab(["eval", set]).trim() || "0"));
+      if (!found) console.log(`${tool} has no colour fields, so it keeps its own colours`);
+      ab(["wait", "800"]);
+    }
+    const grab = `(() => { const byId = document.getElementById(${JSON.stringify(tool)}); const el = byId && byId.tagName.toLowerCase() === 'svg' ? byId : [...document.querySelectorAll('main svg')].sort((a, b) => b.getBoundingClientRect().width * b.getBoundingClientRect().height - a.getBoundingClientRect().width * a.getBoundingClientRect().height)[0]; return el ? el.outerHTML : ''; })()`;
+    return JSON.parse(ab(["eval", grab]).trim() || '""');
+  });
+  if (!svg.startsWith("<svg")) throw new Fail(`fffuel's ${tool} page did not show an SVG to take`);
+  save(out, svg.includes("xmlns=") ? svg : svg.replace("<svg", '<svg xmlns="http://www.w3.org/2000/svg"'));
+  record("fffuel", [out], `https://www.fffuel.co/${tool}/`);
+}
+
+// GradientsHub's free images: list or search them, then take one, resized when --size is given.
+async function bgGradientsHub([query], flags) {
+  const html = await get("https://gradientshub.com/freebies/");
+  const all = [...new Set([...(html ?? "").matchAll(/href="\/freebies\/(?:gradients|ai-generated)\/([a-z0-9-]+)\/?"/g)].map((m) => m[1]))];
+  if (!all.length) throw new Fail("GradientsHub's list could not be read");
+  const words = String(query ?? "")
+    .toLowerCase()
+    .split(/\s+/)
+    .filter(Boolean);
+  const hits = all.filter((s) => words.every((w) => s.includes(w)));
+  if (!query || (!flags.take && hits.length !== 1 && !all.includes(query))) {
+    console.log(`${hits.length || all.length} images${query ? ` matching "${query}"` : ""}:`);
+    for (const s of (query ? hits : all).slice(0, 80)) console.log(`  ${s}`);
+    console.log("Take one with: source.mjs bg gradientshub <name> [--size 1920x1080] [--out assets/bg.jpg]");
+    return;
+  }
+  const name = all.includes(query) ? query : hits[0];
+  const url = `https://assets.gradientshub.com/free/${name}.jpg`;
+  const bytes = await get(url, { kind: "bytes" });
+  if (!bytes) throw new Fail(`GradientsHub has no file for ${name}`);
+  const out = flags.out ?? `assets/${name}.jpg`;
+  if (flags.size) {
+    // Cropped and resized in the browser, so a 1 MB original becomes a page-sized JPEG.
+    const [w, h] = size(flags.size);
+    const html = `<!doctype html><html><body style="margin:0"><img id="i" src="data:image/jpeg;base64,${bytes.toString("base64")}" style="width:100vw;height:100vh;object-fit:cover;display:block" onload="window.__ready=true"></body></html>`;
+    await render(html, w, h, out);
+  } else save(out, bytes);
+  record("gradientshub", [out], url);
+}
+
+// Hero Patterns keeps its 87 patterns as SVG in its own script; take one and recolour it.
+async function patternHero([name], flags) {
+  const js = await get("https://heropatterns.com/js/app.js");
+  const patterns = [...(js ?? "").matchAll(/name:\s*'([^']+)',\s*image:\s*'(<svg[\s\S]*?<\/svg>)'/g)].map((m) => ({
+    name: m[1],
+    svg: m[2],
+  }));
+  if (!patterns.length) throw new Fail("Hero Patterns' list could not be read");
+  const found = name && patterns.find((p) => slug(p.name) === slug(name));
+  if (!found) {
+    console.log(`${name ? `No pattern named "${name}". ` : ""}The ${patterns.length} patterns:`);
+    console.log(`  ${patterns.map((p) => slug(p.name)).join(", ")}`);
+    return;
+  }
+  const colour = flags.color ? colours(flags.color, 1, 1)[0] : "#000000";
+  const opacity = Number(flags.opacity ?? 0.4);
+  const svg = found.svg
+    .replace(/fill="#[0-9a-f]{3,6}"/gi, `fill="${colour}"`)
+    .replace(/<svg /, `<svg fill="${colour}" fill-opacity="${opacity}" `);
+  const out = flags.out ?? `assets/pattern-${slug(found.name)}.svg`;
+  save(out, svg);
+  record("hero-patterns", [out], `https://heropatterns.com (${found.name})`);
+  const css = `background-image: url("data:image/svg+xml,${encodeURIComponent(svg).replace(/'/g, "%27")}");`;
+  console.log(`As a CSS background (${css.length} characters): use the file, or paste this:\n${css.slice(0, 160)}…`);
+}
+
+const ICON_SETS = {
+  lucide: { pkg: "lucide-static", path: (n) => `icons/${n}.svg`, list: "tags.json" },
+  tabler: { pkg: "@tabler/icons", path: (n, f) => `icons/${f.filled ? "filled" : "outline"}/${n}.svg`, list: "tabler-nodes-outline.json" },
+  phosphor: {
+    pkg: "@phosphor-icons/core",
+    path: (n, f) => {
+      const weight = f.weight ?? "regular";
+      return `assets/${weight}/${n}${weight === "regular" ? "" : `-${weight}`}.svg`;
+    },
+  },
+};
+async function icon([set, ...names], flags) {
+  const def = ICON_SETS[set];
+  if (!def) throw new Fail(`Pick an icon set: ${Object.keys(ICON_SETS).join(", ")}`);
+  if (!names.length) throw new Fail(`Name the icons, like: source.mjs icon ${set} house search arrow-right`);
+  const version = await npmVersion(def.pkg);
+  const dir = flags.out ?? "assets/icons";
+  const files = [];
+  const missing = [];
+  for (const raw of names) {
+    const n = slug(raw);
+    const svg = await get(`https://cdn.jsdelivr.net/npm/${def.pkg}@${version}/${def.path(n, flags)}`);
+    if (!svg?.includes("<svg")) {
+      missing.push(n);
+      continue;
+    }
+    files.push(save(join(dir, `${n}.svg`), svg.replace(/^<!--[\s\S]*?-->\s*/, "")));
+  }
+  if (files.length) record(set, files, `${def.pkg}@${version}`);
+  if (missing.length) {
+    let hint = "";
+    if (def.list) {
+      const index = await get(`https://cdn.jsdelivr.net/npm/${def.pkg}@${version}/${def.list}`, { kind: "json" }).catch(() => null);
+      const keys = index ? Object.keys(index) : [];
+      const near = missing.flatMap((m) => keys.filter((k) => k.includes(m.split("-")[0])).slice(0, 6));
+      if (near.length) hint = ` Close names: ${[...new Set(near)].join(", ")}`;
+    }
+    console.log(`Not in ${set}: ${missing.join(", ")}.${hint}`);
+    if (!files.length) process.exitCode = 1;
+  }
+}
+
+async function logo(brands, flags) {
+  if (!brands.length) throw new Fail('Name the brands, like: source.mjs logo stripe github "google cloud"');
+  const dir = flags.out ?? "assets/logos";
+  for (const brand of brands) {
+    if (flags.mono) {
+      const version = await npmVersion("simple-icons");
+      const s = brand
+        .toLowerCase()
+        .replace(/\+/g, "plus")
+        .replace(/\./g, "dot")
+        .replace(/&/g, "and")
+        .replace(/[^a-z0-9]/g, "");
+      const svg = await get(`https://cdn.jsdelivr.net/npm/simple-icons@${version}/icons/${s}.svg`);
+      if (!svg) {
+        console.log(`Simple Icons has no "${brand}"; try it without --mono for svgl`);
+        continue;
+      }
+      record("simple-icons", [save(join(dir, `${s}-mono.svg`), svg)], `simple-icons@${version}`);
+      continue;
+    }
+    const hits = await get(`https://api.svgl.app?search=${encodeURIComponent(brand)}`, { kind: "json" });
+    const hit = (hits ?? []).find((h) => h.title.toLowerCase() === brand.toLowerCase()) ?? hits?.[0];
+    if (!hit) {
+      console.log(`svgl has no "${brand}"; try --mono for Simple Icons`);
+      continue;
+    }
+    const routes = typeof hit.route === "string" ? { "": hit.route } : { "-light": hit.route.light, "-dark": hit.route.dark };
+    const files = [];
+    for (const [suffix, url] of Object.entries(routes)) {
+      const svg = await get(url);
+      if (svg) files.push(save(join(dir, `${slug(hit.title)}${suffix}.svg`), svg));
+    }
+    if (files.length) record("svgl", files, `https://svgl.app (${hit.title})`);
+    if (files.length > 1) console.log("It has a light and a dark version: show the -dark file on dark backgrounds");
+  }
+}
+
+async function font([family], flags) {
+  if (!family) throw new Fail('Name the family, like: source.mjs font "Space Grotesk" --weights 400,500');
+  const id = slug(family);
+  const meta = await get(`https://api.fontsource.org/v1/fonts/${id}`, { kind: "json" });
+  if (!meta) throw new Fail(`Fontsource has no "${family}". Check the name on https://fontsource.org`);
+  const weights = String(flags.weights ?? "400,500")
+    .split(",")
+    .map(Number);
+  const styles = String(flags.styles ?? "normal").split(",");
+  const subset = flags.subset ?? meta.defSubset ?? "latin";
+  const dir = flags.out ?? "assets/fonts";
+  const files = [];
+  const faces = [];
+  for (const w of weights)
+    for (const st of styles) {
+      const url = meta.variants?.[w]?.[st]?.[subset]?.url?.woff2;
+      if (!url) {
+        console.log(`${meta.family} has no ${w} ${st} in ${subset}; it offers weights ${meta.weights.join(", ")}`);
+        continue;
+      }
+      const name = `${id}-${subset}-${w}-${st}.woff2`;
+      files.push(save(join(dir, name), await get(url, { kind: "bytes" })));
+      faces.push(
+        `@font-face {\n  font-family: "${meta.family}";\n  font-style: ${st};\n  font-weight: ${w};\n  font-display: swap;\n  src: url("./${name}") format("woff2");\n}`,
+      );
+    }
+  if (!files.length) throw new Fail("No font file matched; pick weights it has");
+  const css = join(dir, `${id}.css`);
+  files.push(save(css, `/* ${meta.family} from Fontsource, ${meta.license} */\n${faces.join("\n\n")}\n`));
+  record("fontsource", files, `${meta.family} ${meta.version ?? ""}, ${meta.license}`.trim());
+  console.log(`Link ${css} in the page, then use font-family: "${meta.family}", ${meta.category}`);
+}
+
+async function avatar([style, ...seeds], flags) {
+  if (!style || !seeds.length) throw new Fail("Give a DiceBear style and seeds, like: source.mjs avatar notionists ana budi citra");
+  const dir = flags.out ?? "assets/avatars";
+  const files = [];
+  let license = "";
+  for (const seed of seeds) {
+    const params = new URLSearchParams({ seed });
+    if (flags.bg) params.set("backgroundColor", String(flags.bg).replace(/^#/, ""));
+    const svg = await get(`https://api.dicebear.com/9.x/${encodeURIComponent(style)}/svg?${params}`);
+    if (!svg) throw new Fail(`DiceBear has no style "${style}". See https://www.dicebear.com/styles`);
+    license ||= /<dcterms:license>[\s\S]*?<rdf:li[^>]*>([^<]+)</.exec(svg)?.[1] ?? /license[^>]*>([^<]{3,80})</i.exec(svg)?.[1] ?? "";
+    files.push(save(join(dir, `${slug(style)}-${slug(seed)}.svg`), svg));
+  }
+  record(style === "open-peeps" ? "open-peeps" : "dicebear", files, `DiceBear ${style}${license ? `, ${license.trim()}` : ""}`);
+  if (license) console.log(`This style's license: ${license.trim()}`);
+}
+
+function key(name, flags) {
+  if (flags["key-file"]) return readFileSync(String(flags["key-file"]), "utf8").trim();
+  if (process.env[name]) return process.env[name];
+  throw new Fail(
+    `This needs ${name}. Ask the person for a free key with request_secret on the satgas_team connector, then pass --key-file <the file it gives you>`,
+  );
+}
+
+async function photo([site, ...query], flags) {
+  const q = query.join(" ");
+  if (!q) throw new Fail('Say what to search for, like: source.mjs photo unsplash "coffee bar morning light"');
+  const count = Math.min(Number(flags.count ?? 3), 10);
+  const orientation = flags.orientation ?? "landscape";
+  const dir = flags.out ?? "assets/photos";
+  const files = [];
+  const credits = [];
+  if (site === "unsplash") {
+    const k = key("UNSPLASH_ACCESS_KEY", flags);
+    const auth = { authorization: `Client-ID ${k}`, "accept-version": "v1" };
+    const data = await get(
+      `https://api.unsplash.com/search/photos?${new URLSearchParams({ query: q, per_page: String(count), orientation })}`,
+      {
+        headers: auth,
+        kind: "json",
+      },
+    );
+    for (const p of data?.results ?? []) {
+      files.push(save(join(dir, `unsplash-${p.id}.jpg`), await get(`${p.urls.raw}&w=1920&q=80&fm=jpg`, { kind: "bytes" })));
+      // Unsplash's API terms ask for a call to the download endpoint whenever a photo is used.
+      await get(p.links.download_location, { headers: auth }).catch(() => null);
+      credits.push(`${p.user?.name ?? "unknown"} (${p.links.html})`);
+    }
+  } else if (site === "pexels") {
+    const k = key("PEXELS_API_KEY", flags);
+    const data = await get(`https://api.pexels.com/v1/search?${new URLSearchParams({ query: q, per_page: String(count), orientation })}`, {
+      headers: { authorization: k },
+      kind: "json",
+    });
+    for (const p of data?.photos ?? []) {
+      files.push(save(join(dir, `pexels-${p.id}.jpg`), await get(p.src.large2x, { kind: "bytes" })));
+      credits.push(`${p.photographer} (${p.url})`);
+    }
+  } else throw new Fail("Pick unsplash or pexels");
+  if (!files.length) throw new Fail(`No photos found for "${q}"`);
+  record(site, files, `search "${q}"`);
+  console.log(`Photographers, if you credit them: ${credits.join("; ")}`);
+}
+
+async function lottie(query, flags) {
+  const q = query.join(" ");
+  if (!q) throw new Fail('Say what to search for, like: source.mjs lottie "success check"');
+  const count = Math.min(Number(flags.count ?? 1), 5);
+  const body = JSON.stringify({
+    query: "query($q:String!,$n:Int){searchPublicAnimations(query:$q,first:$n){edges{node{name jsonUrl url}}}}",
+    variables: { q, n: count },
+  });
+  const data = await get("https://graphql.lottiefiles.com/2022-08", {
+    method: "POST",
+    body,
+    headers: { "content-type": "application/json" },
+    kind: "json",
+  });
+  const nodes = (data?.data?.searchPublicAnimations?.edges ?? []).map((e) => e.node).filter((n) => n.jsonUrl);
+  if (!nodes.length) throw new Fail(`No free animation found for "${q}"`);
+  const dir = flags.out ?? "assets/lottie";
+  const files = [];
+  for (const n of nodes) files.push(save(join(dir, `${slug(n.name || q)}-${n.url.split("-").pop()}.json`), await get(n.jsonUrl)));
+  record("lottiefiles", files, nodes.map((n) => n.url).join(", "));
+  console.log("Play it with lottie-web (source.mjs lib lottie-web) and recolour it to the palette");
+}
+
+const RADIX = [
+  "gray mauve slate sage olive sand",
+  "tomato red ruby crimson pink plum purple violet iris indigo blue cyan teal jade green grass bronze gold brown orange amber yellow lime mint sky",
+]
+  .join(" ")
+  .split(" ");
+async function colorRadix([which, ...scales], flags) {
+  if (which !== "radix" || !scales.length)
+    throw new Fail(`Name Radix scales, like: source.mjs color radix slate amber. Scales: ${RADIX.join(", ")}`);
+  const bad = scales.filter((s) => !RADIX.includes(s));
+  if (bad.length) throw new Fail(`Not a Radix scale: ${bad.join(", ")}`);
+  const version = await npmVersion("@radix-ui/colors");
+  const parts = [];
+  for (const s of scales)
+    for (const file of [s, `${s}-dark`]) parts.push(await get(`https://cdn.jsdelivr.net/npm/@radix-ui/colors@${version}/${file}.css`));
+  const out = flags.out ?? "assets/colors.css";
+  save(out, `/* Radix Colors ${version}: ${scales.join(", ")}, light and dark (.dark) */\n${parts.join("\n")}`);
+  record("radix-colors", [out], `@radix-ui/colors@${version}`);
+  console.log(
+    `Use steps by their job: 1-2 backgrounds, 3-5 components, 6-8 borders, 9-10 solid fills, 11-12 text. Variables like var(--${scales[0]}-9)`,
+  );
+}
+
+const LIBS = {
+  gsap: { pkg: "gsap", files: ["dist/gsap.min.js"], source: "gsap" },
+  scrolltrigger: { pkg: "gsap", files: ["dist/ScrollTrigger.min.js"], source: "gsap" },
+  motion: { pkg: "motion", files: ["dist/motion.js"], source: "motion" },
+  "lottie-web": { pkg: "lottie-web", files: ["build/player/lottie_light.min.js"], source: "lottie-web" },
+};
+async function lib(names, flags) {
+  if (!names.length || names.some((n) => !LIBS[n])) throw new Fail(`Pick libraries: ${Object.keys(LIBS).join(", ")}`);
+  const dir = flags.out ?? "vendor";
+  for (const n of names) {
+    const def = LIBS[n];
+    const version = await npmVersion(def.pkg);
+    const files = [];
+    for (const f of def.files) {
+      const js = await get(`https://cdn.jsdelivr.net/npm/${def.pkg}@${version}/${f}`);
+      if (!js) throw new Fail(`${def.pkg}@${version} has no ${f}`);
+      files.push(
+        save(
+          join(
+            dir,
+            f
+              .split("/")
+              .pop()
+              .replace(/(\.min)?\.js$/, `-${version}$1.js`),
+          ),
+          js,
+        ),
+      );
+    }
+    record(def.source, files, `${def.pkg}@${version}`);
+  }
+}
+
+// Screenshots a reference site at desktop and phone width, so the build can be compared with it.
+async function ref(urls, flags) {
+  if (!urls.length) throw new Fail("Give the sites to study, like: source.mjs ref https://linear.app https://stripe.com");
+  const dir = flags.out ?? "design/refs";
+  for (const raw of urls) {
+    const url = /^https?:\/\//.test(raw) ? raw : `https://${raw}`;
+    const name = slug(new URL(url).host.replace(/^www\./, ""));
+    const files = [];
+    await withBrowser(async (ab) => {
+      for (const [label, w, h] of [
+        ["desktop", 1280, 800],
+        ["phone", 390, 844],
+      ]) {
+        ab(["set", "viewport", String(w), String(h), "1"]);
+        ab(["open", url], 60_000);
+        ab(["wait", "--load", "networkidle"], 30_000);
+        ab(["wait", "1200"]);
+        const out = join(dir, `${name}-${label}.jpg`);
+        mkdirSync(dirname(resolve(out)), { recursive: true });
+        ab([...shotFormat(out), "screenshot", resolve(out)]);
+        files.push(out);
+      }
+    }).catch((e) => console.log(`Could not capture ${url}: ${e.message}`));
+    if (files.length) {
+      const known = CATALOG.sources.find((s) => s.category === "references" && url.startsWith(s.url));
+      recordRef(known?.id, files, url);
+    }
+  }
+}
+function recordRef(id, files, url) {
+  if (id) return record(id, files, url);
+  ledger();
+  for (const f of files) {
+    appendFileSync(
+      LEDGER,
+      `| \`${relative(process.cwd(), resolve(f))}\` | ${url} | Reference only, never copied into the page | ${url} |\n`,
+    );
+    saved.push(f);
+  }
+  console.log(`From ${url} · reference only, study it and never copy it`);
+}
+
+// --- main ------------------------------------------------------------------------------------------------------------
+
+const USAGE = `Usage: node source.mjs <command>
+
+  list [category]                                   Every source, what it gives and its license
+  bg mesh --colors "#a,#b,#c" [--size 1920x1080] [--seed N] [--out assets/bg.jpg]
+  bg fffuel <${FFFUEL.join("|")}> [--colors "#a,#b"] [--out assets/bg.svg]
+  bg gradientshub [search words | name] [--size 1920x1080] [--out assets/bg.jpg]
+  pattern hero [name] [--color "#hex"] [--opacity 0.4] [--out assets/pattern.svg]
+  icon <lucide|tabler|phosphor> <names...> [--weight bold] [--out assets/icons]
+  logo <brands...> [--mono] [--out assets/logos]
+  font "<family>" [--weights 400,500] [--styles normal,italic] [--out assets/fonts]
+  avatar <dicebear style> <seeds...> [--bg "#hex"] [--out assets/avatars]
+  photo <unsplash|pexels> <search words> [--count 3] [--key-file path]
+  lottie <search words> [--count 1] [--out assets/lottie]
+  color radix <scales...> [--out assets/colors.css]
+  lib <gsap|scrolltrigger|motion|lottie-web...> [--out vendor]
+  ref <urls...> [--out design/refs]
+
+Every file is recorded in ${LEDGER}.`;
+
+async function main(argv) {
+  const { words, flags } = parse(argv);
+  const [cmd, sub, ...rest] = words;
+  if (!cmd || cmd === "help" || flags.help) return console.log(USAGE);
+  if (cmd === "list") return list([sub]);
+  if (cmd === "bg" && sub === "mesh") return bgMesh(flags);
+  if (cmd === "bg" && sub === "fffuel") return bgFffuel(rest, flags);
+  if (cmd === "bg" && sub === "gradientshub") return bgGradientsHub([rest.join(" ") || undefined], flags);
+  if (cmd === "pattern" && sub === "hero") return patternHero(rest, flags);
+  if (cmd === "icon") return icon([sub, ...rest], flags);
+  if (cmd === "logo") return logo([sub, ...rest].filter(Boolean), flags);
+  if (cmd === "font") return font([[sub, ...rest].filter(Boolean).join(" ")], flags);
+  if (cmd === "avatar") return avatar([sub, ...rest], flags);
+  if (cmd === "photo") return photo([sub, ...rest], flags);
+  if (cmd === "lottie") return lottie([sub, ...rest].filter(Boolean), flags);
+  if (cmd === "color") return colorRadix([sub, ...rest], flags);
+  if (cmd === "lib") return lib([sub, ...rest].filter(Boolean), flags);
+  if (cmd === "ref") return ref([sub, ...rest].filter(Boolean), flags);
+  throw new Fail(`Unknown command "${words.join(" ")}".\n\n${USAGE}`);
+}
+
+main(process.argv.slice(2))
+  .then(() => {
+    if (saved.length) console.log(`Saved ${saved.length} file${saved.length === 1 ? "" : "s"}: ${saved.join(", ")}\nRecorded in ${LEDGER}`);
+  })
+  .catch((e) => {
+    console.error(e instanceof Fail ? e.message : `source.mjs failed: ${e.stack ?? e.message}`);
+    process.exitCode = 1;
+  });

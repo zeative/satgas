@@ -723,6 +723,7 @@ async function runNode(
     commitRule(getSettings().commitStyle),
     remembered.rules,
     enabledSkills().some((s) => s.builtin && s.name === "hallmark"),
+    enabledSkills().some((s) => s.builtin && s.name === "satgas-design"),
   );
   // The live run, so the board the agent sees includes the lead's edits and what earlier tasks added.
   const prompt = buildNodePrompt(getRun(run.id) ?? run, node, config.upstreamChars, blind, {

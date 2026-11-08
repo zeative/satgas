@@ -68,8 +68,12 @@ const DESIGN =
 // guide: the built-in satgas skill is installed, so the rules can point at it for the details. system: describeSystem().
 // design: the built-in hallmark skill is on, so every interface an agent makes goes through it.
 // rules: the person's own do and don't from the Memory page; they outrank the defaults above.
-export const workingRules = (guide: boolean, system = "", commits = "", rules = "", design = false) =>
-  `${WORKING}${guide ? GUIDE : ""}${design ? DESIGN : ""}${commits ? `\n\n<commits>${commits}</commits>` : ""}${rules ? `\n\n<person_rules>\nThe person's own rules. Follow every one; where one conflicts with a default above, the person's rule wins.\n${rules}\n</person_rules>` : ""}${system ? `\n\n${system}` : ""}`;
+const SOURCES =
+  "\n\n<design_sources>Any task that makes or changes anything people look at (a page, an app screen, a component, a dashboard, a deck, a poster, a social graphic, a banner, an illustration, a document with visuals, an HTML preview for the board, a mockup) loads the satgas-design skill (named satgas-skills:satgas-design in Claude Code) before the first line of markup, even when the brief never mentions it. Take the page's material from its sources with its script: backgrounds, patterns, icons, logos, fonts, avatars, photos, animations, colour scales and references to study. The script saves the real files and records each one in design/sources.md. Draw your own only when no source fits, and say so in your report.</design_sources>";
+
+// sources: the built-in satgas-design skill is on, so a page's material comes from its licensed sources.
+export const workingRules = (guide: boolean, system = "", commits = "", rules = "", design = false, sources = false) =>
+  `${WORKING}${guide ? GUIDE : ""}${design ? DESIGN : ""}${sources ? SOURCES : ""}${commits ? `\n\n<commits>${commits}</commits>` : ""}${rules ? `\n\n<person_rules>\nThe person's own rules. Follow every one; where one conflicts with a default above, the person's rule wins.\n${rules}\n</person_rules>` : ""}${system ? `\n\n${system}` : ""}`;
 
 const FINAL_REPORT =
   "When you are done, reply with the final report for the person, in this order: the outcome in a sentence or two; where things live (files, card titles, URLs); how to use or check it, with the evidence; what you assumed and anything not done; then up to three concrete next steps you recommend, best first. Next steps, summaries and answers stay in this reply, never on a card. It is read in a narrow chat column: short paragraphs, lists only for parallel points, a small table for facts about one thing, `code` only for commands, paths and names, links as [text](url). The person sees the cards on the board, so never walk through what they show; name each card in a few words.";
