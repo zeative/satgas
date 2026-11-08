@@ -1,7 +1,8 @@
 import { ArrowUp } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { RichText } from "@/components/rich-text";
 import { Button } from "@/components/ui/button";
+import { useEvent } from "@/hooks/use-event";
 import { t } from "@/i18n";
 import { openMission } from "@/lib/actions";
 import { useDraft } from "@/lib/drafts";
@@ -10,23 +11,28 @@ import { createRun, uploadAttachment } from "@/stores/runs";
 import { loadSettings, useSettings } from "@/stores/settings";
 import { AttachmentTiles, attach, SightNote, useFileDrop, useSight } from "./attachments";
 import { ComposerMenu } from "./composer-menu";
+import { withTemplate } from "./composer-seed";
 import { ModelPicker } from "./model-picker";
 import { ProviderGate, useNeedsProvider } from "./provider-gate";
 import { TokenField, useTokenCatalog } from "./token-field";
 
 // The one way a board starts: a brief with any files it needs, plus quick switches for the agents and connectors.
 // The unsent brief and its files survive a reload.
-export function Composer({ className }: { className?: string }) {
+export function Composer({ className, seed }: { className?: string; seed?: ComposerSeed }) {
   const needsProvider = useNeedsProvider();
-  return needsProvider ? <ProviderGate className={className} /> : <ComposerForm className={className} />;
+  return needsProvider ? <ProviderGate className={className} /> : <ComposerForm className={className} seed={seed} />;
 }
 
-function ComposerForm({ className }: { className?: string }) {
+// A new object each time, so picking the same template twice still lands.
+export type ComposerSeed = { prompt: string };
+
+function ComposerForm({ className, seed }: { className?: string; seed?: ComposerSeed }) {
   const draft = useDraft("home");
   const value = draft.text;
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const textarea = useRef<HTMLTextAreaElement>(null);
+  const selecting = useRef<ReturnType<typeof withTemplate> | null>(null);
   const picker = useRef<HTMLInputElement>(null);
   const { over, handlers } = useFileDrop(draft);
   const sight = useSight(draft.files);
@@ -38,6 +44,26 @@ function ComposerForm({ className }: { className?: string }) {
     textarea.current?.focus();
     if (!useSettings.getState().settings) void loadSettings();
   }, []);
+
+  const fill = useEvent((prompt: string) => {
+    const filled = withTemplate(draft.text, prompt);
+    selecting.current = filled;
+    draft.setText(filled.text);
+    setError(null);
+  });
+  useEffect(() => {
+    if (seed) fill(seed.prompt);
+  }, [seed, fill]);
+  // The field must hold the new text first, or setting its value moves the selection to the end.
+  useLayoutEffect(() => {
+    const filled = selecting.current;
+    if (filled?.text !== value) return;
+    selecting.current = null;
+    textarea.current?.focus();
+    textarea.current?.setSelectionRange(filled.start, filled.end);
+    // A template joins at the end, where its blank may sit below the field's fold.
+    if (textarea.current) textarea.current.scrollTop = textarea.current.scrollHeight;
+  }, [value]);
 
   const submit = async () => {
     if (pending) return;

@@ -36,7 +36,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Composer } from "@/features/missions/composer";
+import { Composer, type ComposerSeed } from "@/features/missions/composer";
+import { useNeedsProvider } from "@/features/missions/provider-gate";
 import { useNow } from "@/hooks/use-now";
 import { useRepo } from "@/hooks/use-repo";
 import { fmtAgo, fmtCompact, t } from "@/i18n";
@@ -45,11 +46,14 @@ import { cn } from "@/lib/utils";
 import { loadRuns, type Organize, organizeBoard, searchBoards, useRuns } from "@/stores/runs";
 import { type AgentKind, isUnread, type RunSummary, type SearchHit } from "../../../shared/types";
 import { BoardThumb } from "./board-thumb";
+import { Templates } from "./templates";
 
 const RECENT = 6;
 const SKELETONS = ["a", "b", "c"];
 
 export function HomePage() {
+  const needsProvider = useNeedsProvider();
+  const [seed, setSeed] = useState<ComposerSeed>();
   return (
     <main id="content" className="relative flex-1 overflow-x-clip">
       {/* The same line grid the boards are drawn on, fading out under the prompt. */}
@@ -67,10 +71,13 @@ export function HomePage() {
               {t.composeTitle}
             </h1>
           </div>
-          <Composer className="w-full text-start" />
+          <Composer className="w-full text-start" seed={seed} />
         </section>
 
-        <RecentBoards />
+        <div className="flex flex-col gap-10">
+          {!needsProvider && <Templates onPick={(prompt) => setSeed({ prompt })} />}
+          <RecentBoards />
+        </div>
       </div>
     </main>
   );

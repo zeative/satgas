@@ -11,6 +11,43 @@ const en = {
   newMission: "New board",
   home: "Home",
   recentBoards: "Recent boards",
+  templates: {
+    title: "Templates",
+    items: {
+      website: {
+        name: "Website",
+        line: "A landing page or company site",
+        prompt: "Build a website for [product or business]: what it offers, who it is for, and how to get in touch.",
+      },
+      dashboard: {
+        name: "Dashboard",
+        line: "Charts and tables for your numbers",
+        prompt:
+          "Build a dashboard for [team or business] that tracks [what to watch], with sample data, and run it so I can open it on the board.",
+      },
+      game: {
+        name: "Browser game",
+        line: "Something to play right on the board",
+        prompt: "Build a browser game where [how it plays], and run it so I can play it on the board.",
+      },
+      poster: {
+        name: "Poster",
+        line: "For print or social, saved as an image",
+        prompt: "Make a poster for [event or promo], size [A3 or 1080x1080], saved as a PNG.",
+      },
+      deck: {
+        name: "Slide deck",
+        line: "Slides for a talk or a pitch",
+        prompt: "Make a slide deck about [topic] for [audience], about [number] slides.",
+      },
+      research: {
+        name: "Competitor research",
+        line: "Rivals compared in one table",
+        prompt:
+          "Research the competitors of [product]: pricing, main features and where each one is weaker. Put the result in a table on the board.",
+      },
+    },
+  },
   agentsReady: "Agents ready",
   agentReady: (name: string) => `${name} ready`,
   noAgents: "No agent CLI found",
@@ -1627,6 +1664,42 @@ const id: typeof en = {
   newMission: "Board baru",
   home: "Beranda",
   recentBoards: "Board terbaru",
+  templates: {
+    title: "Template",
+    items: {
+      website: {
+        name: "Website",
+        line: "Landing page atau situs perusahaan",
+        prompt: "Buatkan website untuk [produk atau usaha]: apa yang ditawarkan, untuk siapa, dan cara menghubungi.",
+      },
+      dashboard: {
+        name: "Dashboard",
+        line: "Grafik dan tabel untuk angka-angkamu",
+        prompt:
+          "Buatkan dashboard untuk [tim atau usaha] yang memantau [yang ingin dipantau], dengan data contoh, lalu jalankan supaya bisa kubuka di board.",
+      },
+      game: {
+        name: "Game browser",
+        line: "Bisa langsung dimainkan di board",
+        prompt: "Buatkan game browser di mana [cara mainnya], lalu jalankan supaya bisa kumainkan di board.",
+      },
+      poster: {
+        name: "Poster",
+        line: "Untuk cetak atau sosial, jadi gambar",
+        prompt: "Buatkan poster untuk [acara atau promo], ukuran [A3 atau 1080x1080], simpan sebagai PNG.",
+      },
+      deck: {
+        name: "Slide",
+        line: "Untuk presentasi atau pitch",
+        prompt: "Buatkan slide tentang [topik] untuk [audiens], sekitar [jumlah] slide.",
+      },
+      research: {
+        name: "Riset kompetitor",
+        line: "Pesaing dibandingkan dalam satu tabel",
+        prompt: "Riset kompetitor [produk]: harga, fitur utama, dan kelemahan masing-masing. Taruh hasilnya dalam tabel di board.",
+      },
+    },
+  },
   agentsReady: "Agen siap",
   agentReady: (name) => `${name} siap`,
   noAgents: "CLI agen tidak ditemukan",
