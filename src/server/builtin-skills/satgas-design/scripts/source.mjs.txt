@@ -664,19 +664,50 @@ function recordRef(id, files, url) {
   console.log(`From ${url} · reference only, study it and never copy it`);
 }
 
-// A wireframe is grey on purpose: the person judges structure and content before any colour or picture exists.
+// A wireframe is only grey and white blocks, so the person judges structure alone: no words, no colour, no pictures.
 const WIRE_STYLE = `*{box-sizing:border-box;margin:0}
-body{font:16px/1.5 system-ui,sans-serif;color:#222;background:#fff}
-h1,h2,h3{font-weight:500;line-height:1.15}h1{font-size:48px}h2{font-size:28px}h3{font-size:18px}
+body{background:#fff}
 .wrap{max-width:1200px;margin:0 auto;padding:0 32px}
-section{padding:64px 0;border-bottom:1px solid #ddd}
+section{padding:64px 0}
+.tint{background:#f4f4f4}
 .row{display:flex;gap:24px;flex-wrap:wrap}.row>*{flex:1 1 240px;min-width:0}
-.box{display:flex;align-items:center;justify-content:center;min-height:200px;padding:16px;text-align:center;font-size:13px;color:#666;background:#eee;border:1px solid #bbb}
-.btn{display:inline-block;padding:10px 16px;border:1px solid #222;font-size:14px}
-.note{font-size:13px;color:#777}
-@media (max-width:640px){h1{font-size:34px}.wrap{padding:0 16px}section{padding:40px 0}}`;
+.stack{display:flex;flex-direction:column;gap:12px}
+.h1,.h2,.h3,.line,.btn{background:#d9d9d9;border-radius:2px}
+.h1{height:48px;width:70%}.h2{height:28px;width:50%}.h3{height:18px;width:40%}
+.line{height:10px;width:100%}.line.short{width:60%}
+.btn{height:40px;width:140px;background:#bdbdbd}
+.img{min-height:240px;background:#cfcfcf}
+.full{min-height:100vh}
+.card{padding:24px;background:#fff;border:1px solid #e2e2e2}
+@media (max-width:640px){.wrap{padding:0 16px}section{padding:40px 0}.h1{height:36px}.img{min-height:180px}}`;
+const WIRE_BODY = `<!-- Blocks only: .h1 .h2 .h3 and .line for words, .img for pictures, .btn for actions, .card and .tint for surfaces. No text at all. -->
+<section><div class="wrap row"><div class="stack"><div class="h1"></div><div class="line"></div><div class="line short"></div><div class="btn"></div></div><div class="img"></div></div></section>`;
+
+// What a wireframe's body shows once its markup is gone; anything left is text it should not have.
+const wireText = (html) =>
+  (/<body[^>]*>([\s\S]*)<\/body>/i.exec(html)?.[1] ?? html)
+    .replace(/<!--[\s\S]*?-->/g, "")
+    .replace(/<(style|script)[\s\S]*?<\/\1>/gi, "")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&[a-z#0-9]+;/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
 function wireframe(names) {
   if (!names.length) throw new Fail("Name the options, like: source.mjs wireframe a b");
+  if (names[0] === "check") {
+    const files = names.slice(1);
+    if (!files.length) throw new Fail("Name the files, like: source.mjs wireframe check design/wireframe-a.html");
+    for (const f of files) {
+      if (!existsSync(f)) throw new Fail(`No such file: ${f}`);
+      const html = readFileSync(f, "utf8");
+      const text = wireText(html);
+      if (text) throw new Fail(`${f} still has text ("${text.slice(0, 80)}"). A wireframe is only grey and white blocks`);
+      if (/<(img|svg|video|canvas)\b/i.test(html)) throw new Fail(`${f} has a picture or icon. Use a .img block`);
+      console.log(`${f}: blocks only`);
+    }
+    return;
+  }
   for (const name of names) {
     const out = `design/wireframe-${slug(name)}.html`;
     if (existsSync(out)) {
@@ -685,7 +716,7 @@ function wireframe(names) {
     }
     save(
       out,
-      `<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width,initial-scale=1">\n<title>Wireframe ${name}</title>\n<style>\n${WIRE_STYLE}\n</style>\n</head>\n<body>\n<!-- Real headings and copy. A .box says exactly what goes there, like "Photo: barista pouring, full width". No colour, no pictures, no icons. -->\n<section><div class="wrap"><h1>Headline</h1></div></section>\n</body>\n</html>\n`,
+      `<!doctype html>\n<html>\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width,initial-scale=1">\n<title>Wireframe ${name}</title>\n<style>\n${WIRE_STYLE}\n</style>\n</head>\n<body>\n${WIRE_BODY}\n</body>\n</html>\n`,
     );
     console.log(`Wrote ${out}`);
   }
@@ -821,7 +852,8 @@ const USAGE = `Usage: node source.mjs <command>
   color radix <scales...> [--out assets/colors.css]
   lib <gsap|scrolltrigger|motion|lottie-web...> [--out vendor]
   ref <urls...> [--out design/refs]
-  wireframe <names...>                                Start grey layout options in design/wireframe-<name>.html
+  wireframe <names...>                                Start grey block layouts in design/wireframe-<name>.html
+  wireframe check <files...>                          Refuse a wireframe that still has text or pictures
   review <page or address> [--refs design/refs]       Check the build for a moment and breakage, next to its references
   note <files...> --from <url> --license "<license>"   Record material from outside the catalog
 

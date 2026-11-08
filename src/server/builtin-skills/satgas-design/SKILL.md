@@ -29,8 +29,8 @@ Build nothing else in this round: no colours, no pictures, no fonts, no page in 
 
 1. **Study.** Search for three sites or pieces clearly better than average in the same field, and shoot them with `ref`.
 2. **Write `design/direction.md`:** what each reference does that we take (specific: "menu as a plain price list in two columns", never "clean and modern"), the kind of picture the work will use and where it comes from, the palette as hex values, and the type pair.
-3. **Make two wireframes** with `wireframe a b`, then edit them. They differ in structure, not decoration: another order of sections, another hero, another way to show the main thing. Use real headings and real copy, in the mission's language. Every `.box` says exactly what will fill it ("Photo: barista pouring, full width"). A game shows its screens one under the other (start, playing, win). A poster shows where the words and the picture sit, at its real proportions.
-4. **Stop and ask.** Your report names the two options in a line each, says how they differ and which you recommend, and asks the person to pick one or say what to change. The wireframes show on the board by themselves.
+3. **Make two wireframes** with `wireframe a b`, then edit them. They are only grey and white blocks, with no text, pictures or icons at all: `.h1`, `.h2`, `.h3` and `.line` bars where words go, `.img` where a picture goes, `.btn` for actions, `.card` and `.tint` for surfaces. Size and place each block as it will really be. The two options differ in structure, not decoration: another order of sections, another hero, another way to show the main thing. A game shows its screens one under the other (start, playing, win). A poster shows its real proportions. Run `wireframe check` on both before you report.
+4. **Stop and ask.** The words live in your report, since the wireframes have none: name the two options, say section by section what each block will hold and how they differ, say which you recommend, and ask the person to pick one or say what to change. The wireframes show on the board by themselves.
 
 When they ask for changes, change the wireframes and ask again.
 
@@ -94,7 +94,7 @@ node <this skill's folder>/scripts/source.mjs list            # every source, wh
 | A font, self-hosted | `font "Space Grotesk" --weights 400,500`, then link `assets/fonts/space-grotesk.css`; Fontshare families (Chillax, Satoshi, General Sans) come by the same command |
 | Characters and avatars | `avatar open-peeps ana budi citra`, `avatar notionists ana` |
 | Photos | `photo openverse "coffee bar morning light" --count 6` needs no key and records the credits to show; `unsplash` and `pexels` need one |
-| Wireframes | `wireframe a b` starts `design/wireframe-a.html` and `-b.html` in plain grey |
+| Wireframes | `wireframe a b` starts `design/wireframe-a.html` and `-b.html` in grey blocks; `wireframe check design/wireframe-a.html` refuses text and pictures |
 | An animation | `lottie "success check"`, played with `lib lottie-web` |
 | A colour scale | `color radix slate amber` gives light and dark CSS variables |
 | Motion libraries | `lib gsap scrolltrigger` or `lib motion` |

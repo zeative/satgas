@@ -82,7 +82,20 @@ describe("the satgas-design skill", () => {
   test("asks the person to approve wireframes before anything is built", () => {
     const skill = files["SKILL.md"] ?? "";
     expect(skill).toContain("Round one: wireframes, then stop");
-    expect(skill).toContain("asks the person to pick one");
+    expect(skill).toContain("ask the person to pick one");
+  });
+
+  test("a wireframe starts as blocks only, and text or pictures in one are refused", async () => {
+    expect((await run("wireframe", "a")).code).toBe(0);
+    expect((await run("wireframe", "check", "design/wireframe-a.html")).out).toContain("blocks only");
+    const path = join(work, "design/wireframe-a.html");
+    const html = await Bun.file(path).text();
+    await Bun.write(join(work, "design/wireframe-t.html"), html.replace("</body>", "<h1>Kopi Senja</h1></body>"));
+    const text = await run("wireframe", "check", "design/wireframe-t.html");
+    expect(text.code).toBe(1);
+    expect(text.err).toContain("Kopi Senja");
+    await Bun.write(join(work, "design/wireframe-p.html"), html.replace("</body>", '<img src="x.png"></body>'));
+    expect((await run("wireframe", "check", "design/wireframe-p.html")).err).toContain("picture");
   });
 
   // Agents only reach for what the skill points them at, so each kind of work names its references, moment and material.
