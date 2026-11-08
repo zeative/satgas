@@ -8,6 +8,7 @@ import { MAIN_SESSION } from "../../shared/sessions";
 import type { AgentKind, ClientMessage, GitInfo, LogLine, Run, RunSummary, SearchHit, ServerEvent } from "../../shared/types";
 import { currentSession } from "./chat-session";
 import { dropLane, loadPipeline, putLane } from "./pipeline";
+import { loadSettings } from "./settings";
 
 const MAX_LOGS = 400;
 
@@ -188,6 +189,9 @@ function handle(ev: ServerEvent) {
       return;
     case "lane":
       putLane(ev.lane);
+      return;
+    case "settings":
+      void loadSettings();
       return;
   }
 }

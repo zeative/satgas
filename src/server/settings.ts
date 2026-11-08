@@ -88,6 +88,15 @@ export async function loadSettings() {
   }
 }
 
+// Told after every save, so pages that are open show the change, whoever made it (a page, a channel, the lead).
+const hotListeners = g as { __satgasSettingsListeners?: Set<() => void> };
+hotListeners.__satgasSettingsListeners ??= new Set();
+const listeners = hotListeners.__satgasSettingsListeners;
+export function onSettingsChange(fn: () => void): () => void {
+  listeners.add(fn);
+  return () => listeners.delete(fn);
+}
+
 // Saves run one at a time, each against the settings the previous one left, so two edits never undo each other.
 export function saveSettings(input: unknown): Promise<Settings | string> {
   const next = (g.__satgasSettingsSaving ?? Promise.resolve()).then(() => write(input));
@@ -110,6 +119,7 @@ async function write(input: unknown): Promise<Settings | string> {
     throw e;
   }
   g.__satgasSettings = parsed;
+  for (const fn of listeners) fn();
   return parsed;
 }
 

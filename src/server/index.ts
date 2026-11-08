@@ -72,7 +72,7 @@ import {
   startSchedules,
 } from "./schedules";
 import { answerSecret, forgetSecret, removeRunSecrets, startSecretSweep } from "./secrets";
-import { getSettings, loadSettings, saveSettings, taskAgents } from "./settings";
+import { getSettings, loadSettings, onSettingsChange, saveSettings, taskAgents } from "./settings";
 import { decideSetup, undoSetup } from "./setup";
 import {
   deleteSkill,
@@ -90,6 +90,7 @@ import {
   skillZip,
 } from "./skills";
 import {
+  announce,
   boardOps,
   deleteRun,
   flushAll,
@@ -1115,6 +1116,10 @@ const server: Server<SocketData> = Bun.serve({
 });
 
 setPublisher((topic, event) => server.publish(topic, JSON.stringify(event)));
+// Hot reloads re-run this file, so the previous registration is dropped first.
+const hotSettings = globalThis as { __satgasSettingsAnnounce?: () => void };
+hotSettings.__satgasSettingsAnnounce?.();
+hotSettings.__satgasSettingsAnnounce = onSettingsChange(() => announce({ type: "settings" }));
 
 const publicHost = config.publicUrl ? new URL(config.publicUrl).host.toLowerCase() : null;
 

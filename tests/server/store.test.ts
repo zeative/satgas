@@ -197,3 +197,15 @@ test("a board from before file lists left the canvas loses them, and no file is 
   expect(run.nodes[0]?.changes?.files).toEqual([{ path: "a.ts", change: "added" }]);
   expect(run.nodes[1]?.changes?.files).toEqual(known);
 });
+
+// `bun --hot` loads the runs again while missions work; it once replaced live logs with the file's older copy.
+test("loading again keeps what is in memory, so a running mission's newest log lines survive", async () => {
+  const run = createRun("still working", "/w");
+  patchRun(run.id, { status: "running" });
+  appendLog(run.id, "task", { kind: "info", text: "only in memory" });
+  await flushAll();
+  appendLog(run.id, "task", { kind: "info", text: "after the last save" });
+  await loadRuns();
+  expect(getRun(run.id)?.status).toBe("running");
+  expect(getLogs(run.id).task?.map((l) => l.text)).toEqual(["only in memory", "after the last save"]);
+});

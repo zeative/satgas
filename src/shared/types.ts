@@ -424,7 +424,9 @@ export type ServerEvent =
   | { type: "lane"; lane: Lane }
   // origin lets the tab that made the change skip its own echo.
   | { type: "board"; runId: string; ops: BoardOp[]; origin?: string }
-  | { type: "pong" };
+  | { type: "pong" }
+  // Settings were saved somewhere; open pages read them again.
+  | { type: "settings" };
 
 export type ClientMessage = { type: "watch"; runId: string | null } | { type: "pipeline"; on: boolean } | { type: "ping" };
 

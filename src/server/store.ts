@@ -78,6 +78,8 @@ export function setRunWatcher(w: (runId: string) => void) {
 }
 
 const publish: Publisher = (topic, event) => state.publish(topic, event);
+// Something every open page should hear about, whatever board it shows.
+export const announce = (event: ServerEvent) => publish("runs", event);
 
 export const topicOf = (runId: string) => `run:${runId}`;
 
@@ -111,6 +113,8 @@ export async function loadRuns() {
     // Left behind by a write that a crash interrupted; the run file itself is intact.
     if (f.endsWith(".tmp")) await rm(join(runsDir(), f), { force: true });
     if (!f.endsWith(".json")) continue;
+    // A hot reload loads again while missions run; what is in memory is newer than the file, logs included.
+    if (runs.has(f.slice(0, -".json".length))) continue;
     try {
       const data = await Bun.file(join(runsDir(), f)).json();
       const run: Run = data.run;

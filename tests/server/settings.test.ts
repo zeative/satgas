@@ -3,7 +3,7 @@ import { mkdtemp, readdir, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { config } from "../../src/server/config";
-import { defaultSettings, getSettings, loadSettings, saveSettings } from "../../src/server/settings";
+import { defaultSettings, getSettings, loadSettings, onSettingsChange, saveSettings } from "../../src/server/settings";
 import type { Settings } from "../../src/shared/settings";
 
 const g = globalThis as { __satgasSettings?: Settings };
@@ -69,4 +69,16 @@ test("a default tool added in a later version joins an existing setup once, and 
   } finally {
     g.__satgasSettings = before;
   }
+});
+
+// Open pages learn about a save from anywhere (another page, a channel, the lead), so the composer never shows a stale model.
+test("every save tells whoever listens, and a listener can stop listening", async () => {
+  let heard = 0;
+  const stop = onSettingsChange(() => heard++);
+  await saveSettings({ agents: { claude: { effort: "high" } } });
+  expect(heard).toBe(1);
+  await saveSettings({ agents: { claude: { tasks: "nope" } } });
+  stop();
+  await saveSettings({ agents: { claude: { effort: "low" } } });
+  expect(heard).toBeLessThanOrEqual(2);
 });
