@@ -732,6 +732,8 @@ const PROBE = `(() => {
   for (const el of document.querySelectorAll("svg")) if (el.querySelectorAll("path, circle, ellipse, polygon, rect, use, image").length >= 6) consider(el, "illustration");
   for (const el of document.querySelectorAll("body *")) if (getComputedStyle(el).backgroundImage.includes("url(")) consider(el, "background picture");
   for (const el of document.querySelectorAll("lottie-player, dotlottie-player, [data-lottie]")) consider(el, "animation");
+  // The map asks product pages to lead with the real table, so it counts like a picture.
+  for (const el of document.querySelectorAll("table, [role=table], [role=grid]")) consider(el, "product table");
   return JSON.stringify({
     moment: Math.round(best * 100),
     kind,
@@ -795,7 +797,7 @@ async function review([target], flags) {
   const problems = [];
   const notes = [];
   const d = seen.desktop;
-  if (d.moment < 35) problems.push(`No moment: the biggest picture, illustration or animation in the first screen covers ${d.moment}% of it (needs a third)`);
+  if (d.moment < 35) problems.push(`No moment: the biggest picture, illustration, animation or product table in the first screen covers ${d.moment}% of it (needs 35%)`);
   if (d.broken.length || seen.phone.broken.length) problems.push(`Broken pictures: ${[...new Set([...d.broken, ...seen.phone.broken])].join(", ")}`);
   if (seen.phone.overflow) problems.push("The page is wider than a phone at 390px");
   if (refs.length < 3) problems.push(`Only ${refs.length} references in ${refsDir}; shoot three with \`ref\` before judging the build`);
