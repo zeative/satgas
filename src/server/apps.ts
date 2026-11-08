@@ -199,6 +199,18 @@ export async function startApp(runId: string, name: string, command?: string, di
   return { ok: false, error: `It did not answer on PORT within two minutes. Last lines it printed:\n${tail(log) || "(nothing)"}` };
 }
 
+// A page can work on its own port and still break for the person: a file it loads from outside the base never reaches the app.
+export async function filesOutsideBase(runId: string, name: string): Promise<string[]> {
+  const port = portOf(runId, name);
+  if (!port) return [];
+  const base = appPath(runId, name);
+  const html = await fetch(`http://127.0.0.1:${port}${base}`, { signal: AbortSignal.timeout(15_000) })
+    .then((r) => r.text())
+    .catch(() => "");
+  const found = html.matchAll(/<(?:script|link|img)\b[^>]*?\b(?:src|href)=["'](\/(?!\/)[^"']*)["']/gi);
+  return [...new Set([...found].flatMap((m) => m[1] ?? []).filter((url) => !url.startsWith(base)))];
+}
+
 export async function stopApp(runId: string, name: string, mark = true) {
   const app = live.get(keyOf(runId, name));
   if (mark) setApp(runId, name, { status: "stopped", error: undefined });
@@ -321,6 +333,9 @@ export async function serveApp(
   }
   const headers = new Headers(req.headers);
   for (const h of ["host", "connection", "upgrade", "content-length"]) headers.delete(h);
+  // The page is sandboxed, so its requests look cross-site and dev servers such as Astro's refuse them. The key already gates them.
+  for (const h of ["sec-fetch-site", "sec-fetch-mode"]) headers.delete(h);
+  if (headers.get("origin") === "null") headers.delete("origin");
   // The person's Satgas sign-in never reaches the app.
   const cookie = (headers.get("cookie") ?? "")
     .split(";")

@@ -2,7 +2,17 @@ import { afterAll, beforeAll, expect, test } from "bun:test";
 import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { appPath, cleanAppName, serveApp, settleApps, shareApp, startApp, stopAllApps, stopApp } from "../../src/server/apps";
+import {
+  appPath,
+  cleanAppName,
+  filesOutsideBase,
+  serveApp,
+  settleApps,
+  shareApp,
+  startApp,
+  stopAllApps,
+  stopApp,
+} from "../../src/server/apps";
 import { loadToken } from "../../src/server/auth";
 import { config } from "../../src/server/config";
 import { createRun, flushAll, getRun, patchRun } from "../../src/server/store";
@@ -86,6 +96,35 @@ test("a stopped app shows as stopped, and a visit starts it again", async () => 
   expect(res?.status).toBe(503);
   for (let i = 0; i < 40 && getRun(runId)?.apps?.game?.status !== "running"; i++) await Bun.sleep(250);
   expect(getRun(runId)?.apps?.game?.status).toBe("running");
+});
+
+test("a sandboxed page's requests do not reach the app as cross-site, or dev servers refuse them", async () => {
+  const echo = `bun -e 'Bun.serve({ hostname: "127.0.0.1", port: Number(process.env.PORT), fetch(req) { return Response.json({ site: req.headers.get("sec-fetch-site"), mode: req.headers.get("sec-fetch-mode"), origin: req.headers.get("origin") }); } })'`;
+  expect((await startApp(runId, "echo", echo)).ok).toBe(true);
+  const res = await serveApp(
+    get(`${appPath(runId, "echo")}a.jpg`, {
+      "sec-fetch-site": "cross-site",
+      "sec-fetch-mode": "no-cors",
+      "sec-fetch-dest": "image",
+      origin: "null",
+    }),
+    noUpgrade,
+    false,
+  );
+  expect(await res?.json()).toEqual({ site: null, mode: null, origin: null });
+  await stopApp(runId, "echo");
+});
+
+test("names the files a page loads from outside the base, which the person's browser never gets", async () => {
+  const page = (body: string) =>
+    `bun -e 'Bun.serve({ hostname: "127.0.0.1", port: Number(process.env.PORT), fetch() { return new Response(\`${body}\`, { headers: { "content-type": "text/html" } }); } })'`;
+  const base = appPath(runId, "pages");
+  const broken = `<script src="/@vite/client"></script><link href="/src/a.css" rel="stylesheet"><img src="${base}ok.jpg"><script src="//cdn.test/x.js"></script><a href="/about">x</a>`;
+  expect((await startApp(runId, "pages", page(broken))).ok).toBe(true);
+  expect(await filesOutsideBase(runId, "pages")).toEqual(["/@vite/client", "/src/a.css"]);
+  expect((await startApp(runId, "pages", page(`<script src="${base}a.js"></script>`))).ok).toBe(true);
+  expect(await filesOutsideBase(runId, "pages")).toEqual([]);
+  await stopApp(runId, "pages");
 });
 
 test("a command that exits fails with what it printed", async () => {

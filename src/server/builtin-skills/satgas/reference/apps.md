@@ -5,7 +5,7 @@ A plain HTML page with its CSS and scripts shows on the board by itself. Anythin
 - The person cannot reach your `localhost`: Satgas may run on a server, and even on their laptop a task's own background processes are stopped when it ends. Never answer with "run `npm run dev`" or a localhost address.
 - `app_start` runs your command in the board's folder, keeps it running after your task, puts it on the board as a live card and serves it at Satgas's own address. It returns once the app answers, with an address to check it at yourself and the one to give the person.
 - The command must stay running, listen on `$PORT` and host `127.0.0.1`, and serve the app under `$SATGAS_APP_BASE` (a path like `/apps/<board>/<key>/web/`; it ends with a slash). Install dependencies first in your task (`bun install`), then start.
-- Check it at the address `app_start` gives you for yourself, in your browser, before you report; `app_status` shows its last output when it fails. Fix and run `app_start` again with the same name to restart it.
+- Check it at the address `app_start` gives you for yourself, in your browser, before you report; `app_status` shows its last output when it fails. Fix and run `app_start` again with the same name to restart it. A file the page loads from outside the base still works at your address but fails for the person, so `app_start` names any it finds: fix those before you report.
 
 The base path, per framework (use the dev server unless the person asked for a production build):
 
@@ -13,7 +13,7 @@ The base path, per framework (use the dev server unless the person asked for a p
 | --- | --- | --- |
 | Vite (React, Vue, Svelte, plain) | `bunx vite --host 127.0.0.1 --port $PORT --strictPort --base "$SATGAS_APP_BASE"` | Asset paths in code start from `import.meta.env.BASE_URL`, never a bare `/` |
 | Next.js | `bunx next dev -H 127.0.0.1 -p $PORT` | `basePath: process.env.SATGAS_APP_BASE?.replace(/\/$/, "")` in `next.config` |
-| Astro | `bunx astro dev --host 127.0.0.1 --port $PORT` | `base: process.env.SATGAS_APP_BASE` in `astro.config` |
+| Astro | `bunx astro build && bunx astro preview --no-background --ignore-lock --host 127.0.0.1 --port $PORT` | `base: process.env.SATGAS_APP_BASE` in `astro.config`. Never `astro dev`: it loads its scripts and styles from `/src` and `/@vite`, outside the base, so the card shows a broken page. Run `app_start` again after a change |
 | SvelteKit | `bunx vite dev --host 127.0.0.1 --port $PORT` | `kit.paths.base` set from `SATGAS_APP_BASE` without the last slash |
 | Express, Hono, Bun.serve, Flask, FastAPI | your own start command | Read `PORT`, bind `127.0.0.1`, mount every route and static folder under `SATGAS_APP_BASE` |
 | A static build | `bunx serve dist -l tcp://127.0.0.1:$PORT` | Build it with the base path above first |

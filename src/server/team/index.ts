@@ -16,7 +16,7 @@ import {
   type TeamTalk,
 } from "../../shared/talk";
 import { crew, memberIdOf } from "../../shared/team";
-import { appLog, appUrl, cleanAppName, startApp, stopApp } from "../apps";
+import { appLog, appUrl, cleanAppName, filesOutsideBase, startApp, stopApp } from "../apps";
 import { config } from "../config";
 import { requestSecret } from "../secrets";
 import { getRun, patchRun } from "../store";
@@ -113,8 +113,12 @@ async function appCall(s: Session, op: string, body: Record<string, unknown>): P
   if (typeof body.command !== "string" || !body.command.trim()) return no("Say the command that starts the app.");
   const r = await startApp(s.runId, name, body.command, typeof body.dir === "string" ? body.dir : undefined, s.nodeId);
   if (!r.ok) return no(`${name} did not start. ${r.error}`);
+  const outside = await filesOutsideBase(s.runId, name);
+  const broken = outside.length
+    ? ` It is broken for the person: the page loads ${outside.slice(0, 5).join(", ")} from outside ${r.app.path}, which works at your address but never reaches the app at theirs. Serve every file under the base and run app_start again; the satgas skill's apps reference has the setting for each framework.`
+    : "";
   return ok(
-    `${name} runs. Check it yourself in your browser at http://127.0.0.1:${r.port}${r.app.path}, which reaches it directly on this machine. The person opens it at ${appUrl(s.runId, name, pageUrl())}, served by Satgas: give them that address, never a localhost one. It is on the board as a live card, keeps running after your task, and stops after two hours nobody opened it; opening it starts it again.`,
+    `${name} runs.${broken} Check it yourself in your browser at http://127.0.0.1:${r.port}${r.app.path}, which reaches it directly on this machine. The person opens it at ${appUrl(s.runId, name, pageUrl())}, served by Satgas: give them that address, never a localhost one. It is on the board as a live card, keeps running after your task, and stops after two hours nobody opened it; opening it starts it again.`,
   );
 }
 const ok = (text: string): Reply => ({ ok: true, text });
