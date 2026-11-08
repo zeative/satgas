@@ -16,7 +16,7 @@ beforeAll(async () => {
 afterAll(() => rm(dir, { recursive: true, force: true }));
 
 // The hook as the agents run it: one process, the payload on stdin, the tools in its environment.
-async function hook(event: string, payload: object, tools: Tool[], agent = "claude") {
+async function hook(event: string, payload: object, tools: Tool[], agent = "claude", extra: Record<string, string> = {}) {
   const proc = Bun.spawn([process.execPath, HOOK, event], {
     stdin: new Blob([JSON.stringify(payload)]),
     stdout: "pipe",
@@ -26,6 +26,7 @@ async function hook(event: string, payload: object, tools: Tool[], agent = "clau
       SATGAS_TOOLS_STATE: join(dir, "state"),
       SATGAS_HOME: "/home/me",
       SATGAS_AGENT: agent,
+      ...extra,
     },
   });
   const out = await new Response(proc.stdout).text();
@@ -145,5 +146,63 @@ describe("after an edit and before finishing", () => {
     await chmod(bin, 0o755);
     expect(formatterFor(file, project)).toEqual([bin, "format", "--write", file]);
     expect(formatterFor(join(project, "notes.txt"), project)).toBeNull();
+  });
+});
+
+describe("for a model that cannot see", () => {
+  let asked: { path: string; auth: string | null }[] = [];
+  const team = Bun.serve({
+    port: 0,
+    fetch: async (req) => {
+      const body = (await req.json()) as { path: string };
+      asked.push({ path: body.path, auth: req.headers.get("authorization") });
+      return Response.json({ text: `A red square (${body.path.split(".").pop()})` });
+    },
+  });
+  afterAll(() => team.stop(true));
+  const env = { SATGAS_TEAM_URL: `http://127.0.0.1:${team.port}/api/team`, SATGAS_TEAM_TOKEN: "tok" };
+  const see = (payload: object, extra = env) => hook("see", { cwd: dir, ...payload }, [], "claude", extra);
+
+  test("a picture it opens comes back as a vision model's description, and other files open as usual", async () => {
+    asked = [];
+    await writeFile(join(dir, "shot.png"), "png");
+    const out = await see({ hook_event_name: "PreToolUse", tool_name: "Read", tool_input: { file_path: "shot.png" } });
+    expect(out).toEqual({
+      hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "deny", permissionDecisionReason: "A red square (png)" },
+    });
+    expect(asked).toEqual([{ path: join(dir, "shot.png"), auth: "Bearer tok" }]);
+    await writeFile(join(dir, "notes.md"), "text");
+    expect(await see({ hook_event_name: "PreToolUse", tool_name: "Read", tool_input: { file_path: join(dir, "notes.md") } })).toBeNull();
+    expect(await see({ hook_event_name: "PreToolUse", tool_name: "Read", tool_input: { file_path: join(dir, "gone.png") } })).toBeNull();
+    expect(asked).toHaveLength(1);
+  });
+
+  test("a picture a connector returns is swapped for its description, the rest of the result kept", async () => {
+    asked = [];
+    const result = [
+      { type: "text", text: "Page loaded" },
+      { type: "image", data: Buffer.from("jpeg").toString("base64"), mimeType: "image/jpeg" },
+    ];
+    const out = await see({ hook_event_name: "PostToolUse", tool_name: "mcp__browser__screenshot", tool_response: result });
+    const swapped = [
+      { type: "text", text: "Page loaded" },
+      { type: "text", text: "A red square (jpg)" },
+    ];
+    expect(out).toEqual({
+      hookSpecificOutput: { hookEventName: "PostToolUse", updatedToolOutput: swapped, updatedMCPToolOutput: swapped },
+    });
+    expect(asked).toHaveLength(1);
+    const plain = await see({ hook_event_name: "PostToolUse", tool_name: "mcp__x__y", tool_response: [{ type: "text", text: "ok" }] });
+    expect(plain).toBeNull();
+  });
+
+  test("when Satgas cannot be reached the picture is still kept from the model, with a reason", async () => {
+    await writeFile(join(dir, "shot.png"), "png");
+    const out = await see(
+      { hook_event_name: "PreToolUse", tool_name: "Read", tool_input: { file_path: join(dir, "shot.png") } },
+      { SATGAS_TEAM_URL: "http://127.0.0.1:9/api/team", SATGAS_TEAM_TOKEN: "tok" },
+    );
+    expect(out.hookSpecificOutput.permissionDecision).toBe("deny");
+    expect(out.hookSpecificOutput.permissionDecisionReason).toContain("Do not guess what it shows");
   });
 });

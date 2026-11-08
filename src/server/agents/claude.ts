@@ -10,7 +10,7 @@ import { noteLimits } from "../limits";
 import { withLogins } from "../oauth";
 import { getSettings } from "../settings";
 import { enabledSkills, pluginRoot } from "../skills";
-import { teamServer } from "../team";
+import { teamServer, teamUrl } from "../team";
 import { ATTRIBUTION, prepareToolHooks, removeToolHooks, type ToolHooks } from "../tools";
 import {
   AgentError,
@@ -167,9 +167,13 @@ export async function runClaude(req: AgentRequest, opts: ClaudeOptions = {}): Pr
     result && (result.is_error || result.subtype !== "success")
       ? clip(readableError(String(result.result || result.subtype || "Claude failed.")), 400)
       : undefined;
-  const servers = [...getSettings().mcpServers, ...(req.teamToken ? [teamServer(req.teamToken, config.port, false, !!req.teamTalk)] : [])];
+  const servers = [
+    ...getSettings().mcpServers,
+    ...(req.teamToken ? [teamServer(req.teamToken, config.port, false, !!req.teamTalk, !!req.blind)] : []),
+  ];
   const mcp = opts.tools === undefined ? await writeMcpFile(await withLogins(servers)) : null;
-  const tools = opts.tools === undefined ? await prepareToolHooks("claude") : null;
+  const sight = req.blind && req.teamToken ? { url: teamUrl(config.port), token: req.teamToken } : undefined;
+  const tools = opts.tools === undefined ? await prepareToolHooks("claude", sight) : null;
   const model = claudeModel(opts.model);
   // Only workers take messages mid-task; the planner answers in one go.
   const streaming = !!req.inbox && opts.tools === undefined;

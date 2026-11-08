@@ -26,6 +26,12 @@ test("includes the mission, the task and only direct upstream reports", () => {
   expect(prompt).not.toContain("report A");
 });
 
+test("a model that cannot see is told how it still gets to see pictures", () => {
+  const nodes = [node("a")];
+  expect(buildNodePrompt(run(nodes), nodes[0] as NodeState, 1000, true)).toContain("call see_image on the satgas_team connector");
+  expect(buildNodePrompt(run(nodes), nodes[0] as NodeState, 1000)).not.toContain("<sight>");
+});
+
 test("only the final task is asked for the user-facing report", () => {
   const nodes = [node("a"), node("b", ["a"])];
   expect(buildNodePrompt(run(nodes), nodes[0] as NodeState, 1000)).toContain("handed to the next tasks");

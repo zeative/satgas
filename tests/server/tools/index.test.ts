@@ -47,6 +47,28 @@ test("hooks go to Claude Code as a private settings file and to Codex as config 
   expect(codexHookArgs(null)).toEqual([]);
 });
 
+test("a Claude Code model that cannot see gets the picture hooks even with no tools on; Codex never does", async () => {
+  const kept = g.__satgasSettings;
+  g.__satgasSettings = { ...defaultSettings(), tools: [] };
+  const sight = { url: "http://127.0.0.1:4317/api/team", token: "tok" };
+  try {
+    expect(await prepareToolHooks("claude")).toBeNull();
+    expect(await prepareToolHooks("codex", sight)).toBeNull();
+    const h = await prepareToolHooks("claude", sight);
+    if (!h) throw new Error("expected hooks");
+    try {
+      expect(h.hooks.PreToolUse?.map((g) => g.matcher)).toEqual(["Read"]);
+      expect(h.hooks.PostToolUse?.map((g) => g.matcher)).toEqual(["mcp__.*"]);
+      expect(h.hooks.PreToolUse?.[0]?.hooks[0]?.command).toEndWith(" see");
+      expect(h.env).toMatchObject({ SATGAS_TEAM_URL: sight.url, SATGAS_TEAM_TOKEN: "tok" });
+    } finally {
+      await removeToolHooks(h);
+    }
+  } finally {
+    g.__satgasSettings = kept;
+  }
+});
+
 test("agents are told what runs around their work", () => {
   const text = describeTools() ?? "";
   expect(text).toContain("command guard blocks");

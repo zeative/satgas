@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { basename, join } from "node:path";
+import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
+import { basename, isAbsolute, join } from "node:path";
 import {
   claudeEnv,
   codexKeyVar,
@@ -11,7 +11,7 @@ import {
   providerDef,
   type Runtime,
 } from "../shared/providers";
-import type { ImageNote, LogLine, ProviderStatus } from "../shared/types";
+import { type ImageNote, isPicture, type LogLine, type ProviderStatus } from "../shared/types";
 import { claudeModel } from "./agents/claude";
 import { AgentError, clip, runJsonl } from "./agents/process";
 import { claudeAliasIds, prettyClaude } from "./claude-models";
@@ -290,6 +290,41 @@ async function described(hash: string): Promise<{ text: string; by: string } | n
   return typeof hit?.text === "string" && typeof hit.by === "string" ? { text: hit.text, by: hit.by } : null;
 }
 
+async function describeWith(reader: Reader, file: string, cwd: string, signal: AbortSignal): Promise<{ text: string; by: string }> {
+  const hash = createHash("sha256")
+    .update(await readFile(file))
+    .digest("hex");
+  const hit = await described(hash);
+  if (hit) return hit;
+  const fresh = { text: await readImage(reader, file, cwd, signal), by: reader.name };
+  await mkdir(join(config.dataDir, "vision"), { recursive: true, mode: 0o700 });
+  await writeFile(storeOf(hash), JSON.stringify(fresh), { mode: 0o600 });
+  return fresh;
+}
+
+// Bigger than any screenshot an agent takes; a reader is never handed a huge file.
+const SEE_MAX_BYTES = 20 * 1024 * 1024;
+
+// A picture an agent opens mid-task (a screenshot it took, an image in the project), described for a model that cannot
+// see it, so opening it never fails the task.
+export async function seeImage(file: string, cwd: string, signal: AbortSignal): Promise<{ text: string; by: string } | { error: string }> {
+  if (!isAbsolute(file) || !isPicture(file)) return { error: "Give the full path of a .png, .jpg, .gif or .webp file." };
+  const size = await stat(file).then(
+    (s) => (s.isFile() ? s.size : -1),
+    () => -1,
+  );
+  if (size < 0) return { error: `There is no file at ${file}.` };
+  if (size > SEE_MAX_BYTES) return { error: `${basename(file)} is larger than 20 MB.` };
+  const reader = await pickReader();
+  if (!reader) return { error: `${NO_READER}, so this image cannot be described.` };
+  try {
+    return await describeWith(reader, file, cwd, signal);
+  } catch (e) {
+    if (signal.aborted) throw e;
+    return { error: `${reader.name} could not read ${basename(file)}: ${clip((e as Error).message, 200)}` };
+  }
+}
+
 export interface Sight {
   // Agents whose model cannot see images.
   blind: { claude: boolean; codex: boolean };
@@ -338,14 +373,7 @@ export async function seeAttachments(
   const work = async () => {
     for (let image = queue.shift(); image; image = queue.shift()) {
       try {
-        const bytes = await readFile(join(cwd, image));
-        const hash = createHash("sha256").update(bytes).digest("hex");
-        let hit = await described(hash);
-        if (!hit) {
-          hit = { text: await readImage(reader, join(cwd, image), cwd, signal), by: reader.name };
-          await mkdir(join(config.dataDir, "vision"), { recursive: true, mode: 0o700 });
-          await writeFile(storeOf(hash), JSON.stringify(hit), { mode: 0o600 });
-        }
+        const hit = await describeWith(reader, join(cwd, image), cwd, signal);
         const file = `${image}.md`;
         await writeFile(join(cwd, file), `What \`${basename(image)}\` shows, described by ${hit.by}:\n\n${hit.text}\n`);
         notes[image] = { file, by: hit.by };

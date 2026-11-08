@@ -19,6 +19,8 @@ export interface AgentRequest {
   // The task's token for its built-in connector: the secret request always, team talk when teammates work alongside.
   teamToken?: string;
   teamTalk?: boolean;
+  // The model cannot see images: pictures it opens are described by a vision model instead.
+  blind?: boolean;
   // A look-only task: no file-editing tools, and Codex runs in its read-only sandbox.
   readOnly?: boolean;
   // A Claude Code session to continue, with its whole history; the prompt is then the next message to it.

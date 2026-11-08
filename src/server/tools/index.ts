@@ -16,14 +16,16 @@ export function activeTools(): Tool[] {
 // In the compiled binary the hook is a subcommand of Satgas itself; from source it is its own script.
 const compiled = import.meta.dir.includes("$bunfs") || import.meta.dir.includes("~BUN");
 const quote = (s: string) => `'${s.replace(/'/g, `'\\''`)}'`;
-export function hookCommand(event: Exclude<ToolWhen, "available">): string {
+// "see" is not a tool from Integrations: it stands between a model that cannot see and the pictures it opens.
+export type HookEvent = Exclude<ToolWhen, "available"> | "see";
+export function hookCommand(event: HookEvent): string {
   return compiled
     ? `${quote(process.execPath)} hook ${event}`
     : `${quote(process.execPath)} ${quote(join(import.meta.dir, "hook.ts"))} ${event}`;
 }
 
 // Hook timeouts in seconds, a little above the hook's own limit per tool.
-const TIMEOUT = { command: 30, edit: 90, finish: 300 } as const;
+const TIMEOUT = { command: 30, edit: 90, finish: 300, see: 180 } as const;
 // Claude Code names edits per tool; Codex reports apply_patch and accepts Write and Edit as aliases.
 const EDITS = "Write|Edit|MultiEdit|NotebookEdit|apply_patch";
 
@@ -40,18 +42,26 @@ export interface ToolHooks {
 // Claude Code's own co-author and pull request lines, which would otherwise name Claude.
 export const ATTRIBUTION = { commit: COMMIT_TRAILER, pr: PR_FOOTER };
 
-export async function prepareToolHooks(agent: "claude" | "codex"): Promise<ToolHooks | null> {
+// sight: the model cannot see images, so on Claude Code the pictures it opens or a connector returns go to a reader
+// through the task's team connector. Codex has no such hook point; its image tool is switched off instead.
+export async function prepareToolHooks(agent: "claude" | "codex", sight?: { url: string; token: string }): Promise<ToolHooks | null> {
   const tools = activeTools().filter((t) => t.when !== "available");
-  if (!tools.length) return null;
+  const see = agent === "claude" && !!sight;
+  if (!tools.length && !see) return null;
   const has = (when: ToolWhen) => tools.some((t) => t.when === when);
-  const entry = (event: Exclude<ToolWhen, "available">) => [
-    { type: "command" as const, command: hookCommand(event), timeout: TIMEOUT[event] },
-  ];
+  const entry = (event: HookEvent) => [{ type: "command" as const, command: hookCommand(event), timeout: TIMEOUT[event] }];
   const hooks: ToolHooks["hooks"] = {};
-  if (has("command")) hooks.PreToolUse = [{ matcher: "Bash", hooks: entry("command") }];
+  const add = (event: string, group: ToolHooks["hooks"][string][number]) => {
+    hooks[event] = [...(hooks[event] ?? []), group];
+  };
+  if (has("command")) add("PreToolUse", { matcher: "Bash", hooks: entry("command") });
   // The finish check needs to know whether files changed, so edits are watched whenever it is on.
-  if (has("edit") || has("finish")) hooks.PostToolUse = [{ matcher: EDITS, hooks: entry("edit") }];
-  if (has("finish")) hooks.Stop = [{ hooks: entry("finish") }];
+  if (has("edit") || has("finish")) add("PostToolUse", { matcher: EDITS, hooks: entry("edit") });
+  if (has("finish")) add("Stop", { hooks: entry("finish") });
+  if (see) {
+    add("PreToolUse", { matcher: "Read", hooks: entry("see") });
+    add("PostToolUse", { matcher: "mcp__.*", hooks: entry("see") });
+  }
   const dir = await mkdtemp(join(tmpdir(), "satgas-tools-"));
   const settingsPath = join(dir, "settings.json");
   await writeFile(settingsPath, JSON.stringify({ hooks, attribution: ATTRIBUTION }), { mode: 0o600 });
@@ -59,7 +69,13 @@ export async function prepareToolHooks(agent: "claude" | "codex"): Promise<ToolH
     hooks,
     dir,
     settingsPath,
-    env: { SATGAS_AGENT: agent, SATGAS_TOOLS: JSON.stringify(tools), SATGAS_TOOLS_STATE: join(dir, "state"), SATGAS_HOME: homedir() },
+    env: {
+      SATGAS_AGENT: agent,
+      SATGAS_TOOLS: JSON.stringify(tools),
+      SATGAS_TOOLS_STATE: join(dir, "state"),
+      SATGAS_HOME: homedir(),
+      ...(see && sight ? { SATGAS_TEAM_URL: sight.url, SATGAS_TEAM_TOKEN: sight.token } : {}),
+    },
   };
 }
 

@@ -35,7 +35,7 @@ import { enabledSkills } from "./skills";
 import { appendLog, boardOps, createRun, getLogs, getRun, patchNode, patchRun } from "./store";
 import { describeSystem } from "./system";
 import { closeTeamSession, openTeamSession, trackFile } from "./team";
-import { type Sight, seeAttachments } from "./vision";
+import { blindAgents, type Sight, seeAttachments } from "./vision";
 import { closeTree, inFolder, openTree, type TaskTree, treesFor } from "./worktrees";
 
 type Live = Map<string, { ctrl: AbortController; done: Promise<void> }>;
@@ -691,8 +691,17 @@ interface Resume {
   message: string;
 }
 
-async function runNode(run: Run, node: NodeState, blind: boolean, signal: AbortSignal, resume?: Resume, trees = false): Promise<void> {
+async function runNode(
+  run: Run,
+  node: NodeState,
+  attachedBlind: boolean,
+  signal: AbortSignal,
+  resume?: Resume,
+  trees = false,
+): Promise<void> {
   patchNode(run.id, node.id, { status: "running", startedAt: Date.now(), branch: undefined });
+  // Known per round only when images were attached; a task without any can still open screenshots it takes itself.
+  const blind = attachedBlind || (await blindAgents())[node.agent];
   // A picture a tool returned is saved first, so the line keeps its name instead of its bytes.
   const log = ({ picture, ...l }: Parameters<AgentRequest["onLog"]>[0]) => {
     if (!picture) return appendLog(run.id, node.id, l);
@@ -751,6 +760,7 @@ async function runNode(run: Run, node: NodeState, blind: boolean, signal: AbortS
   const req: AgentRequest = {
     teamToken,
     teamTalk: together,
+    ...(blind ? { blind: true } : {}),
     ...(session ? { resume: session } : {}),
     onSession: (id) => patchNode(run.id, node.id, { session: id }),
     ...(node.access === "read" ? { readOnly: true } : {}),

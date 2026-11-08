@@ -155,6 +155,11 @@ export function buildNodePrompt(
         "attachments",
         `Files the user attached, in the working directory; read the ones your task needs:\n${files.map(listed).join("\n")}`,
       ),
+    blind &&
+      section(
+        "sight",
+        "Your model cannot view images. When you need to see a picture (a screenshot you took of your own page, an image in the project, one a connector returns), open it as usual or call see_image on the satgas_team connector: Satgas has a vision model describe it and you get that description instead. Treat it as what the image shows, and never guess beyond it.",
+      ),
     extra.pointed && section("pointed", `What the request's / and @ words point at:\n${extra.pointed}`),
     extra.skills?.length &&
       section(

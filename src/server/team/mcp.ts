@@ -3,6 +3,8 @@
 // The team tools are listed only when teammates work alongside (SATGAS_TEAM_TALK=1); the web app tools and the secret
 // request always are.
 
+import { resolve } from "node:path";
+
 const TOOLS = [
   {
     name: "team_notes",
@@ -112,11 +114,25 @@ const TOOLS = [
     },
     op: "secret",
   },
+  {
+    name: "see_image",
+    description:
+      "Your model cannot view images. Call this with an image file (a screenshot you took, a picture in the project) and a vision model describes everything it shows: text word for word, layout, colours, errors. Use it whenever you need to see a picture.",
+    inputSchema: {
+      type: "object",
+      properties: { path: { type: "string", description: "Path to a .png, .jpg, .gif or .webp file" } },
+      required: ["path"],
+      additionalProperties: false,
+    },
+    op: "see",
+  },
 ] as const;
 
 // Asking for a secret and running web apps are every task's; the team tools only when teammates work alongside.
 const ALWAYS = new Set<string>(["secret", "app_start", "app_stop", "app_status"]);
-const offered = () => TOOLS.filter((t) => ALWAYS.has(t.op) || process.env.SATGAS_TEAM_TALK !== "0");
+// Seeing images through a reader only for a model that cannot see them itself.
+const offered = () =>
+  TOOLS.filter((t) => (t.op === "see" ? process.env.SATGAS_BLIND === "1" : ALWAYS.has(t.op) || process.env.SATGAS_TEAM_TALK !== "0"));
 
 type Rpc = { jsonrpc: "2.0"; id?: number | string; method: string; params?: Record<string, unknown> };
 const send = (msg: object) => {
@@ -155,7 +171,10 @@ export async function handle(msg: Rpc): Promise<void> {
   if (msg.method === "tools/call") {
     const tool = offered().find((t) => t.name === msg.params?.name);
     if (!tool) return send({ id: msg.id, result: { content: [{ type: "text", text: "Unknown tool" }], isError: true } });
-    const r = await call(tool.op, msg.params?.arguments);
+    const args = (msg.params?.arguments ?? {}) as Record<string, unknown>;
+    // A path relative to the agent's folder, which is this server's working directory.
+    if (tool.op === "see" && typeof args.path === "string") args.path = resolve(args.path);
+    const r = await call(tool.op, args);
     return send({ id: msg.id, result: { content: [{ type: "text", text: r.text }], isError: r.error } });
   }
   if (msg.method === "ping") return send({ id: msg.id, result: {} });

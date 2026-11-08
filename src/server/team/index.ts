@@ -2,7 +2,7 @@
 // teammates; and a private card to ask the person for a secret. Each running task gets a token; its built-in
 // "satgas_team" connector calls back here with it.
 
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { defang } from "../../shared/defang";
 import type { McpServer } from "../../shared/settings";
 import {
@@ -20,6 +20,7 @@ import { appLog, appUrl, cleanAppName, startApp, stopApp } from "../apps";
 import { config } from "../config";
 import { requestSecret } from "../secrets";
 import { getRun, patchRun } from "../store";
+import { seeImage } from "../vision";
 
 interface Session {
   runId: string;
@@ -124,6 +125,7 @@ export async function teamCall(token: string, op: string, body: Record<string, u
   if (!s) return no("This task is no longer running.");
   if (op === "secret") return ok(await requestSecret(s.runId, s.nodeId, body.label, body.reason, body.hint));
   if (op === "app_start" || op === "app_stop" || op === "app_status") return appCall(s, op, body);
+  if (op === "see") return seeCall(s, body);
   if (!s.talk) return no("Nobody else works alongside you this round.");
   const talk = talkOf(s.runId, s.round);
 
@@ -217,12 +219,30 @@ export async function teamCall(token: string, op: string, body: Record<string, u
   return no(`Unknown team action ${op}.`);
 }
 
+// Bounded below the hook's own timeout, so the agent always gets an answer instead of a killed hook.
+const SEE_WAIT_MS = 150_000;
+
+async function seeCall(s: Session, body: Record<string, unknown>): Promise<Reply> {
+  const run = getRun(s.runId);
+  const file = typeof body.path === "string" ? body.path.trim() : "";
+  if (!run || !file) return no("Give the full path of the image.");
+  const r = await seeImage(file, run.cwd, AbortSignal.timeout(SEE_WAIT_MS)).catch((e: Error) => ({ error: e.message }));
+  if ("error" in r)
+    return no(
+      `${r.error} Your model cannot view images, so do not guess what it shows; check the page another way (its HTML, text or computed styles) or say in your report that you could not see it.`,
+    );
+  return ok(
+    `Your model cannot view images, so ${r.by} looked at ${basename(file)} for you. Treat this description as what the image shows:\n\n${r.text}`,
+  );
+}
+
 // The task's built-in connector, as a stdio MCP server entry. Codex prefixes every connector with satgas_, so it gets
 // the bare name and both agents see the same satgas_team tools.
 const compiled = import.meta.dir.includes("$bunfs") || import.meta.dir.includes("~BUN");
 // A secret request waits on the person, so the connector's calls may take minutes.
 export const TEAM_TOOL_TIMEOUT_SEC = 900;
-export function teamServer(token: string, port: number, codex: boolean, talk = true): McpServer {
+export const teamUrl = (port: number) => `http://127.0.0.1:${port}/api/team`;
+export function teamServer(token: string, port: number, codex: boolean, talk = true, blind = false): McpServer {
   return {
     id: "satgas-team",
     name: codex ? "team" : "satgas_team",
@@ -230,7 +250,7 @@ export function teamServer(token: string, port: number, codex: boolean, talk = t
     transport: "stdio",
     command: process.execPath,
     args: compiled ? ["team-mcp"] : [join(import.meta.dir, "mcp.ts")],
-    env: { SATGAS_TEAM_URL: `http://127.0.0.1:${port}/api/team`, SATGAS_TEAM_TOKEN: token, SATGAS_TEAM_TALK: talk ? "1" : "0" },
+    env: { SATGAS_TEAM_URL: teamUrl(port), SATGAS_TEAM_TOKEN: token, SATGAS_TEAM_TALK: talk ? "1" : "0", SATGAS_BLIND: blind ? "1" : "0" },
     toolTimeoutSec: TEAM_TOOL_TIMEOUT_SEC,
     toolsApproved: true,
   };

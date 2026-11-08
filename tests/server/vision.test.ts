@@ -6,7 +6,7 @@ import type { Server } from "bun";
 import { config } from "../../src/server/config";
 import { buildNodePrompt, workingRules } from "../../src/server/prompt";
 import { defaultSettings } from "../../src/server/settings";
-import { canSee, probeVision, readerCandidates, sawProbe, seeAttachments } from "../../src/server/vision";
+import { canSee, probeVision, readerCandidates, sawProbe, seeAttachments, seeImage } from "../../src/server/vision";
 import type { Settings } from "../../src/shared/settings";
 import type { NodeState, ProviderStatus, Run } from "../../src/shared/types";
 import { collector, jsonl, makeFakeCli, setFake } from "../helpers/fake-cli";
@@ -232,3 +232,12 @@ describe("describing attached images", () => {
 function ok(kind: ProviderStatus["kind"], ids: string[] = []): ProviderStatus {
   return { kind, state: "ok", models: ids.map((id) => ({ id, name: id })) };
 }
+
+test("a picture an agent opens mid-task must be a real image file before any reader is asked", async () => {
+  const signal = new AbortController().signal;
+  expect(await seeImage("shot.png", "/w", signal)).toEqual({ error: "Give the full path of a .png, .jpg, .gif or .webp file." });
+  expect(await seeImage("/w/notes.md", "/w", signal)).toEqual({ error: "Give the full path of a .png, .jpg, .gif or .webp file." });
+  expect(await seeImage("/satgas-no-such-dir/shot.png", "/w", signal)).toEqual({
+    error: "There is no file at /satgas-no-such-dir/shot.png.",
+  });
+});

@@ -61,3 +61,17 @@ test("a task working alone is offered its web apps and the secret request, not t
   const replies = await talk([{ jsonrpc: "2.0", id: 1, method: "tools/list" }], { SATGAS_TEAM_TALK: "0" });
   expect(replies[0]?.result.tools.map((t: { name: string }) => t.name)).toEqual(["app_start", "app_stop", "app_status", "request_secret"]);
 });
+
+test("a model that cannot see is offered see_image, which sends the full path of the picture", async () => {
+  const replies = await talk(
+    [
+      { jsonrpc: "2.0", id: 1, method: "tools/list" },
+      { jsonrpc: "2.0", id: 2, method: "tools/call", params: { name: "see_image", arguments: { path: "shots/home.png" } } },
+    ],
+    { SATGAS_TEAM_TALK: "0", SATGAS_BLIND: "1" },
+  );
+  expect(replies[0]?.result.tools.map((t: { name: string }) => t.name)).toContain("see_image");
+  expect(seen).toEqual([{ op: "/api/team/see", auth: "Bearer tok", body: { path: join(process.cwd(), "shots/home.png") } }]);
+  const sighted = await talk([{ jsonrpc: "2.0", id: 1, method: "tools/list" }], { SATGAS_TEAM_TALK: "0", SATGAS_BLIND: "0" });
+  expect(sighted[0]?.result.tools.map((t: { name: string }) => t.name)).not.toContain("see_image");
+});

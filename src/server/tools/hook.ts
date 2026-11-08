@@ -196,8 +196,49 @@ const say = (out: unknown) => {
   process.stdout.write(JSON.stringify(out));
 };
 
+// A little under the hook's own timeout, so the agent gets an answer instead of a killed hook.
+const SEE_WAIT_MS = 170_000;
+const RASTER = /\.(png|jpe?g|gif|webp)$/i;
+const EXT: Record<string, string> = { "image/jpeg": "jpg", "image/gif": "gif", "image/webp": "webp" };
+
+// Asks Satgas, through the task's team connector, to have a vision model describe a picture.
+async function see(file: string): Promise<string> {
+  try {
+    const res = await fetch(`${process.env.SATGAS_TEAM_URL}/see`, {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: `Bearer ${process.env.SATGAS_TEAM_TOKEN ?? ""}` },
+      body: JSON.stringify({ path: file }),
+      signal: AbortSignal.timeout(SEE_WAIT_MS),
+    });
+    const data = (await res.json().catch(() => ({}))) as { text?: string; error?: string };
+    return data.text ?? data.error ?? `Satgas answered ${res.status} and could not describe the image.`;
+  } catch (e) {
+    return `Your model cannot view images, and Satgas could not be reached to describe ${file}: ${(e as Error).message}. Do not guess what it shows.`;
+  }
+}
+
+// Image blocks in a connector's result, in MCP's shape or Anthropic's, each swapped for its description.
+async function describeImages(value: unknown, dir: string, count: { n: number }): Promise<unknown> {
+  if (Array.isArray(value)) {
+    const out: unknown[] = [];
+    for (const v of value) out.push(await describeImages(v, dir, count));
+    return out;
+  }
+  if (!value || typeof value !== "object") return value;
+  const block = value as Record<string, any>;
+  if (Array.isArray(block.content)) return { ...block, content: await describeImages(block.content, dir, count) };
+  if (block.type !== "image") return value;
+  const data = typeof block.data === "string" ? block.data : block.source?.data;
+  if (typeof data !== "string") return value;
+  const mime = String(block.mimeType ?? block.source?.media_type ?? "image/png");
+  mkdirSync(dir, { recursive: true });
+  const file = join(dir, `seen-${process.pid}-${count.n++}.${EXT[mime] ?? "png"}`);
+  writeFileSync(file, Buffer.from(data, "base64"));
+  return { type: "text", text: await see(file) };
+}
+
 export async function runHook(event: string): Promise<void> {
-  if (event !== "command" && event !== "edit" && event !== "finish") return;
+  if (event !== "command" && event !== "edit" && event !== "finish" && event !== "see") return;
   let tools: Tool[] = [];
   let payload: Record<string, any> = {};
   try {
@@ -211,6 +252,23 @@ export async function runHook(event: string): Promise<void> {
   const state = process.env.SATGAS_TOOLS_STATE;
   const mine = tools.filter((t) => t.enabled && t.when === event && installed(t));
   const input: Record<string, unknown> = payload.tool_input ?? {};
+
+  // The model cannot see: a picture it opens is described instead, and so is one a connector hands back.
+  if (event === "see") {
+    if (payload.hook_event_name === "PreToolUse") {
+      const path = typeof input.file_path === "string" ? input.file_path : "";
+      const file = path && (isAbsolute(path) ? path : resolve(cwd, path));
+      if (!file || !RASTER.test(file) || !existsSync(file)) return;
+      return say({
+        hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "deny", permissionDecisionReason: await see(file) },
+      });
+    }
+    const count = { n: 0 };
+    const swapped = await describeImages(payload.tool_response, join(state || cwd, "seen"), count);
+    // Both names, since Claude Code versions differ in which one replaces a connector's result.
+    if (count.n) say({ hookSpecificOutput: { hookEventName: "PostToolUse", updatedToolOutput: swapped, updatedMCPToolOutput: swapped } });
+    return;
+  }
 
   if (event === "command") {
     const command = typeof input.command === "string" ? input.command : "";

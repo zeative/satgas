@@ -97,6 +97,11 @@ test("a failed turn keeps its reason when the process also exits non-zero", asyn
   await expect(runCodex(req())).rejects.toThrow(new AgentError("rate limited"));
 });
 
+test("a model that cannot see loses the image tool, so it never sends a picture its endpoint refuses", () => {
+  expect(codexArgs("/w", undefined, null, false, false, true).join(" ")).toContain("-c features.view_image=false");
+  expect(codexArgs("/w").join(" ")).not.toContain("view_image");
+});
+
 test("lean mode ignores config.toml but always runs ephemeral and sandboxed", () => {
   config.leanAgents = true;
   expect(codexArgs("/w")).toEqual(expect.arrayContaining(["--ephemeral", "--ignore-user-config", "-C", "/w", "-s", config.codexSandbox]));
