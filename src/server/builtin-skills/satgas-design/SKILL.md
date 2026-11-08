@@ -36,6 +36,12 @@ The shape of an answer, never to be copied: a billing product whose overdue row 
 
 How to make it rich, with no image generator: real photos used large, and everything else built in code. Give it depth with layers, real light and shadow, and a scale several times anything around it. Tie its motion to what is happening, so every move means something, and let it play by itself so it shows on a small card. Spend the time here: it gets more care than the rest of the page together.
 
+Keep it light, because a moment that makes a laptop heavy is a failed moment. Safari and weak machines pay the most for effects that an automated Chromium hides, so 60 fps there proves nothing: measure the work per frame, before and after. If it draws on a canvas:
+
+- Draw glows, shadows and gradients once and reuse them as pictures, with no `shadowBlur` or `filter` recomputed each frame.
+- Limit the canvas resolution, and lower it when frames get heavy.
+- Stop the loop when the page is hidden or off screen, since a board shows several moments at once.
+
 ## Three rounds
 
 Something new that people look at goes in three rounds, and each ends by asking the person. The structure is approved first, then the moment, and only then the rest, so a weak idea costs one piece and not a whole site.
@@ -58,7 +64,7 @@ When they ask for changes, change the wireframes and ask again.
 Build only the moment, as `design/moment.html`: one file that runs by itself with no build step, at its real size, with its real type, colours, material and motion, on the page's real background. Everything around it stays out. A game makes it a real slice that plays itself until someone touches it.
 
 1. **Take its material** from your row of the map below, with the script.
-2. **Build it, then look.** Shoot it at rest and in the middle of its motion, and open both. Fix what looks cheap: thin depth, stiff timing, a corner that gives away it was generated. Do this at least twice.
+2. **Build it, then look.** Shoot it at rest and in the middle of its motion, and open both. Fix what looks cheap: thin depth, stiff timing, a corner that gives away it was generated. Do this at least twice. Check it on what people will really use, and at the widths in between: a typing race needs a physical keyboard, so skip phones; a poster has its one real size; a website gets 390, 768, 960 and 1280, because the widths between are where things collide.
 3. **Stop and ask.** Say in your report what it shows and ask the person whether this is the feeling they want. It shows on the board by itself.
 
 When they say it is flat or wrong, bring a different idea, not a polish of the same one. Build nothing else until they approve.

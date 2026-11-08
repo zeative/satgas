@@ -89,6 +89,14 @@ describe("the satgas-design skill", () => {
     expect(skill.indexOf("Round two: the moment")).toBeGreaterThan(skill.indexOf("Round one: wireframes"));
   });
 
+  test("keeps the moment light and checks it where people really use it", () => {
+    const skill = files["SKILL.md"] ?? "";
+    expect(skill).toContain("measure the work per frame");
+    expect(skill).toContain("Stop the loop when the page is hidden or off screen");
+    expect(skill).toContain("skip phones");
+    expect(skill).toContain("the widths between are where things collide");
+  });
+
   test("asks the person to approve wireframes before anything is built", () => {
     const skill = files["SKILL.md"] ?? "";
     expect(skill).toContain("Round one: wireframes, then stop");
