@@ -69,6 +69,16 @@ describe("the satgas-design skill", () => {
     ).toBeUndefined();
   });
 
+  test("defaults to a modern, elegant look and picks only hallmark themes that exist", async () => {
+    const skill = files["SKILL.md"] ?? "";
+    expect(skill).toContain("modern, current, elegant");
+    expect(skill).toContain("Never, unless asked");
+    const list = /Pick from (.+?), whichever/.exec(skill)?.[1] ?? "";
+    const themes = [...list.matchAll(/`([a-z]+)`/g)].map((m) => m[1]);
+    expect(themes.length).toBeGreaterThan(8);
+    for (const t of themes) expect(BUILTIN.hallmark?.[`references/themes/${t}.md`]).toBeDefined();
+  });
+
   test("asks the person to approve wireframes before anything is built", () => {
     const skill = files["SKILL.md"] ?? "";
     expect(skill).toContain("Round one: wireframes, then stop");

@@ -113,6 +113,7 @@ test("every task hears to put interfaces through Hallmark only while it is on", 
   expect(workingRules(true, "", "", "", true)).toContain("loads the hallmark skill");
   expect(workingRules(true)).not.toContain("hallmark");
   expect(workingRules(true, "", "", "", true, true)).toContain("loads the satgas-design skill");
+  expect(workingRules(true, "", "", "", true, true)).toContain("modern, current and elegant");
   expect(workingRules(true, "", "", "", true)).not.toContain("satgas-design");
 });
 

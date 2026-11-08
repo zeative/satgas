@@ -7,6 +7,20 @@ description: "How anything visual gets made in Satgas so it looks like a profess
 
 The goal is work a professional would sign: it looks made by someone who knows this field, with real content and real pictures, not assembled by a tool. Hallmark sets the floor (spacing, contrast, states); this sets the bar above it.
 
+## The default look: modern, current, elegant
+
+Unless the person asks for another style, everything looks like what a top product or studio would ship today. The test: would it sit comfortably next to Linear, Stripe, Apple, Aesop or Nothing? If not, it is not done.
+
+- **Surfaces:** near-white, near-black, or one confident flat colour, from one neutral ramp, with a single accent.
+- **Type:** a contemporary grotesk or a refined modern serif, set large and tight, at normal weights.
+- **Layout:** a strict grid, generous space, large pictures running edge to edge, hairlines instead of boxes.
+- **Pictures:** current, well lit, cropped with intent, no filters.
+- **Motion:** quick and subtle.
+- **Never, unless asked:** retro, vintage, rustic, kitsch, childish or cartoon looks, paper and print textures, slab, ornamental, blackletter, pixel or handwritten faces, even when the subject is old or traditional. A traditional coffee shop still gets a modern site.
+- **Hallmark themes:** do not deal one. Pick from `cobalt`, `console`, `dusk`, `grid`, `ink`, `midnight`, `refract`, `ribbon`, `rim`, `studio`, `vantage`, whichever fits the work; a game or a playful brief picks from them too and brings its play through the pieces and motion.
+
+## Two rounds
+
 Something new that people look at goes in two rounds. The person approves the structure before anything is styled.
 
 ## Round one: wireframes, then stop
