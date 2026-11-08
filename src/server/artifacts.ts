@@ -80,6 +80,12 @@ async function pictureSize(path: string): Promise<{ w: number; h: number }> {
   }
 }
 
+// What a page is made of (icons, fonts, textures, vendored code, reference and review shots, QA screenshots, the source
+// ledger) is material, not a result: it stays in the file list and off the canvas, which it would only clutter.
+const MATERIAL =
+  /(^|\/)(assets|public|vendor|static|node_modules|dist|build|screenshots|\.hallmark)\/|(^|\/)design\/(refs|review)\/|(^|\/)design\/sources\.md$/;
+export const isMaterial = (path: string) => MATERIAL.test(path);
+
 export const bundlerEntry = (html: string) => /<script\b[^>]*\bsrc=["'][^"']+\.(?:jsx|tsx|ts|vue|svelte)(?:\?[^"']*)?["']/i.test(html);
 
 // Turns what a task wrote into cards: images, pages, sheets and docs get their own card. The rest stays off the canvas;
@@ -103,7 +109,7 @@ export async function cardsForTask(
   const rich: Omit<Card, "x" | "y">[] = [];
 
   for (const f of files) {
-    const kind = f.change === "deleted" ? null : cardKindForFile(f.path);
+    const kind = f.change === "deleted" || isMaterial(f.path) ? null : cardKindForFile(f.path);
     if (!kind || rich.length >= MAX_RICH_CARDS) continue;
     const id = `${node.id.slice(0, 40)}:${pathHash(f.path)}`;
     const full = resolve(run.cwd, f.path);

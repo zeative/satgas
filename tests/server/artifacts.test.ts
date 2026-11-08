@@ -161,14 +161,30 @@ describe("placement", () => {
     const brief = { id: "b", kind: "doc" as const, x: 0, y: 400, w: 300, h: 200, from: "brief", createdAt: 1 };
     const note = (id: string) => ({ id, kind: "note" as const, w: 200, h: 100, createdAt: 2 });
 
-    test("a task's cards go just right of the card its work came from, level with it, one under the other", () => {
+    test("a task's cards go just right of the card its work came from, level with it, side by side in rows", () => {
       const r = {
         ...run([node("brief", 0, 0), node("code", 0, 0, { dependsOn: ["brief"] })]),
         board: { cards: [brief], links: [], moved: {} },
       };
       const [a, b] = placeInFlow(r, { id: "code" }, [note("1"), note("2")]);
       expect(a).toMatchObject({ x: 420, y: 400 });
-      expect(b).toMatchObject({ x: 420, y: 540 });
+      expect(b).toMatchObject({ x: 660, y: 400 });
+    });
+
+    test("many cards wrap into rows of a compact block, never one long column, and none of them touch", () => {
+      const r = {
+        ...run([node("brief", 0, 0), node("code", 0, 0, { dependsOn: ["brief"] })]),
+        board: { cards: [brief], links: [], moved: {} },
+      };
+      const placed = placeInFlow(
+        r,
+        { id: "code" },
+        Array.from({ length: 12 }, (_, i) => note(String(i))),
+      );
+      expect(new Set(placed.map((c) => c.y)).size).toBeLessThanOrEqual(3);
+      for (const a of placed)
+        for (const b of placed)
+          if (a !== b) expect(a.x + a.w <= b.x || b.x + b.w <= a.x || a.y + a.h <= b.y || b.y + b.h <= a.y).toBe(true);
     });
 
     test("a follow-up round continues to the right of the round it builds on", () => {
@@ -179,13 +195,13 @@ describe("placement", () => {
       expect(placeInFlow(r, { id: "shorter" }, [note("1")])[0]).toMatchObject({ x: 420, y: 400 });
     });
 
-    test("moves down its column past a card already there", () => {
+    test("steps past a card already there instead of covering it", () => {
       const there = { id: "t", kind: "note" as const, x: 420, y: 380, w: 200, h: 200, createdAt: 1 };
       const r = {
         ...run([node("brief", 0, 0), node("code", 0, 0, { dependsOn: ["brief"] })]),
         board: { cards: [brief, there], links: [], moved: {} },
       };
-      expect(placeInFlow(r, { id: "code" }, [note("1")])[0]).toMatchObject({ x: 420, y: 620 });
+      expect(placeInFlow(r, { id: "code" }, [note("1")])[0]).toMatchObject({ x: 660, y: 400 });
     });
 
     test("a task with nothing upstream fills the shelf as before", () => {
@@ -315,4 +331,21 @@ test("a bundler's entry page gets no blank preview, while a plain page with modu
   expect(bundlerEntry('<script type="module" src="/src/main.tsx?t=1"></script>')).toBe(true);
   expect(bundlerEntry('<script type="module" src="./app.js"></script>')).toBe(false);
   expect(bundlerEntry("<h1>Kopi Senja</h1>")).toBe(false);
+});
+
+test("what a page is made of stays off the canvas; the page, the direction and the poster get cards", async () => {
+  const { isMaterial } = await import("../../src/server/artifacts");
+  for (const m of [
+    "assets/icons/flame.svg",
+    "public/sound.svg",
+    "src/assets/hero.png",
+    "design/refs/x-desktop.jpg",
+    "design/review/compare.jpg",
+    "design/sources.md",
+    "screenshots/win.png",
+    "vendor/gsap.min.js",
+  ])
+    expect({ m, material: isMaterial(m) }).toEqual({ m, material: true });
+  for (const r of ["index.html", "design/direction.md", "poster.png", "out/kopi-senja-story.png"])
+    expect({ r, material: isMaterial(r) }).toEqual({ r, material: false });
 });

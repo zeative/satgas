@@ -1002,7 +1002,7 @@ function ImageBody({ card, src }: { card: Card; src: string }) {
         if (!nw || !nh || card.locked || !hasCard(card.id)) return;
         const want = nw / nh;
         if (Math.abs(card.w / card.h - want) / want <= RATIO_SLACK) return;
-        commit([{ op: "patch", id: card.id, patch: imageFit(card.w, want) }]);
+        commit([{ op: "patch", id: card.id, patch: imageFitInside(card.w, card.h, want) }]);
       }}
       className="size-full bg-muted/40 object-contain"
     />
@@ -1014,6 +1014,12 @@ export function imageFit(width: number, ratio: number, maxHeight = 900): { w: nu
   const h = Math.round(width / ratio);
   if (h <= maxHeight) return { w: Math.round(width), h: Math.max(40, h) };
   return { w: Math.max(80, Math.round(maxHeight * ratio)), h: maxHeight };
+}
+
+// Reshaping a placed card only shrinks it inside the box it has, so the picture's real shape never pushes it over a card
+// placed next to it.
+export function imageFitInside(w: number, h: number, ratio: number): { w: number; h: number } {
+  return w / h > ratio ? { w: Math.max(40, Math.round(h * ratio)), h } : { w, h: Math.max(40, Math.round(w / ratio)) };
 }
 
 // Expand and open-in-tab, the same two buttons wherever a card shows them.

@@ -51,11 +51,11 @@ test("each new step moves the pointer, and the same step always lands in the sam
   expect(at([tool(1, "Bash npm test")])).toEqual(one);
 });
 
-test("two running tasks from the same card get slots one under the other", () => {
+test("two running tasks from the same card get slots side by side, never on top of each other", () => {
   const { slots } = liveWork(run([task("brief", "done"), task("a", "running", ["brief"]), task("b2", "running", ["brief"])]), {});
   expect(slots.map((s) => [s.x, s.y])).toEqual([
     [420, 400],
-    [420, 400 + SLOT_H + 40],
+    [420 + SLOT_W + 40, 400],
   ]);
 });
 

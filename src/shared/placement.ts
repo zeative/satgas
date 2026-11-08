@@ -33,31 +33,28 @@ export function placeOnShelf(run: Run, cards: Omit<Card, "x" | "y">[]): Card[] {
 }
 
 // A task whose work came from other cards puts its own just right of them, level with the first, so the board reads
-// left to right the way the work went. A task with nothing upstream fills the shelf as before.
+// left to right the way the work went. They pack into rows of a block about two cards wide, biggest first, instead of
+// one long column, and never touch what is already there. A task with nothing upstream fills the shelf as before.
 export function placeInFlow(run: Run, node: Pick<NodeState, "id">, cards: Omit<Card, "x" | "y">[]): Card[] {
   const board = run.board?.cards ?? [];
   const ids = new Set(flowSources(run.nodes, board)(node.id));
   const from = board.filter((c) => ids.has(c.id));
   if (!from.length) return placeOnShelf(run, cards);
-  const x = Math.max(...from.map((c) => c.x + c.w)) + FLOW_GAP;
+  const left = Math.max(...from.map((c) => c.x + c.w)) + FLOW_GAP;
+  const top = Math.min(...from.map((c) => c.y));
+  const widest = Math.max(...cards.map((c) => c.w), 0);
+  const right = left + Math.max(BLOCK_MIN_WIDTH, widest * 2 + SHELF_GAP);
   const taken: Rect[] = board.filter((c) => !withinFrame(c, board));
-  let y = Math.min(...from.map((c) => c.y));
-  return cards.map((c) => {
-    const card = { ...c, x, y: columnSpot(c, taken, x, y) } as Card;
+  const order = cards.map((c, i) => ({ c, i })).sort((a, b) => b.c.w * b.c.h - a.c.w * a.c.h);
+  const placed: Card[] = new Array(cards.length);
+  for (const { c, i } of order) {
+    const card = { ...c, ...freeSpot(c, taken, left, right, top, true) } as Card;
     taken.push(card);
-    y = card.y + card.h + SHELF_GAP;
-    return card;
-  });
-}
-
-// The first height from `y` down where the card fits in its column without touching anything.
-function columnSpot(c: { w: number; h: number }, taken: Rect[], x: number, y: number): number {
-  for (;;) {
-    const hit = taken.find((r) => clash(r, x, y, c.w, c.h));
-    if (!hit) return y;
-    y = hit.y + hit.h + SHELF_GAP;
+    placed[i] = card;
   }
+  return placed;
 }
+const BLOCK_MIN_WIDTH = 1400;
 
 interface Rect {
   x: number;
@@ -74,7 +71,16 @@ const clash = (a: Rect, x: number, y: number, w: number, h: number) =>
   a.x < x + w + SHELF_GAP && x < a.x + a.w + SHELF_GAP && a.y < y + h + SHELF_GAP && y < a.y + a.h + SHELF_GAP;
 
 // Spots worth trying sit at the shelf's edges and just past what is already there.
-function freeSpot(c: { w: number; h: number }, taken: Rect[], left: number, right: number, top: number): { x: number; y: number } {
+// `local`: only what overlaps the column band counts, so a block beside other work starts level with its inputs.
+function freeSpot(
+  c: { w: number; h: number },
+  all: Rect[],
+  left: number,
+  right: number,
+  top: number,
+  local = false,
+): { x: number; y: number } {
+  const taken = local ? all.filter((r) => r.x < right + SHELF_GAP && r.x + r.w + SHELF_GAP > left) : all;
   const below = { x: left, y: Math.max(top, ...taken.map((r) => r.y + r.h + SHELF_GAP)) };
   // The search grows with the cube of what is there; a crowded shelf just continues underneath.
   if (taken.length > MAX_SHELF_SEARCH) return below;
