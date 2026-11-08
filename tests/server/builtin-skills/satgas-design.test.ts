@@ -69,6 +69,26 @@ describe("the satgas-design skill", () => {
     ).toBeUndefined();
   });
 
+  // Agents only reach for what the skill points them at, so each kind of work names its references, moment and material.
+  test("tells agents explicitly which sources to use for each kind of work, and to review the result", () => {
+    const skill = files["SKILL.md"] ?? "";
+    for (const kind of ["software", "café", "event", "game", "poster", "portfolio", "kids", "dashboard", "deck"])
+      expect(skill.toLowerCase()).toContain(kind);
+    for (const command of [
+      "ref ",
+      "bg mesh",
+      "bg fffuel",
+      "pattern hero",
+      "avatar open-peeps",
+      "lottie",
+      "lib gsap",
+      "photo unsplash",
+      "review ",
+    ])
+      expect(skill).toContain(command);
+    expect(skill).toContain("design/direction.md");
+  });
+
   test("its script lists every source it can draw from", async () => {
     const { code, out } = await run("list");
     expect(code).toBe(0);
@@ -102,6 +122,8 @@ describe("the satgas-design skill", () => {
     expect(photo.err).toContain("request_secret");
     expect((await run("note", "nothing.svg")).err).toContain("--from");
     expect((await run("note", "nothing.svg", "--from", "https://x", "--license", "CC0")).err).toContain("No such file");
+    expect((await run("review")).err).toContain("Give the page");
+    expect((await run("review", "nothing.html")).err).toContain("No such file");
     expect((await run("nonsense")).err).toContain("Unknown command");
   });
 });
