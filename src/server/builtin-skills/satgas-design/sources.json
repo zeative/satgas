@@ -167,6 +167,17 @@
       "icon": "/sources/open-peeps.png"
     },
     {
+      "id": "openverse",
+      "name": "Openverse",
+      "url": "https://openverse.org",
+      "category": "photos",
+      "gives": "Real photographs, no key needed, credit recorded",
+      "license": "CC0, public domain or CC BY, credit shown on the page",
+      "use": "download",
+      "command": "photo openverse",
+      "icon": "/sources/openverse.png"
+    },
+    {
       "id": "unsplash",
       "name": "Unsplash",
       "url": "https://unsplash.com",

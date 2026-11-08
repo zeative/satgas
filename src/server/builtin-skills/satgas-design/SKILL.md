@@ -1,50 +1,64 @@
 ---
 name: satgas-design
-description: "How anything visual gets made in Satgas so it does not come out plain: an art direction from real reference sites, one visual moment that carries the page, and the material for it (backgrounds, patterns, icons, logos, fonts, characters, photos, animations, colour scales, motion libraries) taken from licensed sources by a script that saves the real files, then a review against the references. Load it for anything people look at, before the first line of markup, even when the request never mentions design: a website, landing page, app screen, dashboard, game, deck, poster, social graphic, banner, illustration, a document with visuals, an HTML page on the board."
+description: "How anything visual gets made in Satgas so it looks like a professional made it: two grey wireframes the person approves first, then the build from real references and real material (photos, logos, fonts, icons, animations, motion libraries, colour scales) taken from licensed sources by a script that saves the files, then a review that fails the tells of generated work. Load it for anything people look at, before the first line of markup, even when the request never mentions design: a website, landing page, app screen, dashboard, game, deck, poster, social graphic, banner, illustration, a document with visuals, an HTML page on the board."
 ---
 
 # Satgas design
 
-Plain pages come from three habits: no reference to aim at, nothing on the page worth remembering, and only the cheapest material (a font and a few icons) taken from anywhere. This skill fixes all three. Hallmark still sets the floor (spacing, contrast, no slop); this sets the ceiling.
+The goal is work a professional would sign: it looks made by someone who knows this field, with real content and real pictures, not assembled by a tool. Hallmark sets the floor (spacing, contrast, states); this sets the bar above it.
 
-Every visual deliverable goes through four steps, in order. A step without its evidence did not happen.
+Something new that people look at goes in two rounds. The person approves the structure before anything is styled.
 
-1. **Direction.** Find three reference sites that are clearly better than an average site in the same field, and shoot them with `ref`. Write `design/direction.md`: what each reference does that we take (specific: "a full-bleed photo collage with a tight serif headline over it", never "clean and modern"), the moment you will build (below), the palette as hex values, the type pair, and the motion. When your task is the art direction itself, also put the reference shots and the palette on the board.
-2. **The moment.** Build the one centerpiece first, from the menu below and the map for what you are making. It sits in the first screen and takes at least a third of it.
-3. **Build** the rest around it, with material from the map. Quiet chrome, one accent; the moment carries the colour.
-4. **Review.** Run `review` on the result. It fails a page without a moment, with broken pictures or a page wider than a phone. Open `design/review/compare.jpg`, the build next to its references, name the three biggest gaps in your report, fix them, and run `review` again. Two rounds at most.
+## Round one: wireframes, then stop
+
+Build nothing else in this round: no colours, no pictures, no fonts, no page in the project's real files.
+
+1. **Study.** Search for three sites or pieces clearly better than average in the same field, and shoot them with `ref`.
+2. **Write `design/direction.md`:** what each reference does that we take (specific: "menu as a plain price list in two columns", never "clean and modern"), the kind of picture the work will use and where it comes from, the palette as hex values, and the type pair.
+3. **Make two wireframes** with `wireframe a b`, then edit them. They differ in structure, not decoration: another order of sections, another hero, another way to show the main thing. Use real headings and real copy, in the mission's language. Every `.box` says exactly what will fill it ("Photo: barista pouring, full width"). A game shows its screens one under the other (start, playing, win). A poster shows where the words and the picture sit, at its real proportions.
+4. **Stop and ask.** Your report names the two options in a line each, says how they differ and which you recommend, and asks the person to pick one or say what to change. The wireframes show on the board by themselves.
+
+When they ask for changes, change the wireframes and ask again.
+
+## Round two: build what they approved
+
+Follow the chosen wireframe's structure and copy; where reality forces a change, say so in your report.
+
+1. **Take the material** from your row of the map below, with the script.
+2. **Build** the page, and the first screen's main picture first.
+3. **Review.** Run `review` on the result. It fails a page without a main visual, with broken pictures, wider than a phone, or showing the tells below. Open `design/review/compare.jpg`, the build next to its references, name the three biggest gaps in your report, fix them, and run it again. Two rounds at most.
 
 ## What you are making, and where its material comes from
 
-Read the row that matches the work and use every column. These are where to look first, not the only things allowed.
+Read the row that matches the work and use it. Real pictures come first; a page without any is the exception and has to earn it through its type or its product.
 
-| Making | Study with `ref` | The moment | Background and texture | Type | Pictures and icons | Motion |
-| --- | --- | --- | --- | --- | --- | --- |
-| A software, app or AI product site | 3 leaders in the category, plus `recent.design`, `saaslandingpage.com` | A product preview built in code: the real screen with plausible data, in a window frame, over a glow | `bg mesh` dark with the brand colour, `bg fffuel gggrain` over it at low opacity | `font` a grotesk (Geist, Inter Tight, General Sans) | `icon lucide`, integration logos with `logo` | `lib motion`: the preview rises in, numbers tween |
-| A café, restaurant, shop or local business | 3 respected places of the same kind, `onepagelove.com` | Photo-led: a collage or full-bleed of real photos (`photo`), or an illustrated scene of the place | `pattern hero` (topography, texture) or `bg fffuel gggrain` warm, never a flat fill | `font` a characterful serif or display from Fontshare, a calm sans for text | `photo unsplash`/`pexels` (key), `icon phosphor` duotone, `logo whatsapp` | `lib gsap scrolltrigger`: the menu and photos reveal as you scroll |
-| An event, festival, launch or promo | `recent.design`, past editions of similar events | A loud poster-like hero: huge display type over a rendered scene | `bg fffuel bbburst` or `ffflux`, or `bg mesh` with saturated colours | `font` a bold display from Fontshare | `avatar open-peeps` crowds, `icon tabler` | `lottie "confetti"` or a GSAP intro timeline |
-| A game in the browser | 3 polished web or mobile games of the same kind | The playfield itself: characters, sprites and juicy feedback, never a form with a button | `bg fffuel ssspot` or `uuunion` behind the board | `font` a playful display | `avatar` (DiceBear) characters, `lottie` for win and lose, `icon phosphor` | `lib gsap`: shake, pop and particles on every action |
-| A poster, social graphic or banner | 3 posters in the same genre | One image doing all the work: a rendered scene with the key number or word huge over it | `bg mesh` or `bg gradientshub`, `bg fffuel gggrain` on top | `font` a display face, at most two families | `logo` when a brand appears | none (still image) |
-| A portfolio, personal, agency or editorial site | `onepagelove.com`, `siteinspire.com`, 3 studios in the field | Kinetic type or a curated work grid with real pictures | `pattern hero` subtle, or plain paper with `bg fffuel nnnoise` | `font` an editorial serif with a grotesk | `photo` or the person's own work | `lib gsap scrolltrigger` for the type |
-| Something for kids, schools, communities or a playful brand | 3 friendly brands of the same kind | An illustrated scene of people doing the thing | `bg fffuel uuunion` or `ssspot`, bright | `font` a rounded display | `avatar open-peeps`, `avatar notionists`, `icon phosphor --weight duotone` | `lottie` characters, `lib motion` springs |
-| A dashboard, admin or app screen | `vercel.com/geist`, `primer.style`, 3 products in the field | The main chart, drawn with care, with real-looking data | none: surfaces only | `font` a grotesk with tabular figures | `icon lucide`, `color radix` for the scales | `lib motion` for state changes only |
-| A deck or report | 3 decks or reports from the field | One rendered cover and one striking chart | `bg mesh` cover, `pattern hero` dividers | `font` a display for titles, a sans for text | `icon lucide` | none |
+| Making | Study with `ref` | The main visual | Pictures and icons | Type | Motion |
+| --- | --- | --- | --- | --- | --- |
+| A software, app or AI product site | 3 leaders in the category, `recent.design`, `saaslandingpage.com` | The real product built in code: the actual screen with believable data, large | Integration logos with `logo`, `icon lucide` | `font` one grotesk (Geist, Inter Tight, General Sans) at 400 and 500 | `lib motion`: one rise on load |
+| A café, restaurant, shop or local business | 3 respected places of the same kind, `onepagelove.com` | Real photos, large and cropped with intent: the place, the people, the product | `photo openverse` (or `unsplash`, `pexels` with a key), `logo whatsapp`, `icon phosphor` | `font` a text serif or a warm grotesk from Fontshare, at normal weights | `lib gsap scrolltrigger`, used lightly |
+| An event, festival, launch or promo | `recent.design`, past editions of similar events | Real photos of such events, or a strict typographic layout on one flat colour | `photo openverse`, `avatar open-peeps` only if the brief is playful | `font` one strong display at a normal weight, one text face | `lib gsap` for one opening move |
+| A game in the browser | 3 polished games of the same kind (shoot them or their store pages) | The playfield fills the screen: pieces, numbers and feedback are the design, not a form inside a card | `lottie` for win and lose, `icon phosphor`, `bg fffuel ssspot` or `uuunion` only as a quiet backdrop | `font` a display with character, a clear text face | `lib gsap`: every action answers |
+| A poster, social graphic or banner | 3 posters in the same genre | One real photo used boldly, or pure type on a flat colour; the key word or number set with care | `photo openverse`, `logo` when a brand appears | `font` a display at a normal weight, at most two families | none |
+| A portfolio, personal, agency or editorial site | `onepagelove.com`, `siteinspire.com`, 3 studios in the field | The work itself, or strict type on paper | The person's own work, `photo openverse` | `font` an editorial serif with a grotesk | `lib gsap scrolltrigger` for reveals only |
+| Something for kids, schools or a playful community | 3 friendly brands of the same kind | Real photos of people doing the thing, or an illustrated scene | `photo openverse`, `avatar open-peeps`, `avatar notionists`, `icon phosphor` | `font` a rounded text face | `lottie`, `lib motion` |
+| A dashboard, admin or app screen | `vercel.com/geist`, `primer.style`, 3 products in the field | The main table or chart, with real-looking data | `icon lucide`, `color radix` for the scales | `font` a grotesk with tabular figures | `lib motion` for state changes only |
+| A deck or report | 3 decks or reports from the field | One real cover photo and one chart drawn with care | `photo openverse`, `icon lucide` | `font` a text serif or grotesk | none |
 
-How it should feel changes the picks: calm or premium wants `bg mesh` at low contrast and lots of space; bold wants `bbburst`, saturated colours and huge type; warm wants grain, a serif and photos; technical wants a dark mesh, a grotesk and a product preview; playful wants characters, rounded type and Lottie.
+## The tells
 
-## The moment
+These are what make work read as generated. `review` fails the ones it can measure; hold yourself to the rest.
 
-The page is remembered for one thing. Without an image generator, build it from these:
+- **A gradient as the design:** a mesh or grainy gradient hero, a large gradient fill, gradient text. `bg mesh` and `bg gradientshub` are for a quiet section or when the person asks, never the page's main visual.
+- **Fat display headings:** weight 800 or 900. Hierarchy comes from size and colour, at 400 to 600.
+- **Tracked uppercase labels** above headings (`KEDAI KOPI LOKAL`), and a label above every section.
+- **The template hero:** a big headline with two buttons on the left and one picture in a rounded box on the right, or a small card floating over the hero.
+- **Shapes standing in for a picture:** a sun drawn from CSS, blobs, circles, decorative lines.
+- **Neo-brutalism by default:** thick black borders with hard offset shadows, every control a pill.
+- **Equal cards in a row,** each with an icon, a title and a vague line.
+- **Copy that fits any business:** exclamation marks, hype words, invented numbers and claims.
+- **One stock photo in a box,** as the only picture on the page.
 
-- **A rendered scene:** `bg mesh` full bleed in the palette, grain over it, the headline on its calm part.
-- **A product preview in code:** the real interface with believable data, in a device or window frame.
-- **An illustrated scene:** Open Peeps or DiceBear characters composed with patterns and shapes into one picture of the thing happening.
-- **An animated centrepiece:** a Lottie animation, or a composition GSAP brings to life.
-- **Real photos, art-directed:** cropped hard, duotoned or set in a collage, never one stock photo in a box.
-- **Kinetic type:** a display face set huge, textured, moving on scroll.
-- **A data moment:** one chart people would screenshot.
-
-A small icon, a plain gradient fill, a centred headline with two buttons, or a single stock photo in a rounded box is not a moment.
+Adapted from unslop's list of signs by Damir Sokolovsky (@heydamir), CC BY 4.0.
 
 ## The script
 
@@ -65,7 +79,8 @@ node <this skill's folder>/scripts/source.mjs list            # every source, wh
 | A brand's logo | `logo stripe github` in their colours, `logo stripe --mono` for one colour |
 | A font, self-hosted | `font "Space Grotesk" --weights 400,500`, then link `assets/fonts/space-grotesk.css`; Fontshare families (Chillax, Satoshi, General Sans) come by the same command |
 | Characters and avatars | `avatar open-peeps ana budi citra`, `avatar notionists ana` |
-| Photos | `photo unsplash "coffee bar morning light" --count 6` |
+| Photos | `photo openverse "coffee bar morning light" --count 6` needs no key and records the credits to show; `unsplash` and `pexels` need one |
+| Wireframes | `wireframe a b` starts `design/wireframe-a.html` and `-b.html` in plain grey |
 | An animation | `lottie "success check"`, played with `lib lottie-web` |
 | A colour scale | `color radix slate amber` gives light and dark CSS variables |
 | Motion libraries | `lib gsap scrolltrigger` or `lib motion` |
@@ -77,10 +92,12 @@ Components come from their own tools: `bunx shadcn@latest add <component>` in a 
 ## Gotchas
 
 - **Fonts and icons alone are not material.** A page whose `design/sources.md` holds only fonts and icons has skipped the map; go back to your row.
+- **Credit the photos.** Openverse photos carry a license that asks for a credit; put the lines `design/sources.md` lists in the page's footer.
+- **Check every photo before using it.** Search results can be off topic or low quality; open each one, and search again with other words when it does not fit.
 - **Find references by searching.** Look up the best sites in the field (award galleries, the category's leaders), then shoot them with `ref`. A site that blocks the browser is skipped; replace it.
 - **A theme names a font: fetch that font.** When hallmark's theme sets the family, pass that exact family to `font`.
 - **Order the colours.** `--colors` fills a generator's fields in order and the first is usually the backdrop: on a dark page put the dark colour first.
-- **Photos need a key.** Unsplash and Pexels refuse requests without one. Ask with `request_secret` on the satgas_team connector for a free key, then pass `--key-file <the path it returns>`. Until then, pick another moment rather than a stock picture from elsewhere.
+- **Unsplash and Pexels need a key.** Ask with `request_secret` on the satgas_team connector for a free one, then pass `--key-file <the path it returns>`, or use `photo openverse`.
 - **Gradient Lab is to look at, not to export.** Its export asks for an email; render backgrounds with `bg mesh`.
 - **References are studied, never copied.** Never put their shots, text or layout wholesale into the page.
 - **Nothing is installed globally.** Fonts, icons and libraries land in the project as files, so the page works offline.

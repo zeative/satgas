@@ -523,10 +523,24 @@ async function photo([site, ...query], flags) {
       files.push(save(join(dir, `pexels-${p.id}.jpg`), await get(p.src.large2x, { kind: "bytes" })));
       credits.push(`${p.photographer} (${p.url})`);
     }
-  } else throw new Fail("Pick unsplash or pexels");
+  } else if (site === "openverse") {
+    // No key needed. Only licenses that allow commercial use and ask for no more than a credit.
+    const data = await get(
+      `https://api.openverse.org/v1/images/?${new URLSearchParams({ q, license: "cc0,pdm,by", page_size: String(Math.min(count * 3, 20)), mature: "false" })}`,
+      { kind: "json" },
+    );
+    const big = (data?.results ?? []).filter((p) => (p.width ?? 0) >= 1000 && /\.(jpe?g|png|webp)(\?|$)/i.test(p.url));
+    for (const p of big.slice(0, count)) {
+      const bytes = await get(p.url, { kind: "bytes", headers: { accept: "image/*" } }).catch(() => null);
+      if (!bytes) continue;
+      files.push(save(join(dir, `openverse-${slug(p.title || p.id).slice(0, 40)}.${/\.png/i.test(p.url) ? "png" : "jpg"}`), bytes));
+      credits.push(`"${p.title}" by ${p.creator ?? "unknown"}, ${p.license.toUpperCase()} ${p.license_version ?? ""} (${p.foreign_landing_url})`);
+    }
+  } else throw new Fail("Pick openverse, unsplash or pexels");
   if (!files.length) throw new Fail(`No photos found for "${q}"`);
   record(site, files, `search "${q}"`);
-  console.log(`Photographers, if you credit them: ${credits.join("; ")}`);
+  if (site === "openverse") appendFileSync(LEDGER, `\nCredit these on the page: ${credits.join("; ")}\n`);
+  console.log(`${site === "openverse" ? "Credit these on the page" : "Photographers, if you credit them"}: ${credits.join("; ")}`);
 }
 
 async function lottie(query, flags) {
@@ -650,6 +664,33 @@ function recordRef(id, files, url) {
   console.log(`From ${url} · reference only, study it and never copy it`);
 }
 
+// A wireframe is grey on purpose: the person judges structure and content before any colour or picture exists.
+const WIRE_STYLE = `*{box-sizing:border-box;margin:0}
+body{font:16px/1.5 system-ui,sans-serif;color:#222;background:#fff}
+h1,h2,h3{font-weight:500;line-height:1.15}h1{font-size:48px}h2{font-size:28px}h3{font-size:18px}
+.wrap{max-width:1200px;margin:0 auto;padding:0 32px}
+section{padding:64px 0;border-bottom:1px solid #ddd}
+.row{display:flex;gap:24px;flex-wrap:wrap}.row>*{flex:1 1 240px;min-width:0}
+.box{display:flex;align-items:center;justify-content:center;min-height:200px;padding:16px;text-align:center;font-size:13px;color:#666;background:#eee;border:1px solid #bbb}
+.btn{display:inline-block;padding:10px 16px;border:1px solid #222;font-size:14px}
+.note{font-size:13px;color:#777}
+@media (max-width:640px){h1{font-size:34px}.wrap{padding:0 16px}section{padding:40px 0}}`;
+function wireframe(names) {
+  if (!names.length) throw new Fail("Name the options, like: source.mjs wireframe a b");
+  for (const name of names) {
+    const out = `design/wireframe-${slug(name)}.html`;
+    if (existsSync(out)) {
+      console.log(`${out} is already there; edit it`);
+      continue;
+    }
+    save(
+      out,
+      `<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width,initial-scale=1">\n<title>Wireframe ${name}</title>\n<style>\n${WIRE_STYLE}\n</style>\n</head>\n<body>\n<!-- Real headings and copy. A .box says exactly what goes there, like "Photo: barista pouring, full width". No colour, no pictures, no icons. -->\n<section><div class="wrap"><h1>Headline</h1></div></section>\n</body>\n</html>\n`,
+    );
+    console.log(`Wrote ${out}`);
+  }
+}
+
 // Measured inside the page: the biggest picture, animation or illustration in the first screen, and what is broken.
 const PROBE = `(() => {
   const vw = innerWidth, vh = innerHeight, area = vw * vh;
@@ -668,6 +709,20 @@ const PROBE = `(() => {
     animations: document.getAnimations().length,
     libraries: ["gsap", "Motion", "lottie", "THREE"].filter((k) => k in window),
     fonts: [...new Set([...document.fonts].filter((f) => f.status === "loaded").map((f) => f.family.replace(/["']/g, "")))],
+    slop: (() => {
+      const texts = [...document.querySelectorAll("h1, h2, h3, h4, p, a, span, li, button, label, small, div")].filter((el) => [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim()));
+      const css = (el) => getComputedStyle(el);
+      const all = [...document.querySelectorAll("body *")];
+      const px = (v) => parseFloat(v) || 0;
+      return {
+        gradientText: texts.filter((el) => css(el).backgroundClip === "text" || css(el).webkitBackgroundClip === "text").length,
+        heavyHeadings: [...document.querySelectorAll("h1, h2, h3")].filter((el) => Number(css(el).fontWeight) >= 800).length,
+        trackedCaps: texts.filter((el) => { const c = css(el); const t = el.textContent.trim(); return t.length > 2 && (c.textTransform === "uppercase" || t === t.toUpperCase() && /[A-Z]{3}/.test(t)) && px(c.letterSpacing) / px(c.fontSize) > 0.04; }).length,
+        hardShadows: all.filter((el) => /(^|,\\s*)(rgba?\\([^)]*\\)\\s+)?-?[1-9][\\d.]*px\\s+-?\\d[\\d.]*px\\s+0px\\s/.test(css(el).boxShadow)).length,
+        pills: all.filter((el) => { const r = el.getBoundingClientRect(); return r.width > 40 && r.height > 16 && px(css(el).borderTopLeftRadius) >= r.height / 2; }).length,
+        gradientFills: all.filter((el) => { const r = el.getBoundingClientRect(); return r.width * r.height > 40000 && /gradient\\(/.test(css(el).backgroundImage); }).length,
+      };
+    })(),
   });
 })()`;
 
@@ -713,6 +768,14 @@ async function review([target], flags) {
   if (d.broken.length || seen.phone.broken.length) problems.push(`Broken pictures: ${[...new Set([...d.broken, ...seen.phone.broken])].join(", ")}`);
   if (seen.phone.overflow) problems.push("The page is wider than a phone at 390px");
   if (refs.length < 3) problems.push(`Only ${refs.length} references in ${refsDir}; shoot three with \`ref\` before judging the build`);
+  // The tells that make a page read as generated, however large its picture is.
+  const sl = d.slop;
+  if (sl.gradientText) problems.push(`Gradient text on ${sl.gradientText} elements; use solid text`);
+  if (sl.heavyHeadings) problems.push(`${sl.heavyHeadings} headings at weight 800 or more; hierarchy comes from size and colour at 400 to 600`);
+  if (sl.trackedCaps > 1) problems.push(`${sl.trackedCaps} uppercase labels with wide tracking; use sentence case`);
+  if (sl.hardShadows) problems.push(`${sl.hardShadows} hard offset shadows, the neo-brutalist template look; use a hairline or a soft neutral shadow`);
+  if (sl.pills > 3) problems.push(`${sl.pills} pill-shaped elements; a radius by size, not everything a pill`);
+  if (sl.gradientFills) problems.push(`${sl.gradientFills} large gradient fills; use a flat surface or a real picture`);
   if (![...kinds].some((k) => !["type", "icons", "logos"].includes(k)))
     problems.push("Only fonts, icons or logos came from the sources; take the moment's material from your row of the map");
   if (!d.animations && !d.libraries.length) notes.push("Nothing moves; a web page or game wants motion for its moment (posters do not)");
@@ -753,11 +816,12 @@ const USAGE = `Usage: node source.mjs <command>
   logo <brands...> [--mono] [--out assets/logos]
   font "<family>" [--weights 400,500] [--styles normal,italic] [--out assets/fonts]
   avatar <dicebear style> <seeds...> [--bg "#hex"] [--out assets/avatars]
-  photo <unsplash|pexels> <search words> [--count 3] [--key-file path]
+  photo <openverse|unsplash|pexels> <search words> [--count 3] [--key-file path]
   lottie <search words> [--count 1] [--out assets/lottie]
   color radix <scales...> [--out assets/colors.css]
   lib <gsap|scrolltrigger|motion|lottie-web...> [--out vendor]
   ref <urls...> [--out design/refs]
+  wireframe <names...>                                Start grey layout options in design/wireframe-<name>.html
   review <page or address> [--refs design/refs]       Check the build for a moment and breakage, next to its references
   note <files...> --from <url> --license "<license>"   Record material from outside the catalog
 
@@ -783,6 +847,7 @@ async function main(argv) {
   if (cmd === "ref") return ref([sub, ...rest].filter(Boolean), flags);
   if (cmd === "note") return note([sub, ...rest].filter(Boolean), flags);
   if (cmd === "review") return review([sub], flags);
+  if (cmd === "wireframe") return wireframe([sub, ...rest].filter(Boolean));
   throw new Fail(`Unknown command "${words.join(" ")}".\n\n${USAGE}`);
 }
 

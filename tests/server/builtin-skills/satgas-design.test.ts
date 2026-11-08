@@ -69,6 +69,12 @@ describe("the satgas-design skill", () => {
     ).toBeUndefined();
   });
 
+  test("asks the person to approve wireframes before anything is built", () => {
+    const skill = files["SKILL.md"] ?? "";
+    expect(skill).toContain("Round one: wireframes, then stop");
+    expect(skill).toContain("asks the person to pick one");
+  });
+
   // Agents only reach for what the skill points them at, so each kind of work names its references, moment and material.
   test("tells agents explicitly which sources to use for each kind of work, and to review the result", () => {
     const skill = files["SKILL.md"] ?? "";
@@ -82,7 +88,8 @@ describe("the satgas-design skill", () => {
       "avatar open-peeps",
       "lottie",
       "lib gsap",
-      "photo unsplash",
+      "photo openverse",
+      "wireframe a b",
       "review ",
     ])
       expect(skill).toContain(command);
@@ -122,6 +129,7 @@ describe("the satgas-design skill", () => {
     expect(photo.err).toContain("request_secret");
     expect((await run("note", "nothing.svg")).err).toContain("--from");
     expect((await run("note", "nothing.svg", "--from", "https://x", "--license", "CC0")).err).toContain("No such file");
+    expect((await run("wireframe")).err).toContain("Name the options");
     expect((await run("review")).err).toContain("Give the page");
     expect((await run("review", "nothing.html")).err).toContain("No such file");
     expect((await run("nonsense")).err).toContain("Unknown command");
