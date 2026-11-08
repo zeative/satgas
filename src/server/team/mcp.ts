@@ -79,7 +79,8 @@ const TOOLS = [
   },
   {
     name: "app_stop",
-    description: "Stop a web app you started with app_start, for example to start it again with a different command.",
+    description:
+      "Stop a web app you started with app_start, only when the person asks or to start it again with a different command. Apps are meant to stay running after your task, as the live card the person opens.",
     inputSchema: {
       type: "object",
       properties: { name: { type: "string" } },

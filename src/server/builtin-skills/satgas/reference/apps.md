@@ -21,3 +21,4 @@ The base path, per framework (use the dev server unless the person asked for a p
 - Links, `fetch` calls and image paths inside the app are relative or start from the base path. An absolute `/api/...` misses it.
 - The app's pages run sandboxed, so they cannot read Satgas's cookies. `localStorage` works but is kept in memory and resets on reload; anything the person must keep belongs in the app's own server or files.
 - Name it shortly (`web`, `game`, `api`). One app per thing to open; a frontend and its API can be one app when the frontend's server serves both, otherwise two.
+- When the person asked to run, play or try it, keep it running when you finish: the live card is what they asked for. Use `app_stop` only when they ask, or to restart it under the same name.

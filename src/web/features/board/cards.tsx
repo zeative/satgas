@@ -911,16 +911,13 @@ function AppShare({ runId, name, shared, path }: { runId: string; name: string; 
             {t.board.app.copyLink}
           </Button>
         </div>
-        <div role="radiogroup" aria-label={t.board.app.access} className="flex flex-col">
+        <fieldset aria-label={t.board.app.access} className="m-0 flex flex-col border-0 p-0">
           {[false, true].map((on) => (
-            <button
+            <label
               key={String(on)}
-              type="button"
-              role="radio"
-              aria-checked={shared === on}
-              onClick={() => set(on)}
-              className="flex min-h-11 items-center gap-2.5 rounded-md px-2 py-1.5 text-start transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+              className="flex min-h-11 cursor-pointer items-center gap-2.5 rounded-md px-2 py-1.5 transition-colors hover:bg-muted has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring"
             >
+              <input type="radio" name={`share-${runId}-${name}`} checked={shared === on} onChange={() => set(on)} className="sr-only" />
               {on ? (
                 <Globe className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
               ) : (
@@ -931,9 +928,9 @@ function AppShare({ runId, name, shared, path }: { runId: string; name: string; 
                 <span className="truncate text-xs text-muted-foreground">{on ? t.board.app.anyoneHint : t.board.app.restrictedHint}</span>
               </span>
               <Check className={cn("size-4 shrink-0", shared !== on && "invisible")} aria-hidden="true" />
-            </button>
+            </label>
           ))}
-        </div>
+        </fieldset>
       </PopoverContent>
     </Popover>
   );

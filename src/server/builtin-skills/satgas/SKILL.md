@@ -166,7 +166,7 @@ Item kinds are `note`, `text`, `shape`, `doc`, `table`, `code` and `image`. The 
 - Upstream reports say which files exist and why. Trust them, then read the files you touch.
 - Files the person attached sit under `attachments/`. An image your model cannot view comes with a description file next to it; treat that file as what the image shows.
 - Add dependencies only when the task needs them, with the project's own package manager.
-- Leave the workspace runnable: no half-written files, no stray debug output, no servers left running.
+- Leave the workspace runnable: no half-written files, no stray debug output, no servers left running other than apps started with `app_start`, which stay up for the person.
 - Scratch work (downloads, data dumps, throwaway scripts) goes in a temporary folder you delete before you reply.
 
 - Satgas records the folder before and after every task that writes files. The person reviews your diff file by file and can undo any of it, so a change outside your task shows up as yours.
@@ -220,5 +220,5 @@ Mistakes agents have made in Satgas before. Each one looked fine to the agent an
 - [ ] No card repeats another card or only sums up what other tasks made.
 - [ ] Only files your task owns changed; on a branch, the work is committed there and nothing was pushed.
 - [ ] No secret, key or token appears in the reply, a card, a file or a commit.
-- [ ] Nothing you started is still running.
+- [ ] Nothing you started is still running, except apps you started with `app_start`: those stay running for the person.
 - [ ] The reply is in the mission's language, short, without filler.
