@@ -186,13 +186,60 @@ function WidgetLabel({ widget }: { widget: NonNullable<Card["widget"]> }) {
   );
 }
 
-// What a heavy card shows from far away: its frame and a hint of text, in a couple of elements.
+// Markdown read as plain words, so a doc far away still says what it holds without being parsed.
+const plainText = (md: string) =>
+  md
+    .slice(0, FAR_CHARS)
+    .replace(/```[\s\S]*?```/g, "")
+    .replace(/!?\[([^\]]*)\]\([^)]*\)/g, "$1")
+    .replace(/^[#>\-*+\s]+|[*_`~]/gm, "");
+// Enough to recognise a card from afar, little enough that a board full of them stays light.
+const FAR_CHARS = 1200;
+const FAR_ROWS = 10;
+const FAR_COLS = 5;
+
+// What a heavy card shows from far away: its real words or rows, unstyled and capped, in a handful of elements. A live
+// page stays a frame, since a board of loaded pages is what makes zooming out slow.
 function FarBody({ card }: { card: Card }) {
   if (card.kind === "preview")
     return (
       <div aria-hidden="true" className="flex size-full flex-col">
         <div className="h-8 shrink-0 border-b bg-muted/40" />
         <div className="flex-1 bg-muted/30" />
+      </div>
+    );
+  if ((card.kind === "doc" || card.kind === "code") && card.text) {
+    const text = card.kind === "doc" ? plainText(card.text) : card.text.slice(0, FAR_CHARS);
+    const [first = "", ...rest] = text.split("\n").filter((l) => l.trim());
+    return (
+      <div aria-hidden="true" className="flex size-full flex-col gap-2 overflow-hidden p-4">
+        {card.kind === "doc" && <p className="shrink-0 truncate text-xl font-medium">{first}</p>}
+        <p
+          className={cn(
+            "min-h-0 flex-1 overflow-hidden text-muted-foreground",
+            card.kind === "code" ? "font-mono text-xs whitespace-pre" : "text-sm whitespace-pre-line",
+          )}
+        >
+          {card.kind === "doc" ? rest.join("\n") : text}
+        </p>
+      </div>
+    );
+  }
+  if (card.kind === "table" && card.rows?.length)
+    return (
+      <div
+        aria-hidden="true"
+        className="grid size-full content-start gap-x-3 gap-y-1.5 overflow-hidden p-4 text-sm"
+        style={{ gridTemplateColumns: `repeat(${Math.min(card.rows[0]?.length ?? 1, FAR_COLS)}, minmax(0, 1fr))` }}
+      >
+        {card.rows.slice(0, FAR_ROWS).flatMap((row, r) =>
+          row.slice(0, FAR_COLS).map((cell, c) => (
+            // biome-ignore lint/suspicious/noArrayIndexKey: a fixed grid of cells that never reorders.
+            <span key={`${r}-${c}`} className={cn("truncate", r === 0 ? "font-medium" : "text-muted-foreground")}>
+              {cell}
+            </span>
+          )),
+        )}
       </div>
     );
   return (
