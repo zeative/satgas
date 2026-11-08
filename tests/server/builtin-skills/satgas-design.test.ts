@@ -93,12 +93,15 @@ describe("the satgas-design skill", () => {
     expect((await run("bg", "mesh")).err).toContain("--colors");
     expect((await run("bg", "mesh", "--colors", "#fff,nothex")).err).toContain("hex colours");
     expect((await run("bg", "mesh", "--colors", "#000,#fff", "--size", "9000x10")).err).toContain("--size");
+    expect((await run("bg", "mesh", "--colors", "#000,#fff", "--distortion", "abc")).err).toContain("--distortion must be a number");
     expect((await run("icon", "lucide")).err).toContain("Name the icons");
     expect((await run("icon", "dribbble", "x")).err).toContain("Pick an icon set");
     expect((await run("bg", "fffuel", "llline")).err).toContain("Pick one of fffuel's generators");
     const photo = await run("photo", "unsplash", "coffee");
     expect(photo.code).toBe(1);
     expect(photo.err).toContain("request_secret");
+    expect((await run("note", "nothing.svg")).err).toContain("--from");
+    expect((await run("note", "nothing.svg", "--from", "https://x", "--license", "CC0")).err).toContain("No such file");
     expect((await run("nonsense")).err).toContain("Unknown command");
   });
 });

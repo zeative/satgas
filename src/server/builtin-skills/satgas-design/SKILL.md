@@ -16,7 +16,7 @@ A generated page gives itself away by what it draws on the spot: a blob for a ba
 
 ## The script
 
-Run it from the project's folder. It writes into the project and records every file in `design/sources.md`, with where it came from and its license; that file is the proof the material is real, so never edit it by hand.
+Run it from the folder that holds the page or app (for a Vite app, the app's own folder), so the files and `design/sources.md` sit beside it. It records every file it writes with where it came from and its license; that file is the proof the material is real, so never write it by hand. Material that truly comes from outside the list is recorded with `note` instead.
 
 ```sh
 node <this skill's folder>/scripts/source.mjs list            # every source, what it gives, its license
@@ -30,18 +30,20 @@ node <this skill's folder>/scripts/source.mjs list            # every source, wh
 | A repeating pattern | `pattern hero` lists the 87, then `pattern hero topography --color "#d0561d" --opacity 0.3` |
 | Icons | `icon lucide house search arrow-right` (or `tabler`, or `phosphor --weight bold`) |
 | A brand's logo | `logo stripe github` in their colours, `logo stripe --mono` for one colour |
-| A font, self-hosted | `font "Space Grotesk" --weights 400,500` then link `assets/fonts/space-grotesk.css` |
+| A font, self-hosted | `font "Space Grotesk" --weights 400,500` then link `assets/fonts/space-grotesk.css`; families Fontsource lacks (Chillax, Satoshi, General Sans) come from Fontshare by the same command |
 | People, avatars | `avatar notionists ana budi`, `avatar open-peeps citra` |
 | Photos | `photo unsplash "coffee bar morning light" --count 3` |
 | A small animation | `lottie "success check"`, played with `lib lottie-web` |
 | A colour scale | `color radix slate amber` gives light and dark CSS variables |
 | Motion libraries, vendored | `lib gsap scrolltrigger` or `lib motion` |
 | References to study | `ref https://linear.app https://stripe.com` screenshots each at 1280 and 390 into `design/refs/` |
+| Something from outside the list | `note assets/x.svg --from https://where.it.came.from --license "CC0"` |
 
 Components come from their own tools, not this script: `bunx shadcn@latest add <component>` in a React and Tailwind project; Radix Primitives, Magic UI, React Bits, HyperUI and Uiverse are read and adapted, never pasted in with their demo styling. `list components` shows them.
 
 ## Gotchas
 
+- **A theme names a font: fetch that font.** When hallmark's theme sets the family, pass that exact family to `font`; it looks in Fontsource, then Fontshare.
 - **Order the colours.** `--colors` fills a generator's colour fields in order, and the first is usually the backdrop: on a dark page put the dark colour first, or the texture disappears into it.
 - **Photos need a key.** Unsplash and Pexels refuse requests without one. Ask the person with `request_secret` on the satgas_team connector for a free key, then pass `--key-file <the path it returns>`.
 - **Gradient Lab is to look at, not to export.** Its export and share link ask for an email, so it is listed as a reference; render the background with `bg mesh` instead.

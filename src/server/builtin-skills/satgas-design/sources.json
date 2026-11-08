@@ -124,6 +124,17 @@
       "icon": "/sources/fontsource.png"
     },
     {
+      "id": "fontshare",
+      "name": "Fontshare",
+      "url": "https://www.fontshare.com",
+      "category": "type",
+      "gives": "Display and text families Fontsource lacks",
+      "license": "ITF Free Font License or SIL OFL, self-hosted as served",
+      "use": "download",
+      "command": "font",
+      "icon": "/sources/fontshare.png"
+    },
+    {
       "id": "google-fonts",
       "name": "Google Fonts",
       "url": "https://fonts.google.com",

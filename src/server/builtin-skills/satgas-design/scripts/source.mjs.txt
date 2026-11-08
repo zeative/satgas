@@ -132,7 +132,7 @@ async function withBrowser(fn) {
 
 const shotFormat = (out) => (/\.jpe?g$/i.test(out) ? ["--screenshot-format", "jpeg", "--screenshot-quality", "82"] : []);
 
-// Renders a page to an image of exactly w×h.
+// Renders a page to an image of exactly w×h; a page that marks itself flat fails instead of saving a blank picture.
 async function render(html, w, h, out, ready = "window.__ready === true") {
   const dir = join(tmpdir(), `satgas-source-${process.pid}`);
   mkdirSync(dir, { recursive: true });
@@ -143,6 +143,8 @@ async function render(html, w, h, out, ready = "window.__ready === true") {
       ab(["--allow-file-access", "set", "viewport", String(w), String(h), "1"]);
       ab(["--allow-file-access", "open", `file://${page}`]);
       ab(["wait", "--fn", ready], 60_000);
+      if (ab(["eval", "window.__flat === true"]).trim() === "true")
+        throw new Fail("The render came out as one flat colour, so nothing was saved. Try other colours or another --seed");
       ab(["wait", "400"]);
       mkdirSync(dirname(resolve(out)), { recursive: true });
       ab([...shotFormat(out), "screenshot", resolve(out)]);
@@ -185,10 +187,20 @@ function list([category]) {
 async function bgMesh(flags) {
   const list = colours(flags.colors, 2, 10);
   const [w, h] = size(flags.size, "1920x1080");
-  const seed = Number(flags.seed ?? Math.floor(Math.random() * 10_000));
-  const num = (k, d) => (flags[k] === undefined ? d : Number(flags[k]));
+  // Any word works as a seed; it is turned into a number, so the same word always gives the same image.
+  const seed =
+    flags.seed === undefined
+      ? Math.floor(Math.random() * 10_000)
+      : /^\d+$/.test(String(flags.seed))
+        ? Number(flags.seed)
+        : [...String(flags.seed)].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 100_000, 7);
+  const num = (k, d) => {
+    if (flags[k] === undefined) return d;
+    const n = Number(flags[k]);
+    if (!Number.isFinite(n)) throw new Fail(`--${k} must be a number, like --${k} ${d}`);
+    return n;
+  };
   const out = flags.out ?? `assets/bg-mesh-${seed}.jpg`;
-  const version = await npmVersion("@paper-design/shaders");
   const uniforms = {
     u_colorsCount: list.length,
     u_distortion: num("distortion", 0.8),
@@ -196,12 +208,25 @@ async function bgMesh(flags) {
     u_grainMixer: 0,
     u_grainOverlay: num("grain", 0.08),
   };
+  const version = await npmVersion("@paper-design/shaders");
   const html = `<!doctype html><html><body style="margin:0;background:${list[0]}"><div id="s" style="width:100vw;height:100vh"></div>
 <script type="module">
 import { ShaderMount, meshGradientFragmentShader, getShaderColorFromString, defaultPatternSizing, ShaderFitOptions } from "https://cdn.jsdelivr.net/npm/@paper-design/shaders@${version}/+esm";
 const sizing = Object.fromEntries(Object.entries(defaultPatternSizing).map(([k, v]) => ["u_" + k, k === "fit" ? ShaderFitOptions[v] : v]));
-new ShaderMount(document.getElementById("s"), meshGradientFragmentShader, { u_colors: ${JSON.stringify(list)}.map(getShaderColorFromString), ...${JSON.stringify(uniforms)}, ...sizing }, undefined, 0, ${seed});
-requestAnimationFrame(() => requestAnimationFrame(() => { window.__ready = true; }));
+new ShaderMount(document.getElementById("s"), meshGradientFragmentShader, { u_colors: ${JSON.stringify(list)}.map(getShaderColorFromString), ...${JSON.stringify(uniforms)}, ...sizing }, { preserveDrawingBuffer: true }, 0, ${seed});
+// Samples the drawn pixels, so a shader that drew nothing is caught instead of saved as a flat image.
+requestAnimationFrame(() => requestAnimationFrame(() => {
+  const c = document.querySelector("canvas");
+  const gl = c && (c.getContext("webgl2") || c.getContext("webgl"));
+  const seen = new Set();
+  if (gl) for (let i = 1; i < 6; i++) for (let j = 1; j < 6; j++) {
+    const px = new Uint8Array(4);
+    gl.readPixels(Math.floor((c.width * i) / 6), Math.floor((c.height * j) / 6), 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px);
+    seen.add(px.slice(0, 3).join(","));
+  }
+  window.__flat = seen.size < 3;
+  window.__ready = true;
+}));
 </script></body></html>`;
   await render(html, w, h, out);
   record("paper-shaders", [out], `@paper-design/shaders@${version}, mesh gradient, seed ${seed}`);
@@ -372,7 +397,7 @@ async function font([family], flags) {
   if (!family) throw new Fail('Name the family, like: source.mjs font "Space Grotesk" --weights 400,500');
   const id = slug(family);
   const meta = await get(`https://api.fontsource.org/v1/fonts/${id}`, { kind: "json" });
-  if (!meta) throw new Fail(`Fontsource has no "${family}". Check the name on https://fontsource.org`);
+  if (!meta) return fontshare(family, id, flags);
   const weights = String(flags.weights ?? "400,500")
     .split(",")
     .map(Number);
@@ -399,6 +424,44 @@ async function font([family], flags) {
   files.push(save(css, `/* ${meta.family} from Fontsource, ${meta.license} */\n${faces.join("\n\n")}\n`));
   record("fontsource", files, `${meta.family} ${meta.version ?? ""}, ${meta.license}`.trim());
   console.log(`Link ${css} in the page, then use font-family: "${meta.family}", ${meta.category}`);
+}
+
+// Fontshare holds the families Fontsource lacks (Chillax, Satoshi, General Sans and the like). Its files are used
+// exactly as served: its license forbids converting or subsetting them, and allows self-hosting on your own site.
+async function fontshare(family, id, flags) {
+  const list = await get("https://api.fontshare.com/v2/fonts?limit=200", { kind: "json" });
+  const meta = (list?.fonts ?? []).find((f) => f.slug === id || slug(f.name) === id);
+  if (!meta) throw new Fail(`Neither Fontsource nor Fontshare has "${family}". Check the name on https://fontsource.org or https://www.fontshare.com`);
+  const have = meta.styles.filter((st) => !st.is_variable).map((st) => st.weight.weight);
+  const weights = String(flags.weights ?? "400,500")
+    .split(",")
+    .map(Number)
+    .filter((w) => {
+      if (have.includes(w)) return true;
+      console.log(`${meta.name} has no weight ${w}; it offers ${[...new Set(have)].join(", ")}`);
+      return false;
+    });
+  if (!weights.length) throw new Fail("No font file matched; pick weights it has");
+  const css = await get(`https://api.fontshare.com/v2/css?f[]=${meta.slug}@${weights.join(",")}&display=swap`);
+  const faces = [...(css ?? "").matchAll(/@font-face\s*{([^}]*)}/g)].map((m) => m[1]);
+  const dir = flags.out ?? "assets/fonts";
+  const files = [];
+  const out = [];
+  for (const face of faces) {
+    const weight = /font-weight:\s*(\d+)/.exec(face)?.[1];
+    const style = /font-style:\s*(\w+)/.exec(face)?.[1] ?? "normal";
+    const url = /url\(['"]?([^'")]+\.woff2)['"]?\)/.exec(face)?.[1];
+    if (!weight || !url) continue;
+    const name = `${meta.slug}-${weight}-${style}.woff2`;
+    files.push(save(join(dir, name), await get(url.startsWith("//") ? `https:${url}` : url, { kind: "bytes" })));
+    out.push(`@font-face {\n  font-family: "${meta.name}";\n  font-style: ${style};\n  font-weight: ${weight};\n  font-display: swap;\n  src: url("./${name}") format("woff2");\n}`);
+  }
+  if (!files.length) throw new Fail(`Fontshare sent no files for ${meta.name}`);
+  const license = meta.license_type === "ofl" ? "SIL OFL 1.1" : "ITF Free Font License: self-host on your own site; never alter, subset or share the files";
+  const sheet = join(dir, `${meta.slug}.css`);
+  files.push(save(sheet, `/* ${meta.name} from Fontshare, ${license} */\n${out.join("\n\n")}\n`));
+  record("fontshare", files, `${meta.name}, ${license}`);
+  console.log(`Link ${sheet} in the page, then use font-family: "${meta.name}"`);
 }
 
 async function avatar([style, ...seeds], flags) {
@@ -587,6 +650,20 @@ function recordRef(id, files, url) {
   console.log(`From ${url} · reference only, study it and never copy it`);
 }
 
+// Material taken from somewhere outside the catalog is still recorded, marked as such, never written in by hand.
+function note(files, flags) {
+  if (!files.length || !flags.from || !flags.license)
+    throw new Fail('Record outside material like: source.mjs note assets/x.svg --from https://site --license "CC0"');
+  const missing = files.filter((f) => !existsSync(f));
+  if (missing.length) throw new Fail(`No such file: ${missing.join(", ")}`);
+  ledger();
+  for (const f of files) {
+    appendFileSync(LEDGER, `| \`${relative(process.cwd(), resolve(f))}\` | Outside the catalog | ${flags.license} | ${flags.from} |\n`);
+    saved.push(f);
+  }
+  console.log(`Recorded as outside the catalog: say in your report why no source fitted`);
+}
+
 // --- main ------------------------------------------------------------------------------------------------------------
 
 const USAGE = `Usage: node source.mjs <command>
@@ -605,6 +682,7 @@ const USAGE = `Usage: node source.mjs <command>
   color radix <scales...> [--out assets/colors.css]
   lib <gsap|scrolltrigger|motion|lottie-web...> [--out vendor]
   ref <urls...> [--out design/refs]
+  note <files...> --from <url> --license "<license>"   Record material from outside the catalog
 
 Every file is recorded in ${LEDGER}.`;
 
@@ -626,6 +704,7 @@ async function main(argv) {
   if (cmd === "color") return colorRadix([sub, ...rest], flags);
   if (cmd === "lib") return lib([sub, ...rest].filter(Boolean), flags);
   if (cmd === "ref") return ref([sub, ...rest].filter(Boolean), flags);
+  if (cmd === "note") return note([sub, ...rest].filter(Boolean), flags);
   throw new Fail(`Unknown command "${words.join(" ")}".\n\n${USAGE}`);
 }
 
