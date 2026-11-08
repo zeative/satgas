@@ -13,6 +13,7 @@ A self-hosted workspace where AI coding agents work as a team on a shared canvas
 [![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](LICENSE)
 [![Runs on Bun](https://img.shields.io/badge/runs%20on-Bun-black?logo=bun)](https://bun.sh)
 [![GitHub stars](https://img.shields.io/github/stars/zeative/satgas?style=flat)](https://github.com/zeative/satgas/stargazers)
+[![M8ven Score](https://m8ven.ai/badge/mcp/zeative-satgas-1gi14d?v=9b6dc8814f3059be2a07bebba9177c7f)](https://m8ven.ai/mcp/zeative-satgas-1gi14d?s=readme)
 
 [Quick start](#quick-start) · [Features](#features) · [Self-hosting](#self-hosting) · [Configuration](#configuration) · [Security](#security) · [Contributing](#contributing)
 

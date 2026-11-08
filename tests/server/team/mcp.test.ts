@@ -75,3 +75,15 @@ test("a model that cannot see is offered see_image, which sends the full path of
   const sighted = await talk([{ jsonrpc: "2.0", id: 1, method: "tools/list" }], { SATGAS_TEAM_TALK: "0", SATGAS_BLIND: "0" });
   expect(sighted[0]?.result.tools.map((t: { name: string }) => t.name)).not.toContain("see_image");
 });
+
+test("every tool declares MCP's four annotation hints, and only the ones that look are marked read-only", async () => {
+  const replies = await talk([{ jsonrpc: "2.0", id: 1, method: "tools/list" }], { SATGAS_TEAM_TALK: "1", SATGAS_BLIND: "1" });
+  const tools = replies[0]?.result.tools as { name: string; annotations: Record<string, boolean> }[];
+  for (const t of tools)
+    expect(Object.keys(t.annotations).sort()).toEqual(["destructiveHint", "idempotentHint", "openWorldHint", "readOnlyHint"]);
+  const readOnly = tools
+    .filter((t) => t.annotations.readOnlyHint)
+    .map((t) => t.name)
+    .sort();
+  expect(readOnly).toEqual(["app_status", "see_image", "team_files", "team_notes"]);
+});

@@ -5,12 +5,14 @@
 
 import { resolve } from "node:path";
 
+// Every tool says how it behaves (MCP's annotation hints), so a client can tell looking from changing and asking out.
 const TOOLS = [
   {
     name: "team_notes",
     description:
       "Who else is on this round's team and the decisions they posted (API shapes, names, file layout). Read it before you start when teammates work alongside you, and before you settle something they may depend on.",
     inputSchema: { type: "object", properties: {}, additionalProperties: false },
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     op: "notes",
   },
   {
@@ -23,12 +25,14 @@ const TOOLS = [
       required: ["text"],
       additionalProperties: false,
     },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
     op: "note",
   },
   {
     name: "team_files",
     description: "The files teammates are editing right now, so you avoid writing over their work.",
     inputSchema: { type: "object", properties: {}, additionalProperties: false },
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     op: "files",
   },
   {
@@ -44,6 +48,7 @@ const TOOLS = [
       required: ["to", "question"],
       additionalProperties: false,
     },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
     op: "ask",
   },
   {
@@ -55,6 +60,7 @@ const TOOLS = [
       required: ["id", "text"],
       additionalProperties: false,
     },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
     op: "answer",
   },
   {
@@ -75,6 +81,7 @@ const TOOLS = [
       required: ["name", "command"],
       additionalProperties: false,
     },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     op: "app_start",
   },
   {
@@ -87,6 +94,7 @@ const TOOLS = [
       required: ["name"],
       additionalProperties: false,
     },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     op: "app_stop",
   },
   {
@@ -97,6 +105,7 @@ const TOOLS = [
       properties: { name: { type: "string", description: "Optional: one app, with more of its log" } },
       additionalProperties: false,
     },
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     op: "app_status",
   },
   {
@@ -113,6 +122,7 @@ const TOOLS = [
       required: ["label", "reason"],
       additionalProperties: false,
     },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
     op: "secret",
   },
   {
@@ -125,6 +135,7 @@ const TOOLS = [
       required: ["path"],
       additionalProperties: false,
     },
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
     op: "see",
   },
 ] as const;
