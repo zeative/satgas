@@ -111,7 +111,7 @@ import { teamCall } from "./team";
 import { toolStatus } from "./tools";
 import { startUpdate, updateInfo } from "./updates";
 import { claimUploads, pruneUploads, stageUpload } from "./uploads";
-import { visionStatus } from "./vision";
+import { visionStatus, withSight } from "./vision";
 import { decodePath, serveWeb } from "./web";
 import { removeRunTrees } from "./worktrees";
 
@@ -365,7 +365,7 @@ const server: Server<SocketData> = Bun.serve({
     "/api/providers": api(async (req) => {
       const site = req.headers.get("sec-fetch-site");
       const refresh = new URL(req.url).searchParams.has("refresh") && (!site || site === "same-origin" || site === "none");
-      return Response.json(await providerStatuses(refresh));
+      return Response.json(await withSight(await providerStatuses(refresh)));
     }),
     // Which programs the tools need are installed here; ?refresh=1 looks again (same-origin only, like /api/providers).
     "/api/tools/status": api(async (req) => {

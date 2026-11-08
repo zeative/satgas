@@ -166,6 +166,26 @@ test("OpenRouter offers the levels each model reports, limited to what --effort 
   ]);
 });
 
+test("OpenRouter says which models see images, reason and how much context they take, and leaves unsaid alone", async () => {
+  const models = await modelsWith("openrouter", () => ({
+    data: [
+      {
+        id: "a/eyes",
+        supported_parameters: ["tools", "reasoning"],
+        architecture: { input_modalities: ["text", "image"] },
+        context_length: 200000,
+      },
+      { id: "b/text", supported_parameters: ["tools"], architecture: { input_modalities: ["text"] } },
+      { id: "c/unsaid", supported_parameters: ["tools"] },
+    ],
+  }));
+  expect(models.map((m) => [m.id, m.vision, m.reasons, m.context])).toEqual([
+    ["a/eyes", true, true, 200000],
+    ["b/text", false, false, undefined],
+    ["c/unsaid", undefined, false, undefined],
+  ]);
+});
+
 test("OpenAI lists only models agents can use, with levels when Codex knows the model", async () => {
   await Bun.write(
     join(dir, "models_cache.json"),
@@ -204,6 +224,19 @@ test("OpenAI lists only models agents can use, with levels when Codex knows the 
   } finally {
     await rm(join(dir, "models_cache.json"), { force: true });
   }
+});
+
+test("Ollama's capabilities say which models see and think, and an older Ollama that sends none says nothing", async () => {
+  const models = await modelsWith("ollama", (asked) => {
+    if (asked.includes("/api/tags")) return { models: [{ name: "llava" }, { name: "old" }] };
+    if (asked.includes('"llava"'))
+      return { capabilities: ["completion", "vision"], model_info: { "llama.context_length": 32768, "llama.block_count": 32 } };
+    return {};
+  });
+  expect(models.map((m) => [m.id, m.vision, m.reasons, m.context])).toEqual([
+    ["llava", true, false, 32768],
+    ["old", undefined, undefined, undefined],
+  ]);
 });
 
 test("Ollama offers named thinking levels, and none for an on/off switch or a failed lookup", async () => {

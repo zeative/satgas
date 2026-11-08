@@ -436,6 +436,11 @@ export interface ModelInfo {
   // Reasoning levels the model takes, when the provider says.
   efforts?: string[];
   defaultEffort?: string;
+  // What the provider reports, or a probe found; left out when nobody said, so the picker never guesses.
+  vision?: boolean;
+  reasons?: boolean;
+  // Context window in tokens.
+  context?: number;
 }
 
 // off: not set up, so hidden; failed: set up but the check did not pass, shown disabled with the reason.

@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Check, ChevronDown, TriangleAlert } from "lucide-react";
+import { Check, ChevronDown, Eye, Lightbulb, TriangleAlert } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { ClaudeMark, CodexMark } from "@/components/brand-marks";
@@ -27,7 +27,41 @@ async function persist(next: Settings) {
 function modelsOf(kind: ProviderKind, status: ProviderStatus | undefined): ModelInfo[] {
   const list = status?.models ?? [];
   const cliDefault = kind === "claude" || kind === "codex" || kind === "claude-token";
-  return cliDefault ? [{ id: "", name: ti.defaultModel, efforts: kind === "codex" ? undefined : CLAUDE_EFFORTS }, ...list] : list;
+  if (!cliDefault) return list;
+  const claude = kind !== "codex";
+  return [
+    { id: "", name: ti.defaultModel, efforts: claude ? CLAUDE_EFFORTS : undefined, vision: true, reasons: claude || undefined },
+    ...list,
+  ];
+}
+
+// A model with reasoning levels reasons, whether or not its provider said so in words.
+const reasonsOf = (m: ModelInfo) => m.reasons ?? (m.efforts?.length ? true : undefined);
+const tokens = (n: number) => (n >= 1_000_000 ? `${Number((n / 1_000_000).toFixed(1))}M` : `${Math.round(n / 1000)}K`);
+
+// Quiet facts on each row, each in its own fixed slot so they line up down the list; a slot only exists when some model
+// in the list fills it, and nothing shows for what the provider never said.
+function Traits({ m, slots }: { m: ModelInfo; slots: { context: boolean; vision: boolean; reasons: boolean } }) {
+  if (!slots.context && !slots.vision && !slots.reasons) return null;
+  return (
+    <span className="ms-auto flex shrink-0 items-center gap-1.5 text-muted-foreground">
+      {slots.context && (
+        <span className="w-9 text-end font-mono text-xs tabular-nums" title={m.context ? t.picker.context(tokens(m.context)) : undefined}>
+          {m.context ? tokens(m.context) : ""}
+        </span>
+      )}
+      {slots.vision && (
+        <span className="flex size-3.5 items-center justify-center" title={m.vision ? t.picker.vision : undefined}>
+          {m.vision && <Eye className="size-3.5" role="img" aria-label={t.picker.vision} />}
+        </span>
+      )}
+      {slots.reasons && (
+        <span className="flex size-3.5 items-center justify-center" title={reasonsOf(m) ? t.picker.reasons : undefined}>
+          {reasonsOf(m) && <Lightbulb className="size-3.5" role="img" aria-label={t.picker.reasons} />}
+        </span>
+      )}
+    </span>
+  );
 }
 
 // Picks the one model everything runs on: connected providers on the rail, their models, then reasoning.
@@ -86,6 +120,11 @@ export function ModelPicker() {
   const models = modelsOf(current, status);
   const chosen = active ? models.find((m) => m.id === agent.model) : undefined;
   const efforts = chosen?.efforts ?? (runtime === "claude" && nativeClaude(current) ? CLAUDE_EFFORTS : []);
+  const slots = {
+    context: models.some((m) => !!m.context),
+    vision: models.some((m) => m.vision),
+    reasons: models.some((m) => reasonsOf(m)),
+  };
 
   const choose = (m: ModelInfo) => {
     const keep = m.efforts?.includes(agent.effort) ? agent.effort : "";
@@ -221,7 +260,10 @@ export function ModelPicker() {
                             >
                               {def && <ProviderLogo def={def} className="size-4 shrink-0" />}
                               <span className="truncate">{m.name}</span>
-                              {on && <Check className="ms-auto size-4 text-foreground" aria-hidden="true" />}
+                              <Traits m={m} slots={slots} />
+                              <span className={cn("flex size-4 shrink-0", !(slots.context || slots.vision || slots.reasons) && "ms-auto")}>
+                                {on && <Check className="size-4 text-foreground" aria-hidden="true" />}
+                              </span>
                             </CommandItem>
                           );
                         })}
@@ -255,6 +297,23 @@ export function ModelPicker() {
                     <li className="px-2 py-2 text-xs text-muted-foreground">{chosen ? ti.reasoningOwn : ti.reasoningPick}</li>
                   )}
                 </ul>
+                {chosen && (
+                  // The chosen model's facts said outright, including what its provider never reported.
+                  <dl className="mt-auto flex flex-col border-t p-1 text-xs max-sm:border-t">
+                    <div className="flex min-h-7 items-center justify-between gap-2 px-2">
+                      <dt className="text-muted-foreground">{t.picker.images}</dt>
+                      <dd title={chosen.vision === false ? t.picker.imagesNoNote : undefined}>
+                        {chosen.vision === undefined ? t.picker.imagesUnknown : chosen.vision ? t.picker.imagesYes : t.picker.imagesNo}
+                      </dd>
+                    </div>
+                    {chosen.context && (
+                      <div className="flex min-h-7 items-center justify-between gap-2 px-2">
+                        <dt className="text-muted-foreground">{t.picker.contextLabel}</dt>
+                        <dd className="font-mono tabular-nums">{tokens(chosen.context)}</dd>
+                      </div>
+                    )}
+                  </dl>
+                )}
               </div>
             </div>
             <div className="flex h-9 items-center justify-end border-t px-3 text-xs text-muted-foreground">

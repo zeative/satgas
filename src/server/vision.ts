@@ -129,13 +129,34 @@ async function sightCache() {
   return hot.__satgasSight;
 }
 
+const sightKey = (kind: ProviderKind, model: string) =>
+  `${kind}|${getSettings().providers[kind]?.baseUrl?.trim() || providerDef.get(kind)?.baseUrl || ""}|${model}`;
+
+// For the model picker: what a probe already found about each listed model, where its provider did not say. Nothing is
+// probed here, since each probe is a paid call; a model gets probed once it is picked.
+export async function withSight(statuses: ProviderStatus[]): Promise<ProviderStatus[]> {
+  const { seen } = await sightCache();
+  return statuses.map((st) =>
+    st.state !== "ok"
+      ? st
+      : {
+          ...st,
+          models: st.models.map((m) => {
+            if (m.vision !== undefined) return m;
+            const known = seesAlways(st.kind) ? true : seen[sightKey(st.kind, m.id)];
+            return known === undefined ? m : { ...m, vision: known };
+          }),
+        },
+  );
+}
+
 // Whether a model takes images, as far as anyone knows: Claude and Codex always do, gateway models are probed once.
 // null: the probe could not tell, so nothing is kept and it is asked again next time.
 async function sight(kind: ProviderKind, model: string): Promise<boolean | null> {
   if (seesAlways(kind)) return true;
   if (!model) return null;
   const cfg = getSettings().providers[kind] ?? {};
-  const key = `${kind}|${cfg.baseUrl?.trim() || providerDef.get(kind)?.baseUrl || ""}|${model}`;
+  const key = sightKey(kind, model);
   const cache = await sightCache();
   if (key in cache.seen) return cache.seen[key] === true;
   // The composer and a starting run can ask at the same moment; they share one probe.

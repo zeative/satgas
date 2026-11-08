@@ -31,6 +31,8 @@ async function claudeAliases(): Promise<ModelInfo[]> {
       name: (id && prettyClaude(id)) || `Claude ${family[0]?.toUpperCase()}${family.slice(1)}`,
       desc: id,
       efforts: CLAUDE_EFFORTS,
+      vision: true,
+      reasons: true,
     };
   });
 }
@@ -115,6 +117,8 @@ async function check(kind: ProviderKind, cfg: ProviderConfig): Promise<ModelInfo
         name: String(m.display_name ?? m.id),
         desc: String(m.id),
         efforts: CLAUDE_EFFORTS,
+        vision: true,
+        reasons: true,
       }));
       return [...(await claudeAliases()), ...live];
     }
@@ -149,12 +153,19 @@ async function check(kind: ProviderKind, cfg: ProviderConfig): Promise<ModelInfo
       // Agents need tool calls, so models without them would only fail mid-task.
       return list(data)
         .filter((m) => Array.isArray(m.supported_parameters) && m.supported_parameters.includes("tools"))
-        .map((m) => ({
-          id: String(m.id),
-          name: String(m.name ?? m.id),
-          desc: contextOf(m.context_length),
-          efforts: claudeLevels((m.reasoning as { supported_efforts?: unknown } | null)?.supported_efforts),
-        }));
+        .map((m) => {
+          const takes = (m.architecture as { input_modalities?: unknown } | null)?.input_modalities;
+          const params = m.supported_parameters as string[];
+          return {
+            id: String(m.id),
+            name: String(m.name ?? m.id),
+            desc: contextOf(m.context_length),
+            efforts: claudeLevels((m.reasoning as { supported_efforts?: unknown } | null)?.supported_efforts),
+            ...(Array.isArray(takes) ? { vision: takes.includes("image") } : {}),
+            reasons: params.includes("reasoning"),
+            ...(typeof m.context_length === "number" && m.context_length > 0 ? { context: m.context_length } : {}),
+          };
+        });
     }
     case "ollama": {
       const data = (await json(`${base}/api/tags`, {}, `Ollama is not running at \`${base}\`.`)) as {
@@ -164,11 +175,11 @@ async function check(kind: ProviderKind, cfg: ProviderConfig): Promise<ModelInfo
         (data.models ?? []).flatMap((m) =>
           m.name
             ? [
-                ollamaLevels(base, m.name).then((efforts) => ({
+                ollamaShow(base, m.name).then((shown) => ({
                   id: m.name as string,
                   name: m.name as string,
                   desc: [m.details?.parameter_size, m.details?.quantization_level].filter(Boolean).join(" · ") || undefined,
-                  efforts,
+                  ...shown,
                 })),
               ]
             : [],
@@ -226,14 +237,22 @@ function claudeLevels(levels: unknown): string[] | undefined {
   return usable.length ? usable : undefined;
 }
 
-// `thinking.values` holds named levels, or only true and false for a model with a plain on/off switch.
-async function ollamaLevels(base: string, model: string): Promise<string[] | undefined> {
+// `thinking.values` holds named levels, or only true and false for a model with a plain on/off switch. Older Ollama
+// versions send no `capabilities`, which leaves vision and reasoning unsaid.
+async function ollamaShow(base: string, model: string): Promise<Pick<ModelInfo, "efforts" | "vision" | "reasons" | "context">> {
   try {
     const res = await fetch(`${base}/api/show`, { method: "POST", body: JSON.stringify({ model }), signal: AbortSignal.timeout(TIMEOUT) });
-    if (!res.ok) return undefined;
-    return claudeLevels(((await res.json()) as { thinking?: { values?: unknown } }).thinking?.values);
+    if (!res.ok) return {};
+    const data = (await res.json()) as { thinking?: { values?: unknown }; capabilities?: unknown; model_info?: Record<string, unknown> };
+    const can = Array.isArray(data.capabilities) ? data.capabilities : null;
+    const context = Object.entries(data.model_info ?? {}).find(([k]) => k.endsWith(".context_length"))?.[1];
+    return {
+      efforts: claudeLevels(data.thinking?.values),
+      ...(can ? { vision: can.includes("vision"), reasons: can.includes("thinking") } : {}),
+      ...(typeof context === "number" && context > 0 ? { context } : {}),
+    };
   } catch {
-    return undefined;
+    return {};
   }
 }
 
@@ -329,6 +348,8 @@ async function codexModels(): Promise<ModelInfo[]> {
       // Shown as a caption, so a closing period goes.
       desc: typeof m.description === "string" && m.description ? m.description.replace(/\.\s*$/, "") : undefined,
       ...levelsOf(m),
+      // Every model Codex offers on a ChatGPT sign-in takes images.
+      vision: true,
     }));
 }
 

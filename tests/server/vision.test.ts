@@ -6,7 +6,7 @@ import type { Server } from "bun";
 import { config } from "../../src/server/config";
 import { buildNodePrompt, workingRules } from "../../src/server/prompt";
 import { defaultSettings } from "../../src/server/settings";
-import { canSee, probeVision, readerCandidates, sawProbe, seeAttachments, seeImage } from "../../src/server/vision";
+import { canSee, probeVision, readerCandidates, sawProbe, seeAttachments, seeImage, withSight } from "../../src/server/vision";
 import type { Settings } from "../../src/shared/settings";
 import type { NodeState, ProviderStatus, Run } from "../../src/shared/types";
 import { collector, jsonl, makeFakeCli, setFake } from "../helpers/fake-cli";
@@ -240,4 +240,30 @@ test("a picture an agent opens mid-task must be a real image file before any rea
   expect(await seeImage("/satgas-no-such-dir/shot.png", "/w", signal)).toEqual({
     error: "There is no file at /satgas-no-such-dir/shot.png.",
   });
+});
+
+test("the picker learns what a probe found for models whose provider never said, without probing anything new", async () => {
+  const before = config.dataDir;
+  const tmp = await mkdtemp(join(tmpdir(), "satgas-sight-"));
+  config.dataDir = tmp;
+  try {
+    await Bun.write(join(tmp, "vision.json"), JSON.stringify({ "groq|https://api.groq.com/openai/v1|blind-model": false }));
+    const [groq, codex] = await withSight([
+      {
+        kind: "groq",
+        state: "ok",
+        models: [
+          { id: "blind-model", name: "Blind" },
+          { id: "never-probed", name: "New" },
+          { id: "said", name: "Said", vision: true },
+        ],
+      },
+      { kind: "codex", state: "ok", models: [{ id: "gpt-x", name: "GPT" }] },
+    ]);
+    expect(groq?.models.map((m) => m.vision)).toEqual([false, undefined, true]);
+    expect(codex?.models[0]?.vision).toBe(true);
+  } finally {
+    config.dataDir = before;
+    await rm(tmp, { recursive: true, force: true });
+  }
 });
