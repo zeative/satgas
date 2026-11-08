@@ -58,6 +58,15 @@ const HEAVY = new Set<Card["kind"]>(["doc", "table", "code", "preview", "files",
 // Below this zoom body text is a few pixels tall and unreadable anyway.
 export const DETAIL_ZOOM = 0.4;
 const isFar = (s: ReactFlowState) => s.transform[2] < DETAIL_ZOOM;
+// Live pages stay on screen when zoomed out, up to this many on a board; past that each one is a frame, since a board
+// full of loaded pages is what makes zooming out slow.
+const FAR_LIVE_PAGES = 8;
+const fewPages = (s: ReactFlowState) => {
+  let n = 0;
+  for (const node of s.nodes) if ((node.data as { card?: Card }).card?.kind === "preview" && ++n > FAR_LIVE_PAGES) return false;
+  return true;
+};
+const notAPage = () => false;
 // Person-made docs, tables and code are edited in place; agent-made ones mirror files and open to read.
 export const editableCard = (card: Card) =>
   card.kind === "note" ||
@@ -75,6 +84,7 @@ export const CardNode = memo(function CardNode({ data, selected, width, height }
   const zoomedOut = useDeferredValue(useStore(isFar), true);
   const fullDetail = useContext(FullDetail);
   const far = zoomedOut && !fullDetail;
+  const staysLive = useStore(card.kind === "preview" ? fewPages : notAPage);
   // While resizing, a live page must not swallow the pointer, or the resize sticks once the cursor crosses it.
   const [resizing, setResizing] = useState(false);
   const opensInTab = (card.kind === "preview" || card.kind === "image") && card.src;
@@ -134,7 +144,7 @@ export const CardNode = memo(function CardNode({ data, selected, width, height }
           selected && card.kind !== "drawing" && "ring-2 ring-foreground/35",
         )}
       >
-        {far && HEAVY.has(card.kind) ? (
+        {far && HEAVY.has(card.kind) && !staysLive ? (
           <FarBody card={card} />
         ) : (
           // Only a shape draws from its size, and only it gets the live one, so other bodies stay memoized through a resize.
