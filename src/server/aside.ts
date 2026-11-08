@@ -1,6 +1,7 @@
 // The lead's answer to a message the person sends while the team works: a quick turn with no tools, so the person is
 // never left waiting for a long task. The lead replies, and decides who of the running team should hear it and whether
 // it is new work for the next round.
+import { cardLabel } from "../shared/refs";
 import { activeAgent } from "../shared/settings";
 import { crew, memberIdOf } from "../shared/team";
 import type { Run } from "../shared/types";
@@ -38,12 +39,15 @@ Decide three things:
 - "tell": the ids of running tasks whose work this changes or adds to. Those teammates get the message as it is, at their next step. Leave it empty when it changes nobody's current work.
 - "later": true when it asks for new work beyond what is running. It then runs as the next round once the team is done, and you plan it then.
 
+A short message belongs to the conversation so far. "gas", "ok", "yes", a letter or a repeat agrees with or picks from what you last asked, and the round below may already be acting on it. When it is already being done, say in one line what is under way, with "tell" empty and "later" false. Never answer that you do not know what to do, or ask them to say the task again: the mission and your last report are below. A pick that differs from what the round is doing is a real change: say so plainly and handle it like any other.
+
 Never say work is done when it is not, and never invent progress: use only the state below.`;
 
 const clip = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
+const REPORT_CHARS = 1500;
 
 // The round being worked on, in words: each task, who has it, how it stands and what it did last.
-function describeWork(run: Run): string {
+export function describeWork(run: Run): string {
   const round = run.rounds?.length ?? 0;
   const people = new Map(crew(run).map((m) => [m.id, m]));
   const logs = getLogs(run.id);
@@ -58,11 +62,28 @@ function describeWork(run: Run): string {
     return `- ${n.id}: "${n.title}", ${who ? `${who.name} (${who.role})` : n.role}, ${n.status}${last ? `\n  Last steps:\n${last}` : ""}`;
   });
   const asked = round === 0 ? run.prompt : (run.rounds?.[round - 1] ?? run.prompt);
-  return `What the person asked for this round:\n${asked}\n\nThe team's tasks now:\n${lines.join("\n") || "- none yet"}`;
+  // A round's own words can be just "gas", so the mission and what the lead last said give them their meaning.
+  const before = round > 0 ? run.nodes.filter((n) => (n.round ?? 0) === round - 1 && n.output).at(-1)?.output : undefined;
+  const earlier = (run.asides?.[round] ?? []).map((a) => `- They said: ${clip(a.prompt, 200)}\n  You replied: ${clip(a.reply, 200)}`);
+  return [
+    `The mission:\n${clip(run.prompt, 1500)}`,
+    before && `Your team's last report to the person, which they are answering:\n${clip(before, REPORT_CHARS)}`,
+    `What the person asked for this round:\n${asked}`,
+    `The team's tasks now:\n${lines.join("\n") || "- none yet"}`,
+    run.status === "planning" && "You are planning this round right now, so its tasks appear in a moment. The work is under way.",
+    earlier.length > 0 && `Already said this round:\n${earlier.join("\n")}`,
+  ]
+    .filter(Boolean)
+    .join("\n\n");
 }
 
-export async function askLeadAside(run: Run, message: string, signal: AbortSignal): Promise<AsideDecision | null> {
-  const prompt = `${describeWork(run)}\n\nThe person's message:\n${message}\n\n${describeSystem()}`;
+export function asideMessage(run: Run, message: string, cards: string[] = []): string {
+  const pointed = (run.board?.cards ?? []).filter((c) => cards.includes(c.id)).map(cardLabel);
+  return `The person's message${pointed.length ? `, sent with these cards selected on the board (${pointed.join(", ")})` : ""}:\n${message}`;
+}
+
+export async function askLeadAside(run: Run, message: string, signal: AbortSignal, cards: string[] = []): Promise<AsideDecision | null> {
+  const prompt = `${describeWork(run)}\n\n${asideMessage(run, message, cards)}\n\n${describeSystem()}`;
   const req = { cwd: run.cwd, signal, onLog: () => {}, prompt, readOnly: true };
   const codex = activeAgent(getSettings().agents) === "codex";
   const result = codex

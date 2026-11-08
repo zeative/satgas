@@ -181,7 +181,7 @@ async function answerAside(id: string, itemId: string) {
   const run = getRun(id);
   const item = run?.queue?.find((q) => q.id === itemId);
   if (!run || !item) return;
-  const decision = await askLeadAside(run, item.prompt, AbortSignal.timeout(ASIDE_MS)).catch(() => null);
+  const decision = await askLeadAside(run, item.prompt, AbortSignal.timeout(ASIDE_MS), item.cards).catch(() => null);
   const now = getRun(id);
   if (!now?.queue?.some((q) => q.id === itemId)) return;
   const mark = (change: Partial<QueuedPrompt>) =>
