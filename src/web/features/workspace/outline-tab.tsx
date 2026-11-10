@@ -51,7 +51,7 @@ export function OutlineTab({ run }: { run: Run }) {
   if (!frames.length && !loose.length) return <TreeNote>{tw.outlineEmpty}</TreeNote>;
   return (
     // biome-ignore lint/a11y/noStaticElementInteractions: the keys belong to the rows inside; this only catches them as they bubble.
-    <div ref={keys.ref} onKeyDown={keys.onKeyDown} className="group/tree flex flex-col py-1">
+    <div ref={keys.ref} onKeyDown={keys.onKeyDown} className="flex flex-col py-1">
       {frames.length > 0 && (
         <Group title={tw.frames} items={frames}>
           {({ card, holds }) => <Row key={card.id} card={card} meta={tw.inFrame(holds)} />}

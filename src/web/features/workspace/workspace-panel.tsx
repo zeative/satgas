@@ -1,5 +1,5 @@
 import { PanelLeftClose } from "lucide-react";
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { isMac, t } from "@/i18n";
@@ -15,6 +15,7 @@ import {
 } from "@/stores/workspace";
 import type { Run } from "../../../shared/types";
 import { ChangesTab } from "./changes-tab";
+import { changesOf } from "./file-tree";
 import { FilesTab } from "./files-tab";
 import { GitTab } from "./git-tab";
 import { OutlineTab } from "./outline-tab";
@@ -33,7 +34,7 @@ function firstTab(run: Run): WorkspaceTab {
 export function WorkspacePanel({ run }: { run: Run }) {
   const width = useWorkspace((s) => s.width);
   const [tab, setTab] = useState<WorkspaceTab>(() => firstTab(run));
-  const changed = run.nodes.reduce((n, t) => n + (t.changes?.files.length ? 1 : 0), 0);
+  const changed = useMemo(() => changesOf(run.nodes).size, [run.nodes]);
   return (
     <aside
       aria-label={tw.label}

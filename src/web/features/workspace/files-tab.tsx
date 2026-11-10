@@ -1,4 +1,4 @@
-import { Search } from "lucide-react";
+import { Folder, FolderOpen, Search } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { t } from "@/i18n";
 import { cn } from "@/lib/utils";
@@ -9,7 +9,7 @@ import type { Run } from "../../../shared/types";
 import { CHANGE_MARK } from "./changes-tab";
 import { FileIcon } from "./file-icon";
 import { baseName, changesOf, type Dir, foldersHolding, treeOf } from "./file-tree";
-import { Guides, indentOf, ROW, TreeChevron, TreeLoading, TreeNote, TreeRow, useTreeKeys } from "./tree-row";
+import { Guides, indentOf, ROW, RowIcon, TreeChevron, TreeLoading, TreeNote, TreeRow, useTreeKeys } from "./tree-row";
 
 const tw = t.workspace;
 
@@ -26,7 +26,7 @@ interface Tree {
 }
 
 // The board's folder the way VS Code's Explorer shows it: tight rows edge to edge, a chevron for folders, an icon for each
-// kind of file, and what this board changed coloured with its letter. Opening a file shows it read-only.
+// kind of file. Names stay plain; a letter says what this board changed. Opening a file shows it read-only.
 export function FilesTab({ run }: { run: Run }) {
   const [paths, setPaths] = useState<string[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -107,10 +107,7 @@ export function FilesTab({ run }: { run: Run }) {
           <TreeNote>{tw.noMatch}</TreeNote>
         )
       ) : (
-        // Indent guides appear while the pointer is over the tree, as they do in VS Code.
-        <div className="group/tree">
-          <DirList dir={root} depth={0} tree={tree} />
-        </div>
+        <DirList dir={root} depth={0} tree={tree} />
       )}
     </div>
   );
@@ -145,7 +142,8 @@ function DirRow({ dir, depth, tree }: { dir: Dir; depth: number; tree: Tree }) {
       >
         <Guides depth={depth} />
         <TreeChevron open={open} />
-        <span className={cn("min-w-0 flex-1 truncate", holds && CHANGE_MARK.modified.tone)}>{dir.name}</span>
+        <RowIcon>{open ? <FolderOpen /> : <Folder />}</RowIcon>
+        <span className="ms-1.5 min-w-0 flex-1 truncate">{dir.name}</span>
         {holds && (
           <span role="img" aria-label={tw.touched} title={tw.touched} className="ms-2 size-1.5 shrink-0 rounded-full bg-signal-ink/80" />
         )}
@@ -165,7 +163,6 @@ function FileRow({ path, change, depth, trail }: { path: string; change?: FileCh
       inset={!trail}
       icon={<FileIcon name={name} />}
       label={name}
-      tone={mark?.tone}
       trail={trail ? path.slice(0, -name.length - 1) : undefined}
       end={mark && <span className={cn("font-mono", mark.tone)}>{mark.letter}</span>}
       title={path}

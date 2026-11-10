@@ -3,16 +3,16 @@ import { type KeyboardEvent, memo, type ReactNode, useRef, useState } from "reac
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
-// One row grammar for the whole sidebar, after VS Code's trees: 22px rows edge to edge, 8px a level, a 16px chevron
-// column, and actions that show on hover.
-const INDENT = 8;
+// One row grammar for the whole sidebar: 22px rows edge to edge, 12px a level, a 16px chevron column and a 16px icon, so
+// names at one depth start on one line whether they are folders or files. Actions show on hover.
+const INDENT = 12;
 const EDGE = 4;
 export const indentOf = (depth: number) => EDGE + depth * INDENT;
 
 export const ROW =
   "relative flex h-[22px] w-full min-w-0 scroll-my-9 items-center pe-2 text-start text-[13px] leading-[22px] hover:bg-muted focus-visible:bg-muted focus-visible:outline focus-visible:outline-1 focus-visible:-outline-offset-1 focus-visible:outline-ring";
 
-// One thin line per level, under each ancestor's chevron, while the pointer is over the tree (a `group/tree` around it).
+// One thin line per level, under each ancestor's chevron, so how deep a row sits reads without counting pixels.
 export const Guides = memo(function Guides({ depth }: { depth: number }) {
   return (
     <>
@@ -21,7 +21,7 @@ export const Guides = memo(function Guides({ depth }: { depth: number }) {
           // biome-ignore lint/suspicious/noArrayIndexKey: levels have no identity beyond their position.
           key={i}
           aria-hidden="true"
-          className="pointer-events-none absolute inset-y-0 w-px bg-foreground/15 opacity-0 transition-opacity group-hover/tree:opacity-100"
+          className="pointer-events-none absolute inset-y-0 w-px bg-foreground/10"
           style={{ insetInlineStart: indentOf(i) + 7 }}
         />
       ))}
@@ -85,19 +85,22 @@ interface SectionProps {
   count?: number;
   actions?: ReactNode;
   depth?: number;
+  // A divider over what sits inside rather than a row of the tree: quiet text under a hairline.
+  heading?: boolean;
   defaultOpen?: boolean;
   children: ReactNode;
 }
 
 // A foldable heading with what belongs under it, like the panes of VS Code's sidebar.
-export function TreeSection({ title, hint, icon, count, actions, depth = 0, defaultOpen = true, children }: SectionProps) {
+export function TreeSection({ title, hint, icon, count, actions, depth = 0, heading, defaultOpen = true, children }: SectionProps) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <section>
+    <section className={cn(heading && "mt-1 border-t")}>
       <div className="group/row relative">
         <button
           type="button"
-          data-row={depth}
+          // A heading is drawn level with what it holds, but the arrow keys still step out to it.
+          data-row={heading ? -1 : depth}
           aria-expanded={open}
           title={hint ? `${title} · ${hint}` : title}
           onClick={() => setOpen((v) => !v)}
@@ -107,8 +110,22 @@ export function TreeSection({ title, hint, icon, count, actions, depth = 0, defa
           <Guides depth={depth} />
           <TreeChevron open={open} />
           {icon}
-          <span className={cn("shrink-0 truncate font-medium", icon && "ms-1.5", hint && "max-w-[70%]")}>{title}</span>
-          {hint && <span className="ms-1.5 min-w-0 flex-1 truncate text-xs text-muted-foreground">{hint}</span>}
+          <span
+            className={cn(
+              "shrink-0 truncate",
+              heading ? "text-xs text-muted-foreground" : "font-medium",
+              icon && "ms-1.5",
+              hint && "max-w-[70%]",
+            )}
+          >
+            {title}
+          </span>
+          {hint && (
+            <span className="ms-1.5 min-w-0 flex-1 truncate text-xs text-muted-foreground">
+              {heading && <span aria-hidden="true">· </span>}
+              {hint}
+            </span>
+          )}
           {count !== undefined && <span className="ms-auto ps-2 text-[11px] text-muted-foreground tabular-nums">{count}</span>}
         </button>
         {actions && <RowActions>{actions}</RowActions>}
@@ -122,8 +139,6 @@ interface RowProps {
   depth: number;
   icon: ReactNode;
   label: string;
-  // The name's colour, for what changed.
-  tone?: string;
   // Quieter text right after the name, such as a folder.
   trail?: string;
   // At the row's end: a change letter, a time, a count.
@@ -138,12 +153,12 @@ interface RowProps {
 }
 
 // A leaf: a pressable row when it opens something, a plain one when it only tells.
-export function TreeRow({ depth, icon, label, tone, trail, end, title, active, struck, inset = true, onClick, actions }: RowProps) {
+export function TreeRow({ depth, icon, label, trail, end, title, active, struck, inset = true, onClick, actions }: RowProps) {
   const body = (
     <>
       <Guides depth={depth} />
       {icon}
-      <span className={cn("ms-1.5 min-w-0 truncate", tone, struck && "text-muted-foreground line-through")}>{label}</span>
+      <span className={cn("ms-1.5 min-w-0 truncate", struck && "text-muted-foreground line-through")}>{label}</span>
       {trail && <span className="ms-1.5 min-w-0 flex-1 truncate text-xs text-muted-foreground">{trail}</span>}
       {end && <span className="ms-auto shrink-0 ps-2 text-xs">{end}</span>}
     </>

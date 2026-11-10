@@ -65,7 +65,7 @@ export function GitTab({ run }: { run: Run }) {
     );
   return (
     // biome-ignore lint/a11y/noStaticElementInteractions: the keys belong to the rows inside; this only catches them as they bubble.
-    <div ref={keys.ref} onKeyDown={keys.onKeyDown} className="group/tree flex flex-col py-1">
+    <div ref={keys.ref} onKeyDown={keys.onKeyDown} className="flex flex-col py-1">
       <TreeSection title={tw.branch}>
         <ul className="flex flex-col">
           <TreeRow

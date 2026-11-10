@@ -53,7 +53,7 @@ export function ChangesTab({ run }: { run: Run }) {
     );
   return (
     // biome-ignore lint/a11y/noStaticElementInteractions: the keys belong to the rows inside; this only catches them as they bubble.
-    <div ref={keys.ref} onKeyDown={keys.onKeyDown} className="group/tree flex flex-col pb-2">
+    <div ref={keys.ref} onKeyDown={keys.onKeyDown} className="flex flex-col pb-2">
       <div className="sticky top-0 z-10 bg-card p-1.5">
         <button
           type="button"
@@ -67,6 +67,7 @@ export function ChangesTab({ run }: { run: Run }) {
       {rounds.map(([round, tasks], i) => (
         <TreeSection
           key={round}
+          heading
           title={tw.round(round)}
           hint={prompts[round]}
           // The newest round is what someone came to see; earlier ones stay a click away.
@@ -126,7 +127,6 @@ function TaskChanges({ run, task, who }: { run: Run; task: NodeState; who: strin
   return (
     <>
       <TreeSection
-        depth={1}
         title={task.title}
         hint={who}
         count={changes.files.length}
@@ -151,7 +151,7 @@ function TaskChanges({ run, task, who }: { run: Run; task: NodeState; who: strin
               return (
                 <TreeRow
                   key={f.path}
-                  depth={2}
+                  depth={1}
                   icon={<FileIcon name={name} muted />}
                   label={name}
                   struck={undone || f.change === "deleted"}
