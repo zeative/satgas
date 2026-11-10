@@ -1,6 +1,6 @@
 import type { CodeViewItem } from "@pierre/diffs";
 import { CodeView, type CodeViewHandle, WorkerPoolContextProvider } from "@pierre/diffs/react";
-import { ArrowLeft, ChevronRight, ExternalLink, WrapText, X } from "lucide-react";
+import { ArrowLeft, ChevronRight, CodeXml, Download, ExternalLink, WrapText, X } from "lucide-react";
 import { type CSSProperties, type KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { OutboundLink } from "@/components/outbound-link";
 import { Button } from "@/components/ui/button";
@@ -8,10 +8,11 @@ import { useTheme } from "@/context/theme-provider";
 import { t } from "@/i18n";
 import { cn } from "@/lib/utils";
 import { closeReview, closeTab, openFile, useReview } from "@/stores/review";
-import { isPicture, type Run } from "../../../shared/types";
+import type { Run } from "../../../shared/types";
 import { CHANGE_MARK } from "./changes-tab";
 import { HIGHLIGHT, POOL, REVIEW_STYLE } from "./diff-config";
 import { FileIcon } from "./file-icon";
+import { type FileKind, fileKind, looksBinary } from "./file-kind";
 import { baseName, changesOf } from "./file-tree";
 import { fileHref } from "./files-tab";
 
@@ -28,7 +29,7 @@ const EDITOR_CSS = `
   [data-code]:hover { scrollbar-color: var(--diffs-bg-context) transparent; }
 `;
 
-type Loaded = { text?: string; error?: string; big?: boolean };
+type Loaded = { text?: string; error?: string; big?: boolean; binary?: boolean };
 // Switching back to a tab shows what it held at once, then refreshes; and lands where it was left.
 const loadedFiles = new Map<string, Loaded>();
 const scrolledTo = new Map<string, number>();
@@ -39,16 +40,18 @@ export default function FileView({ run }: { run: Run }) {
   const tabs = useReview((s) => s.tabs);
   const { resolvedTheme } = useTheme();
   const [wrap, setWrap] = useState(false);
+  const [svgCode, setSvgCode] = useState(false);
   const [state, setState] = useState<Loaded>({});
   const href = path ? fileHref(run.id, path) : "";
-  const picture = !!path && isPicture(path);
+  const kind = path ? fileKind(path) : "text";
+  const asText = kind === "text" || (kind === "svg" && svgCode);
   // A file can change under an open tab whenever a task finishes.
   const finished = run.nodes.filter((n) => n.endedAt).length;
   const changes = useMemo(() => changesOf(run.nodes), [run.nodes]);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: finished is the signal to look again.
   useEffect(() => {
-    if (!href || picture) return;
+    if (!href || !asText) return;
     let alive = true;
     const done = (next: Loaded) => {
       loadedFiles.set(href, next);
@@ -60,13 +63,13 @@ export default function FileView({ run }: { run: Run }) {
         if (!res.ok) throw new Error(tw.loadFailed);
         if (Number(res.headers.get("content-length") ?? 0) > VIEW_MAX) return done({ big: true });
         const text = await res.text();
-        done(text.length > VIEW_MAX ? { big: true } : { text });
+        done(looksBinary(text) ? { binary: true } : text.length > VIEW_MAX ? { big: true } : { text });
       })
       .catch((e: Error) => done({ error: e.message }));
     return () => {
       alive = false;
     };
-  }, [href, picture, finished]);
+  }, [href, asText, finished]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent | globalThis.KeyboardEvent) => {
@@ -134,7 +137,20 @@ export default function FileView({ run }: { run: Run }) {
         </button>
         <FileTabs tabs={tabs} active={path} changes={changes} />
         <div className="flex shrink-0 items-center gap-0.5 border-s px-1.5">
-          {!picture && (
+          {kind === "svg" && (
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-pressed={svgCode}
+              aria-label={tw.showCode}
+              title={tw.showCode}
+              className={tool}
+              onClick={() => setSvgCode((v) => !v)}
+            >
+              <CodeXml />
+            </Button>
+          )}
+          {asText && state.text !== undefined && (
             <Button
               variant="ghost"
               size="icon"
@@ -155,12 +171,12 @@ export default function FileView({ run }: { run: Run }) {
         </div>
       </header>
       <Breadcrumb path={path} />
-      {picture ? (
-        <div className="flex min-h-0 flex-1 items-center justify-center overflow-auto p-6">
-          <img src={href} alt={path} className="max-h-full max-w-full rounded-md border" />
-        </div>
+      {!asText ? (
+        <FilePreview key={`${href}:${finished}`} kind={kind} href={href} name={path} />
       ) : state.error ? (
         <p className="p-6 text-xs text-destructive">{state.error}</p>
+      ) : state.binary ? (
+        <NoPreview href={href} name={path} />
       ) : state.big ? (
         <p className={note}>{tw.tooBig}</p>
       ) : state.text === undefined ? (
@@ -181,6 +197,54 @@ export default function FileView({ run }: { run: Run }) {
         </div>
       )}
     </section>
+  );
+}
+
+// Shows through a picture's transparent parts, so a white logo stays visible on a light theme and a black one on a dark theme.
+const CHECKER: CSSProperties = {
+  backgroundImage: "repeating-conic-gradient(var(--muted) 0 25%, transparent 0 50%)",
+  backgroundSize: "16px 16px",
+};
+
+// What the browser can show itself. An <img> runs no script an SVG carries, so the file's own sandbox is not needed here.
+function FilePreview({ kind, href, name }: { kind: FileKind; href: string; name: string }) {
+  const [failed, setFailed] = useState(false);
+  const fail = () => setFailed(true);
+  if (failed) return <p className="p-6 text-xs text-destructive">{tw.loadFailed}</p>;
+  if (kind === "pdf") return <iframe src={href} title={name} className="min-h-0 w-full flex-1 border-0" />;
+  return (
+    <div className="flex min-h-0 flex-1 items-center justify-center overflow-auto p-6">
+      {kind === "video" ? (
+        // biome-ignore lint/a11y/useMediaCaption: an agent's file comes with no captions to offer.
+        <video src={href} controls preload="metadata" onError={fail} className="max-h-full max-w-full rounded-md border" />
+      ) : kind === "audio" ? (
+        // biome-ignore lint/a11y/useMediaCaption: an agent's file comes with no captions to offer.
+        <audio src={href} controls preload="metadata" onError={fail} className="w-full max-w-md" />
+      ) : (
+        <img
+          src={href}
+          alt={name}
+          onError={fail}
+          style={CHECKER}
+          // An SVG without a size of its own would otherwise come out at the browser's default 300 by 150.
+          className={cn("max-h-full max-w-full rounded-md border", kind === "svg" && "size-full object-contain")}
+        />
+      )}
+    </div>
+  );
+}
+
+function NoPreview({ href, name }: { href: string; name: string }) {
+  return (
+    <div className="flex flex-col items-start gap-3 p-6">
+      <p className="text-xs text-muted-foreground">{tw.noPreview}</p>
+      <Button asChild variant="secondary" size="sm">
+        <a href={href} download={baseName(name)}>
+          <Download />
+          {t.board.download(baseName(name))}
+        </a>
+      </Button>
+    </div>
   );
 }
 

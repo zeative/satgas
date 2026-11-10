@@ -1,5 +1,6 @@
 import { mkdir, realpath } from "node:fs/promises";
 import { join, resolve, sep } from "node:path";
+import type { BunFile } from "bun";
 import { assetsDir } from "./store";
 
 const IMAGE_TYPES: Record<string, string> = {
@@ -67,7 +68,7 @@ export async function copyAsset(runId: string, name: string, title: string, cwd:
 
 // Serves a file from the mission's working folder, for previews and images agents wrote; never anything outside it.
 // Both sides are resolved through symlinks, so a link inside the folder cannot point the browser at anything outside it.
-export async function serveWorkFile(cwd: string, relPath: string): Promise<Response> {
+export async function serveWorkFile(cwd: string, relPath: string, range?: string | null): Promise<Response> {
   const notFound = () => new Response("Not found.", { status: 404 });
   const root = await realpath(resolve(cwd)).catch(() => null);
   const full = await realpath(resolve(cwd, relPath)).catch(() => null);
@@ -75,6 +76,20 @@ export async function serveWorkFile(cwd: string, relPath: string): Promise<Respo
   const file = Bun.file(full);
   if (!(await file.exists())) return notFound();
   // A sandboxed document cannot host the browser's PDF viewer; a PDF runs no page script, so it is served plain.
-  if (/\.pdf$/i.test(full)) return new Response(file, { headers: { "content-type": "application/pdf", "cache-control": "no-store" } });
-  return new Response(file, { headers: SANDBOXED });
+  const headers = /\.pdf$/i.test(full) ? { "content-type": "application/pdf", "cache-control": "no-store" } : SANDBOXED;
+  return partOf(file, range, headers) ?? new Response(file, { headers: { ...headers, "accept-ranges": "bytes" } });
+}
+
+// Safari will not play a video unless the server answers byte ranges; a multi-range or malformed ask gets the whole file.
+function partOf(file: BunFile, range: string | null | undefined, headers: Record<string, string>): Response | null {
+  const asked = /^bytes=(\d*)-(\d*)$/.exec(range?.trim() ?? "");
+  if (!asked || (!asked[1] && !asked[2])) return null;
+  const size = file.size;
+  const start = asked[1] ? Number(asked[1]) : Math.max(0, size - Number(asked[2]));
+  const end = asked[1] && asked[2] ? Math.min(Number(asked[2]), size - 1) : size - 1;
+  if (start >= size || start > end) return new Response(null, { status: 416, headers: { ...headers, "content-range": `bytes */${size}` } });
+  return new Response(file.slice(start, end + 1, file.type), {
+    status: 206,
+    headers: { ...headers, "accept-ranges": "bytes", "content-range": `bytes ${start}-${end}/${size}` },
+  });
 }

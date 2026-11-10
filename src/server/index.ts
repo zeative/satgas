@@ -926,7 +926,7 @@ const server: Server<SocketData> = Bun.serve({
         path = keyed[2] ?? "";
       } else if (!authorized(req)) return signInFirst();
       const rel = decodePath(path);
-      return rel === null ? error(404, "Not found.") : serveWorkFile(run.cwd, rel);
+      return rel === null ? error(404, "Not found.") : serveWorkFile(run.cwd, rel, req.headers.get("range"));
     }),
     "/api/pipeline": api(() => Response.json(listLanes())),
     "/api/runs/:id/queue/:item": {
