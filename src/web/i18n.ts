@@ -1,6 +1,6 @@
 import type { AgentKind, NodeStatus, RunStatus } from "../shared/types";
 
-const en = {
+export const en = {
   theme: "Theme",
   language: "Language",
   light: "Light",
@@ -13,38 +13,68 @@ const en = {
   recentBoards: "Recent boards",
   templates: {
     title: "Templates",
+    previous: "Previous templates",
+    next: "More templates",
     items: {
       website: {
-        name: "Website",
-        line: "A landing page or company site",
-        prompt: "Build a website for [product or business]: what it offers, who it is for, and how to get in touch.",
-      },
-      dashboard: {
-        name: "Dashboard",
-        line: "Charts and tables for your numbers",
+        name: "Landing page",
         prompt:
-          "Build a dashboard for [team or business] that tracks [what to watch], with sample data, and run it so I can open it on the board.",
-      },
-      game: {
-        name: "Browser game",
-        line: "Something to play right on the board",
-        prompt: "Build a browser game where [how it plays], and run it so I can play it on the board.",
+          "Build a landing page for {Kopi Senja, a small coffee roastery in Bandung}: what it sells, why people come back, three best sellers with prices, opening hours and one clear way to order. Write all the copy, and use believable sample details where you need them.",
       },
       poster: {
         name: "Poster",
-        line: "For print or social, saved as an image",
-        prompt: "Make a poster for [event or promo], size [A3 or 1080x1080], saved as a PNG.",
+        prompt:
+          "Make a portrait A3 poster for {Pasar Malam Rasa, a night food market on 14 December at Taman Kota}, saved as a PNG. The name, date and place must read from across a room.",
+      },
+      social: {
+        name: "Social carousel",
+        prompt:
+          "Make a 5-slide Instagram carousel for {a gym's 30-day program for beginners}: a hook on the first slide, one idea on each slide and a call to action on the last. Save each slide as a 1080x1350 PNG and write the caption.",
       },
       deck: {
-        name: "Slide deck",
-        line: "Slides for a talk or a pitch",
-        prompt: "Make a slide deck about [topic] for [audience], about [number] slides.",
+        name: "Pitch deck",
+        prompt:
+          "Make a 10-slide pitch deck for {Rute, an app that plans delivery routes for small couriers}, saved as a .pptx: problem, solution, product, market, business model, traction, team and the ask. Mark every sample number as sample.",
+      },
+      dashboard: {
+        name: "Dashboard",
+        prompt:
+          "Build a sales dashboard for {an online shoe store} with 90 days of labelled sample data: revenue, orders, best sellers and the change against the month before, with a date filter. Run it so I can open it on the board.",
+      },
+      invitation: {
+        name: "Invitation",
+        prompt:
+          "Make a wedding invitation for {Rania and Dimas, 20 December at 10:00, Gedung Serbaguna Bogor}, saved as a 1080x1920 PNG ready to share on WhatsApp, with the date, the place and a short warm line.",
+      },
+      businessCard: {
+        name: "Business card",
+        prompt:
+          "Design a business card for {Maya Putri, interior designer at Studio Ruang, maya@studioruang.example, +62 812 0000 0000}: front and back at 90x55 mm, saved as a print-ready PDF and as PNGs.",
+      },
+      game: {
+        name: "Browser game",
+        prompt:
+          "Build a browser game: {a space courier dodging asteroids to deliver parcels on time}. It starts right away on the keyboard, gets harder as it goes, and keeps a score and a restart. Run it so I can play it on the board.",
+      },
+      cv: {
+        name: "CV",
+        prompt:
+          "Write a one-page CV for {Arif Nugroho, a product designer with 6 years of experience}, with sample work history I can replace, easy for recruitment software to read, saved as a PDF.",
       },
       research: {
         name: "Competitor research",
-        line: "Rivals compared in one table",
         prompt:
-          "Research the competitors of [product]: pricing, main features and where each one is weaker. Put the result in a table on the board.",
+          "Research the main competitors of {Notion for small teams}: pricing, main features, who each one suits and where each one is weak, with a source link for every fact. Put the comparison in a table on the board and end with what to do differently.",
+      },
+      certificate: {
+        name: "Certificate",
+        prompt:
+          "Make a certificate for {Best Speaker at the Campus Debate 2026, awarded to Salma Hakim}: A4 landscape with the organiser's name, the date and two signature lines, saved as a PDF and a PNG.",
+      },
+      budget: {
+        name: "Budget sheet",
+        prompt:
+          "Build a budget workbook for {a 3-day company offsite for 40 people}, saved as an .xlsx: categories, estimate against actual, totals and what is left, with working formulas and labelled sample figures.",
       },
     },
   },
@@ -1653,7 +1683,7 @@ const en = {
   missionDeleted: "Board deleted",
 };
 
-const id: typeof en = {
+export const id: typeof en = {
   theme: "Tema",
   language: "Bahasa",
   light: "Terang",
@@ -1666,37 +1696,68 @@ const id: typeof en = {
   recentBoards: "Board terbaru",
   templates: {
     title: "Template",
+    previous: "Template sebelumnya",
+    next: "Template lainnya",
     items: {
       website: {
-        name: "Website",
-        line: "Landing page atau situs perusahaan",
-        prompt: "Buatkan website untuk [produk atau usaha]: apa yang ditawarkan, untuk siapa, dan cara menghubungi.",
-      },
-      dashboard: {
-        name: "Dashboard",
-        line: "Grafik dan tabel untuk angka-angkamu",
+        name: "Landing page",
         prompt:
-          "Buatkan dashboard untuk [tim atau usaha] yang memantau [yang ingin dipantau], dengan data contoh, lalu jalankan supaya bisa kubuka di board.",
-      },
-      game: {
-        name: "Game browser",
-        line: "Bisa langsung dimainkan di board",
-        prompt: "Buatkan game browser di mana [cara mainnya], lalu jalankan supaya bisa kumainkan di board.",
+          "Buatkan landing page untuk {Kopi Senja, roastery kopi kecil di Bandung}: apa yang dijual, kenapa orang balik lagi, tiga menu terlaris dengan harga, jam buka, dan satu cara pesan yang jelas. Tulis semua teksnya, dan pakai detail contoh yang masuk akal kalau perlu.",
       },
       poster: {
         name: "Poster",
-        line: "Untuk cetak atau sosial, jadi gambar",
-        prompt: "Buatkan poster untuk [acara atau promo], ukuran [A3 atau 1080x1080], simpan sebagai PNG.",
+        prompt:
+          "Buatkan poster A3 potret untuk {Pasar Malam Rasa, pasar kuliner malam 14 Desember di Taman Kota}, simpan sebagai PNG. Nama, tanggal, dan tempatnya harus terbaca dari seberang ruangan.",
+      },
+      social: {
+        name: "Carousel sosmed",
+        prompt:
+          "Buatkan carousel Instagram 5 slide untuk {program 30 hari untuk pemula di sebuah gym}: pemancing di slide pertama, satu ide di tiap slide, dan ajakan di slide terakhir. Simpan tiap slide sebagai PNG 1080x1350 dan tulis caption-nya.",
       },
       deck: {
-        name: "Slide",
-        line: "Untuk presentasi atau pitch",
-        prompt: "Buatkan slide tentang [topik] untuk [audiens], sekitar [jumlah] slide.",
+        name: "Pitch deck",
+        prompt:
+          "Buatkan pitch deck 10 slide untuk {Rute, aplikasi yang mengatur rute antar untuk kurir kecil}, simpan sebagai .pptx: masalah, solusi, produk, pasar, model bisnis, traksi, tim, dan permintaannya. Tandai setiap angka contoh sebagai contoh.",
+      },
+      dashboard: {
+        name: "Dashboard",
+        prompt:
+          "Buatkan dashboard penjualan untuk {toko sepatu online} dengan data contoh 90 hari yang diberi label: pendapatan, pesanan, produk terlaris, dan perubahan dibanding bulan sebelumnya, plus filter tanggal. Jalankan supaya bisa kubuka di board.",
+      },
+      invitation: {
+        name: "Undangan",
+        prompt:
+          "Buatkan undangan pernikahan untuk {Rania dan Dimas, 20 Desember pukul 10.00, Gedung Serbaguna Bogor}, simpan sebagai PNG 1080x1920 yang siap dibagikan di WhatsApp, berisi tanggal, tempat, dan satu kalimat hangat.",
+      },
+      businessCard: {
+        name: "Kartu nama",
+        prompt:
+          "Desain kartu nama untuk {Maya Putri, desainer interior di Studio Ruang, maya@studioruang.example, +62 812 0000 0000}: depan dan belakang ukuran 90x55 mm, simpan sebagai PDF siap cetak dan PNG.",
+      },
+      game: {
+        name: "Game browser",
+        prompt:
+          "Buatkan game browser: {kurir luar angkasa yang menghindari asteroid untuk mengantar paket tepat waktu}. Langsung main pakai keyboard, makin lama makin sulit, ada skor dan tombol main lagi. Jalankan supaya bisa kumainkan di board.",
+      },
+      cv: {
+        name: "CV",
+        prompt:
+          "Tuliskan CV satu halaman untuk {Arif Nugroho, product designer dengan pengalaman 6 tahun}, dengan riwayat kerja contoh yang bisa kuganti, mudah dibaca software rekrutmen, simpan sebagai PDF.",
       },
       research: {
-        name: "Riset kompetitor",
-        line: "Pesaing dibandingkan dalam satu tabel",
-        prompt: "Riset kompetitor [produk]: harga, fitur utama, dan kelemahan masing-masing. Taruh hasilnya dalam tabel di board.",
+        name: "Riset pesaing",
+        prompt:
+          "Riset pesaing utama {Notion untuk tim kecil}: harga, fitur utama, cocok untuk siapa, dan kelemahan masing-masing, dengan tautan sumber untuk setiap fakta. Taruh perbandingannya dalam tabel di board dan akhiri dengan apa yang sebaiknya dilakukan berbeda.",
+      },
+      certificate: {
+        name: "Sertifikat",
+        prompt:
+          "Buatkan sertifikat untuk {Pembicara Terbaik Debat Kampus 2026, diberikan kepada Salma Hakim}: A4 lanskap dengan nama penyelenggara, tanggal, dan dua kolom tanda tangan, simpan sebagai PDF dan PNG.",
+      },
+      budget: {
+        name: "Anggaran",
+        prompt:
+          "Buatkan workbook anggaran untuk {outing kantor 3 hari untuk 40 orang}, simpan sebagai .xlsx: kategori, perkiraan dibanding realisasi, total, dan sisa, dengan rumus yang berfungsi dan angka contoh yang diberi label.",
       },
     },
   },

@@ -54,15 +54,26 @@ function ComposerForm({ className, seed }: { className?: string; seed?: Composer
   useEffect(() => {
     if (seed) fill(seed.prompt);
   }, [seed, fill]);
+  // Grows with the text, up to about nine lines. Dropping to auto to measure would lose the scroll position.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the height follows the brief.
+  useLayoutEffect(() => {
+    const el = textarea.current;
+    if (!el) return;
+    const top = el.scrollTop;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 240)}px`;
+    el.scrollTop = top;
+  }, [value]);
   // The field must hold the new text first, or setting its value moves the selection to the end.
   useLayoutEffect(() => {
     const filled = selecting.current;
-    if (filled?.text !== value) return;
+    const el = textarea.current;
+    if (filled?.text !== value || !el) return;
     selecting.current = null;
-    textarea.current?.focus();
-    textarea.current?.setSelectionRange(filled.start, filled.end);
-    // A template joins at the end, where its blank may sit below the field's fold.
-    if (textarea.current) textarea.current.scrollTop = textarea.current.scrollHeight;
+    el.focus();
+    el.setSelectionRange(filled.start, filled.end);
+    // A template joins below what is typed, so a full field brings the selected value into view.
+    el.scrollTop = (el.scrollHeight * filled.start) / value.length - el.clientHeight / 2;
   }, [value]);
 
   const submit = async () => {
@@ -119,7 +130,7 @@ function ComposerForm({ className, seed }: { className?: string; seed?: Composer
           fieldRef={textarea}
           catalog={catalog}
           rows={2}
-          className="max-h-60 min-h-14 w-full resize-none bg-transparent px-4 pt-3.5 text-[15px] leading-6 outline-none placeholder:text-muted-foreground"
+          className="mt-3.5 max-h-60 w-full resize-none bg-transparent px-4 text-[15px] leading-6 outline-none placeholder:text-muted-foreground"
           placeholder={t.missionPlaceholder}
           value={value}
           aria-invalid={invalid}
