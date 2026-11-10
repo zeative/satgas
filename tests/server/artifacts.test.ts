@@ -3,7 +3,7 @@ import { mkdtemp, rm, symlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { cardsForTask, cardsFromReply, placeInFlow, placeOnShelf, relativeInside, reuseFileCards } from "../../src/server/artifacts";
-import { type FileChange, LIMITS, sanitizeOps } from "../../src/shared/board";
+import { type Card, type FileChange, LIMITS, sanitizeOps } from "../../src/shared/board";
 import { crew, teamBounds } from "../../src/shared/team";
 import type { NodeState, Run } from "../../src/shared/types";
 
@@ -145,6 +145,26 @@ describe("placement", () => {
     expect(second).toMatchObject({ x: at.x + 1040, y: at.y + 140 });
   });
 
+  test("keeps one kind to a row past a frame of references, however the work arrives", () => {
+    const r = run([node("a", 0, 0)]);
+    const at = shelf(r);
+    const refs = { id: "f", kind: "frame" as const, ...at, w: 720, h: 460, createdAt: 1 };
+    let board: Card[] = [refs];
+    const add = (id: string, kind: "doc" | "preview", w: number, h: number) => {
+      const [c] = placeOnShelf({ ...r, board: { cards: board, links: [], moved: {} } }, [{ id, kind, w, h, createdAt: 2 }]);
+      if (c) board = [...board, c];
+      return c;
+    };
+    const docs = [add("d1", "doc", 400, 300), add("d2", "doc", 400, 300), add("d3", "doc", 400, 300)];
+    const page = add("p1", "preview", 960, 632);
+    docs.push(add("d4", "doc", 400, 300));
+    const page2 = add("p2", "preview", 960, 632);
+    expect(docs.map((d) => d?.y)).toEqual([at.y, at.y, at.y, at.y]);
+    expect(docs.map((d) => d?.x)).toEqual([760, 1200, 1640, 2080].map((x) => at.x + x));
+    expect(page).toMatchObject({ x: at.x + 760, y: at.y + 340 });
+    expect(page2).toMatchObject({ x: at.x + 1760, y: at.y + 340 });
+  });
+
   test("starts below the team, so a card never covers a face", () => {
     const r = run([node("a", 0, 0), { ...node("later", 0, 200), round: 1, role: "Writer" }]);
     const [card] = placeOnShelf(r, [{ id: "1", kind: "note", w: 200, h: 100, createdAt: 1 }]);
@@ -195,13 +215,13 @@ describe("placement", () => {
       expect(placeInFlow(r, { id: "shorter" }, [note("1")])[0]).toMatchObject({ x: 420, y: 400 });
     });
 
-    test("steps past a card already there instead of covering it", () => {
+    test("starts a row under a card already there instead of covering it", () => {
       const there = { id: "t", kind: "note" as const, x: 420, y: 380, w: 200, h: 200, createdAt: 1 };
       const r = {
         ...run([node("brief", 0, 0), node("code", 0, 0, { dependsOn: ["brief"] })]),
         board: { cards: [brief, there], links: [], moved: {} },
       };
-      expect(placeInFlow(r, { id: "code" }, [note("1")])[0]).toMatchObject({ x: 660, y: 400 });
+      expect(placeInFlow(r, { id: "code" }, [note("1")])[0]).toMatchObject({ x: 420, y: 620 });
     });
 
     test("a task with nothing upstream fills the shelf as before", () => {
