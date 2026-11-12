@@ -9,6 +9,9 @@ services:
       - satgas-data:/data
       - satgas-home:/home/node
     stop_grace_period: 15s
+    # Agents build and preview apps in here (a dev server and a browser each), so cap the container: past the limit
+    # Satgas is stopped and restarted on its own instead of starving everything else on the server.
+    mem_limit: ${SATGAS_MEMORY_LIMIT:-8g}
 
 volumes:
   satgas-data: {}
