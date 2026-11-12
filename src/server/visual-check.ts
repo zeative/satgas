@@ -160,7 +160,10 @@ spacing, type (family, size, weight, case, tracking), colours, corner radius and
 and the state shown (a target mid-use beside an empty build is a difference). List the differences that matter most,
 each as: where, what the target does, what the build does, and the exact fix with values. Score how close the build
 comes to the target's level of craft from 1 to 10, where 10 would sit beside it on Dribbble's popular page. Be strict:
-a page that is tidy but plainer than its target is a 5. Name broken things too: overlapping elements, cut-off text,
+a page that is tidy but plainer than its target is a 5. Judge the topic too: the colours, type, pictures and details
+must come from this product's own world (its place, materials, objects, people). A page that would fit any other app
+with the name changed is a template: mark it so, cap it at 5, and say which of its parts should come from the world
+instead. Name broken things too: overlapping elements, cut-off text,
 fixed bars covering content, empty gaps. Judge the pictures as the target's art director would: a photo that does
 not show this product's world, does not match the others in light and style, or repeats, is a difference.`;
 
@@ -181,7 +184,7 @@ export async function reviewScreens(
         `- ${p.route} (${p.name}): build ${p.shots.map(rel).join(", ")}; ${p.target ? `target ${p.target}` : `no target of its own, so judge it against the hub screens (${hubs})`}`,
     )
     .join("\n");
-  const prompt = `Review these pages.\n\n${list}\n\nThe design direction is in DESIGN.md and design/directions.md if you need it.`;
+  const prompt = `The product, in the person's words: ${run.prompt.slice(0, 600)}\n\nReview these pages.\n\n${list}\n\nThe design direction is in DESIGN.md and design/directions.md if you need it.`;
   const req = { prompt, cwd: run.cwd, signal, onLog: () => {}, readOnly: true };
   const result = await (agent === "codex"
     ? runCodex(

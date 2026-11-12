@@ -28,6 +28,11 @@ When the task is the direction:
 3. Write `design/directions.md` with three directions that differ for real: light against dark, quiet against bold,
    editorial against product-led. For each one give:
    - a name;
+   - the world of the topic, before any target: the place, the materials, the objects, the light and the people this
+     product belongs to (a festival is posters, stage light and wristbands; a farm box is crates, soil, leaves and
+     morning markets; a furniture maker is grain, joints and the workshop). Everything below comes from it: the palette
+     is sampled from that world, the type has its character, the pictures show it, and the memorable element is one of
+     its objects. A target is chosen because it fits this world, never the other way round;
    - the main target shot (its file in `design/refs/` and its Dribbble link), plus the shot for every other kind of
      page;
    - the palette, as 4 to 6 hex values, each with its role;
@@ -39,7 +44,7 @@ When the task is the direction:
    - the hub screen of each kind of page as an ASCII wireframe;
    - the one memorable element.
 4. Check each direction against the two waves above. Change anything in it that is a default, not a choice. Then the
-   template test: put another product's name on the target. If it would fit just as well, it is a template, not a
+   template test: put another product's name on the target, and on your direction. If it would fit just as well, it is a template, not a
    design; pick a shot with a real idea of its own.
 5. In your report, present A, B and C in a few lines each with their Dribbble links, say which you recommend, and ask
    the person to pick. Build nothing.
