@@ -32,6 +32,58 @@
     return;
   }
   const post = (m) => window.parent.postMessage({ satgas: true, ...m }, "*");
+
+  // A board shows many of these pages at once, and each one animating would compete with the canvas for every frame.
+  // The canvas says how much this page may run: "live" while the person looks at it, "idle" otherwise (it pauses once
+  // nothing has changed for a moment, and wakes on any change so new content still animates in), "still" while the
+  // canvas pans, zooms or drags. Paused means no animation frames and no CSS animation; the page stays drawn.
+  const nativeRaf = window.requestAnimationFrame.bind(window);
+  const nativeCancel = window.cancelAnimationFrame.bind(window);
+  let mode = "live";
+  let paused = false;
+  let held = [];
+  let quietTimer = 0;
+  window.requestAnimationFrame = (cb) => {
+    if (!paused) return nativeRaf(cb);
+    held.push(cb);
+    return -held.length;
+  };
+  window.cancelAnimationFrame = (id) => {
+    if (id < 0) held[-id - 1] = null;
+    else nativeCancel(id);
+  };
+  const freezeCss = document.createElement("style");
+  freezeCss.setAttribute("data-satgas-ui", "");
+  freezeCss.textContent = "*,*::before,*::after{animation-play-state:paused!important;transition:none!important}";
+  const setPaused = (on) => {
+    if (on === paused) return;
+    paused = on;
+    if (on) (document.head || document.documentElement).appendChild(freezeCss);
+    else {
+      freezeCss.remove();
+      const run = held;
+      held = [];
+      for (const cb of run) if (cb) nativeRaf(cb);
+    }
+  };
+  const settle = () => {
+    clearTimeout(quietTimer);
+    if (mode === "live") return setPaused(false);
+    if (mode === "still") return setPaused(true);
+    setPaused(false);
+    quietTimer = setTimeout(() => mode === "idle" && setPaused(true), 2500);
+  };
+  // Satgas's own outlines and the freeze style are not the page changing.
+  const ours = (n) => n instanceof Element && n.closest("[data-satgas-ui]");
+  const pageChanged = (r) => {
+    const target = r.target.nodeType === 1 ? r.target : r.target.parentElement;
+    if (ours(target)) return false;
+    const nodes = [...r.addedNodes, ...r.removedNodes];
+    return !nodes.length || nodes.some((n) => !(n instanceof Element && n.hasAttribute("data-satgas-ui")));
+  };
+  new MutationObserver((list) => {
+    if (mode === "idle" && list.some(pageChanged)) settle();
+  }).observe(document.documentElement, { childList: true, subtree: true, characterData: true });
   let picking = false;
   let hovered = null;
   let picked = null;
@@ -276,7 +328,14 @@
   addEventListener("message", (e) => {
     const m = e.data;
     if (e.source !== window.parent || !m || m.satgas !== true) return;
-    if (m.type === "screen") {
+    if (m.type === "run") {
+      if (m.mode === "live" || m.mode === "idle" || m.mode === "still") {
+        const was = mode;
+        mode = m.mode;
+        // Coming back from a pan into idle waits the full quiet time again rather than staying frozen.
+        if (mode !== was) settle();
+      }
+    } else if (m.type === "screen") {
       screenH = Number(m.h) || 0;
       document.documentElement.style.overflowY = screenH ? "hidden" : "";
       lastH = 0;

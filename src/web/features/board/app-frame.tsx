@@ -21,7 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { t } from "@/i18n";
 import { cn } from "@/lib/utils";
-import { dropFrame, type FileBox, setFrameLayout, useFrames } from "@/stores/frames";
+import { dropFrame, type FileBox, setFrameLayout, useCanvasMoving, useFrames } from "@/stores/frames";
 import { closeInspect, type PickedEl, pickElement, setPicking, useInspect } from "@/stores/inspect";
 import { useRuns } from "@/stores/runs";
 import { type Card, DEVICES, type Device } from "../../../shared/board";
@@ -107,6 +107,14 @@ export function AppBody({ card, interactive }: { card: Card; interactive: boolea
   }, [runId, card.id, name, send]);
 
   useEffect(() => send({ type: "mode", pick: picking }), [picking, send]);
+  // How much the page may run: fully while the person looks at it, paused once quiet otherwise, frozen while the canvas
+  // moves. A board of many live pages is otherwise many apps animating against the canvas on every frame.
+  const moving = useCanvasMoving((s) => s.moving);
+  const [hovered, setHovered] = useState(false);
+  const runMode = moving ? "still" : hovered || interactive || picking ? "live" : "idle";
+  const runRef = useRef(runMode);
+  runRef.current = runMode;
+  useEffect(() => send({ type: "run", mode: runMode }), [runMode, send]);
   useEffect(() => send({ type: "screen", h: SCREEN_H[device] }), [device, send]);
   // The frame is as tall as the whole page, the way a design file shows a screen, so nobody scrolls inside it.
   const scale = useFrames((s) => s[card.id]?.scale);
@@ -182,7 +190,7 @@ export function AppBody({ card, interactive }: { card: Card; interactive: boolea
   // A phone-width frame keeps the address, inspect and screen size; the rest lives on the wider frames and the menu.
   const narrow = card.w < 640;
   return (
-    <div className="flex size-full flex-col">
+    <div className="flex size-full flex-col" onPointerEnter={() => setHovered(true)} onPointerLeave={() => setHovered(false)}>
       <div className="card-handle flex h-8 shrink-0 items-center gap-1 border-b bg-muted/40 px-1.5">
         <span
           aria-hidden="true"
@@ -276,6 +284,7 @@ export function AppBody({ card, interactive }: { card: Card; interactive: boolea
           w={card.w}
           h={card.h}
           onLoad={() => {
+            send({ type: "run", mode: runRef.current });
             send({ type: "screen", h: SCREEN_H[device] });
             send({ type: "mode", pick: useInspect.getState().picking === card.id });
           }}

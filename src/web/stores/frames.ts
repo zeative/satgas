@@ -33,3 +33,9 @@ export function dropFrame(cardId: string) {
   const { [cardId]: _, ...rest } = useFrames.getState();
   useFrames.setState(rest, true);
 }
+
+// While the canvas pans, zooms or drags, the live pages on it hold still, so every frame goes to the canvas.
+export const useCanvasMoving = create<{ moving: boolean }>(() => ({ moving: false }));
+export function setCanvasMoving(moving: boolean) {
+  if (useCanvasMoving.getState().moving !== moving) useCanvasMoving.setState({ moving });
+}

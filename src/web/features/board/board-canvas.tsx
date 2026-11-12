@@ -26,7 +26,7 @@ import { useCoarsePointer } from "@/hooks/use-mobile";
 import { isMac, t } from "@/i18n";
 import { isLiveRun } from "@/lib/actions";
 import { cn } from "@/lib/utils";
-import { useFrames } from "@/stores/frames";
+import { setCanvasMoving, useCanvasMoving, useFrames } from "@/stores/frames";
 import { usePanel } from "@/stores/panel";
 import { uploadImage, useRuns } from "@/stores/runs";
 import { setBoardSelection } from "@/stores/selection";
@@ -95,6 +95,8 @@ const PAN: Record<string, { x: number; y: number }> = {
 const EMPTY = emptyBoard();
 const SNAP: [number, number] = [24, 24];
 const MIN_ZOOM = 0.1;
+// Boards past this many cards render only what is on screen.
+const CULL_FROM = 60;
 const MAX_ZOOM = 4;
 // React Flow's own panOnScroll speed, so the drawing layers scroll like the board under them.
 const PAN_SPEED = 0.5;
@@ -207,6 +209,8 @@ function Canvas({ run, selectedTaskId, onSelectTask, panelOpen }: Props) {
   const history = useBoardHistory(run.id, board);
   const surface = useRef<HTMLElement>(null);
   const filePicker = useRef<HTMLInputElement>(null);
+  // Set on the element directly, so starting and stopping a pan never re-renders the canvas.
+  useEffect(() => useCanvasMoving.subscribe((s) => surface.current?.classList.toggle("satgas-moving", s.moving)), []);
 
   const [tool, setTool] = useState<Tool>("select");
   const [toolStyle, setToolStyle] = useState<ToolStyle>({
@@ -1385,10 +1389,14 @@ function Canvas({ run, selectedTaskId, onSelectTask, panelOpen }: Props) {
       const links = board.links.filter((l) => ids.has(l.source) && ids.has(l.target));
       if (cards.length) commit(cloneOps({ cards, links }, 0, 0, newId).ops);
     }
+    setCanvasMoving(true);
     onDragStart(picked);
   });
   const handleDrag = useEvent((_: unknown, __: unknown, picked: Node[]) => onDrag(picked));
-  const handleDragStop = useEvent((_: unknown, __: unknown, moved: Node[]) => onDragStop(moved));
+  const handleDragStop = useEvent((_: unknown, __: unknown, moved: Node[]) => {
+    setCanvasMoving(false);
+    onDragStop(moved);
+  });
   // React Flow listens for Delete on the whole document; only delete when the board itself has focus.
   const handleBeforeDelete = useEvent(
     async () => boardFocused(surface.current) && !document.querySelector("[role='dialog'], [role='alertdialog'], [role='menu']"),
@@ -1421,7 +1429,11 @@ function Canvas({ run, selectedTaskId, onSelectTask, panelOpen }: Props) {
     setSelectedLinks(new Set());
   });
   const handleFit = useEvent(() => void fit());
-  const handleMoveEnd = useEvent((_: unknown, view: { x: number; y: number; zoom: number }) => saveView(run.id, view));
+  const handleMoveStart = useEvent(() => setCanvasMoving(true));
+  const handleMoveEnd = useEvent((_: unknown, view: { x: number; y: number; zoom: number }) => {
+    setCanvasMoving(false);
+    saveView(run.id, view);
+  });
   const handleInsert = useEvent(insert);
   const handleImage = useEvent(() => filePicker.current?.click());
   const handleStroke = useEvent(saveStroke);
@@ -1514,12 +1526,15 @@ function Canvas({ run, selectedTaskId, onSelectTask, panelOpen }: Props) {
             edgeTypes={edgeTypes}
             colorMode={resolvedTheme}
             defaultViewport={firstView}
+            onMoveStart={handleMoveStart}
             onMoveEnd={handleMoveEnd}
             elevateNodesOnSelect={false}
             minZoom={MIN_ZOOM}
             maxZoom={MAX_ZOOM}
-            // Only what is on screen is in the DOM; an export briefly mounts everything.
-            onlyRenderVisibleElements={!exporting}
+            // Only what is on screen is in the DOM on a big board; an export briefly mounts everything. A small board, like
+            // an app's row of live pages, keeps every card mounted, since a page culled off screen reloads its whole app
+            // when it scrolls back in.
+            onlyRenderVisibleElements={!exporting && shown.length > CULL_FROM}
             snapToGrid={prefs.snap}
             snapGrid={SNAP}
             onNodesChange={onNodesChange}

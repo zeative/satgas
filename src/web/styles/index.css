@@ -429,6 +429,12 @@
 }
 
 /* Far zoom: heavy cards draw as quiet text lines in one element instead of their whole content. */
+/* While the canvas moves, its layer keeps the raster it has and is only scaled, instead of every live page being
+   redrawn at each zoom step; it sharpens again once the canvas settles. */
+.satgas-moving .react-flow__viewport {
+  will-change: transform;
+}
+
 .satgas-far-lines {
   background-image: repeating-linear-gradient(
     to bottom,
