@@ -6,9 +6,11 @@ import {
   appPath,
   cleanAppName,
   filesOutsideBase,
+  screensOf,
   serveApp,
   settleApps,
   shareApp,
+  showScreens,
   startApp,
   stopAllApps,
   stopApp,
@@ -180,3 +182,80 @@ test("an app that exits by itself still reports its own exit code", async () => 
   expect(getRun(runId)?.apps?.short?.status).toBe("failed");
   expect(getRun(runId)?.apps?.short?.error).toContain("code 3");
 }, 30_000);
+
+// The board shows an app the way a design file shows screens: one frame per listed page, and the first once at phone width.
+test("every page the app lists gets its own frame in one row, and a page added later joins the end", async () => {
+  const cwd = join(dir, "workspaces", "screens");
+  await mkdir(join(cwd, ".satgas"), { recursive: true });
+  await Bun.write(
+    join(cwd, ".satgas/screens.json"),
+    JSON.stringify([
+      { route: "/", name: "Beranda" },
+      { route: "booking", name: "Booking" },
+    ]),
+  );
+  const id = createRun("bikin web booking", cwd).id;
+  expect((await startApp(id, "web", SERVER, ".", "t1")).ok).toBe(true);
+  const frames = () => (getRun(id)?.board?.cards ?? []).filter((c) => c.app === "web");
+  expect(frames().map((c) => [c.title, c.route ?? "/", c.device ?? "desktop"])).toEqual([
+    ["Beranda", "/", "phone"],
+    ["Beranda", "/", "desktop"],
+    ["Booking", "/booking", "desktop"],
+  ]);
+  const [phone, home, booking] = frames();
+  expect(new Set(frames().map((c) => c.y)).size).toBe(1);
+  expect(home && phone && home.x).toBeGreaterThan((phone?.x ?? 0) + (phone?.w ?? 0));
+  expect(booking && home && booking.x).toBeGreaterThan((home?.x ?? 0) + (home?.w ?? 0));
+  // The page carries the bridge that lets its frame follow it and pick elements.
+  const html = (await (await serveApp(get(appPath(id, "web"), { "sec-fetch-dest": "document" }), noUpgrade, true))?.text()) ?? "";
+  expect(html).toContain("__satgas");
+  // Opened on its own, the page offers a way back to its board; inside a frame it does not.
+  expect(html).toContain("satgas-badge");
+  // The bridge is added on the way out, so the page is never cached or revalidated against the app's own copy.
+  const again = await serveApp(get(appPath(id, "web"), { "sec-fetch-dest": "document", "if-none-match": 'W/"old"' }), noUpgrade, true);
+  expect(again?.status).toBe(200);
+  expect(again?.headers.get("cache-control")).toBe("no-store");
+  expect(again?.headers.get("etag")).toBeNull();
+
+  await Bun.write(
+    join(cwd, ".satgas/screens.json"),
+    JSON.stringify([
+      { route: "/", name: "Beranda" },
+      { route: "/booking", name: "Booking" },
+      { route: "/admin", name: "Admin" },
+    ]),
+  );
+  await showScreens(id, "web", "t2");
+  expect(frames().map((c) => c.title)).toEqual(["Beranda", "Beranda", "Booking", "Admin"]);
+  const admin = frames()[3];
+  expect(admin?.x).toBeGreaterThan((booking?.x ?? 0) + (booking?.w ?? 0));
+  await stopApp(id, "web");
+});
+
+// A phone app is never stretched to desktop width: every page it lists is a phone frame.
+test("a phone app's pages are all phone frames, with no desktop copy", async () => {
+  const cwd = join(dir, "workspaces", "phone-screens");
+  await mkdir(join(cwd, ".satgas"), { recursive: true });
+  await Bun.write(
+    join(cwd, ".satgas/screens.json"),
+    JSON.stringify({
+      device: "phone",
+      screens: [
+        { route: "/", name: "Hari ini", target: "design/refs/ref-01/part-1.jpg" },
+        { route: "/latihan", name: "Latihan", target: "../secret.png" },
+      ],
+    }),
+  );
+  const id = createRun("bikin app olahraga", cwd).id;
+  expect((await startApp(id, "web", SERVER, ".", "t1")).ok).toBe(true);
+  const frames = () => (getRun(id)?.board?.cards ?? []).filter((c) => c.app === "web");
+  expect(frames().map((c) => [c.title, c.route ?? "/", c.device ?? "desktop"])).toEqual([
+    ["Hari ini", "/", "phone"],
+    ["Latihan", "/latihan", "phone"],
+  ]);
+  await showScreens(id, "web", "t2");
+  expect(frames()).toHaveLength(2);
+  // A page names the picture it was cloned from, and only a picture inside design/ counts.
+  expect((await screensOf(id, "web")).map((s) => s.target)).toEqual(["design/refs/ref-01/part-1.jpg", undefined]);
+  await stopApp(id, "web");
+});

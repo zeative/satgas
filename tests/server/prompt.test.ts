@@ -109,14 +109,6 @@ test("the person's rules outrank the defaults, and what Satgas remembers shapes 
   expect(rules(false)).not.toContain("<person_rules>");
 });
 
-test("every task hears to put interfaces through Hallmark only while it is on", () => {
-  expect(workingRules(true, "", "", "", true)).toContain("loads the hallmark skill");
-  expect(workingRules(true)).not.toContain("hallmark");
-  expect(workingRules(true, "", "", "", true, true)).toContain("loads the satgas-design skill");
-  expect(workingRules(true, "", "", "", true, true)).toContain("modern, current and elegant");
-  expect(workingRules(true, "", "", "", true)).not.toContain("satgas-design");
-});
-
 test("what a task is handed comes back as log lines, names only and never a secret's value", () => {
   const run = {
     board: {

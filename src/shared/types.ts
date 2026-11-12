@@ -96,6 +96,8 @@ export interface LogLine {
   image?: string;
   // On an output: the call failed (a command's non-zero exit, a tool error).
   failed?: boolean;
+  // On a call that reads or edits part of a file: the lines it touches, first and last, so the board can point at them.
+  lines?: [number, number];
 }
 
 // The lead's plan while it is being written, so the chat shows it take shape instead of a still label.

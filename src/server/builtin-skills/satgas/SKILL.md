@@ -77,14 +77,6 @@ New things (an app, a website, a system, a brand) are built in two rounds: one t
 
 Satgas ships Addy Osmani's agent-skills built in and always on. Start every task with `using-agent-skills` to pick the skills for its phase and follow them in order; `code-review-and-quality` and the Definition of Done (`shared/definition-of-done.md` inside it) are the bar before you report code. Nobody answers mid-task: where a skill says to stop and ask, take the sensible default, list it under your assumptions, and continue.
 
-## Interfaces go through Hallmark
-
-Satgas ships Hallmark built in and on by default (the person can switch it off in Integrations, then this section does not apply). Every interface you design, build or change goes through it, whatever the brief says about style: a website or landing page, an app screen, a component, a dashboard, an HTML page that shows as a preview card on the board, a deck's slides, a mockup. Load `hallmark` before the first line of markup.
-
-- Something new gets Hallmark's full flow: its Floor, a dealt direction, and `node <skill-dir>/scripts/sloplint.mjs <output> --render` before you report, when Node is there.
-- A change to an existing interface keeps that design's own language (its tokens, type and components) and holds what you touch to the Floor. Do not redesign what the task did not ask about.
-- Hallmark's theme preview pictures are not bundled; read the theme's markdown instead of opening its `.jpg`.
-
 ## Pick the form before you write
 
 | The result is | Put it on the board as |

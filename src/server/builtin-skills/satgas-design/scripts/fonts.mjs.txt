@@ -1,0 +1,98 @@
+#!/usr/bin/env node
+// Sets candidate typefaces with the product's own words, side by side in one picture (design/fonts.png), so a face is
+// chosen by looking at it and not by its name. Each family comes from Fontshare when it has it, else Google Fonts.
+//   node fonts.mjs "Clash Display" "Archivo:wdth=125" "Young Serif" [--text "Kopi enak, poin jalan"] [--out design]
+import { execFileSync } from "node:child_process";
+import { mkdirSync, writeFileSync } from "node:fs";
+import { join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
+
+const args = process.argv.slice(2);
+const opt = (f, d) => {
+  const i = args.indexOf(f);
+  return i >= 0 ? args[i + 1] : d;
+};
+const families = args.filter((a, i) => !a.startsWith("--") && !["--text", "--out"].includes(args[i - 1] ?? ""));
+if (!families.length) {
+  console.error('Usage: node fonts.mjs "Clash Display" "Satoshi" ... [--text "the product\'s headline"] [--out design]');
+  process.exit(1);
+}
+const text = opt("--text", "Setiap hari terasa lebih ringan");
+const out = resolve(opt("--out", "design"));
+mkdirSync(out, { recursive: true });
+
+const NEVER = /^(geist|inter|inter tight|roboto|open sans|lato|poppins|montserrat|dm sans|manrope|plus jakarta sans|outfit|figtree|nunito|space grotesk|jost|playfair display|instrument serif|fraunces|cormorant|dm serif display|eb garamond|lora|libre baskerville|newsreader|cinzel)$/i;
+const css = async (url) => {
+  const r = await fetch(url, { headers: { "user-agent": "Mozilla/5.0" }, signal: AbortSignal.timeout(20_000) }).catch(() => null);
+  const body = r?.ok ? await r.text() : "";
+  return body.includes("@font-face") ? url : null;
+};
+
+const links = [];
+const found = [];
+// "Archivo:wdth=125" asks for a width axis; only Google serves those, so such a face is fetched from there.
+for (const spec of families) {
+  const [family, axis] = spec.split(":");
+  const width = Number(/wdth=(\d+)/.exec(axis ?? "")?.[1]) || 0;
+  if (NEVER.test(family)) console.log(`${family}: on the never list in fonts.md; pick a face with more character.`);
+  const slug = family.toLowerCase().replace(/\s+/g, "-");
+  const fontshare = width ? null : await css(`https://api.fontshare.com/v2/css?f[]=${slug}@300,400,500,600,700,800,900&display=swap`);
+  // Google refuses an axis range wider than the family's own, so ranges are tried from widest to none.
+  let google = null;
+  const ranges = [
+    ...(width ? [":wdth,wght@62..125,100..900", ":wdth,wght@75..125,100..900", ":wdth,wght@75..100,100..900"] : []),
+    ":wght@100..900",
+    ":wght@200..800",
+    ":wght@300..800",
+    ":wght@400..700",
+    ":wght@400;700",
+    "",
+  ];
+  for (const range of fontshare ? [] : ranges) {
+    google = await css(`https://fonts.googleapis.com/css2?family=${family.replace(/\s+/g, "+")}${range}&display=swap`);
+    if (google) break;
+  }
+  const link = fontshare ?? google;
+  if (!link) {
+    console.log(`${family}: not on Fontshare or Google Fonts; check the name in fonts.md.`);
+    continue;
+  }
+  links.push(link);
+  found.push({ family, width, source: fontshare ? "Fontshare" : "Google Fonts", link });
+}
+if (!found.length) process.exit(1);
+
+const esc = (s) => s.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c]);
+const html = `<!doctype html><meta charset="utf-8">${links.map((l) => `<link rel="stylesheet" href="${l}">`).join("")}
+<style>body{margin:0;background:#f4f4f2;color:#141414;font:14px system-ui;padding:32px;display:grid;gap:20px}
+.f{background:#fff;border-radius:16px;padding:28px 32px}.n{font:500 13px system-ui;color:#777;margin-bottom:12px}
+.d{font-size:64px;line-height:1;letter-spacing:-.01em;margin-bottom:16px}.w{display:flex;gap:28px;align-items:baseline;margin-bottom:12px}
+.w span{font-size:30px}.b{font-size:17px;line-height:1.5;max-width:780px;color:#333}</style>
+${found
+  .map(
+    (f) => `<div class="f" style="font-family:'${f.family}'${f.width ? `;font-stretch:${f.width}%` : ""}"><div class="n">${esc(f.family)}${f.width ? ` at ${f.width}% width` : ""} · ${f.source}</div>
+<div class="d" style="font-weight:600">${esc(text)}</div>
+<div class="d" style="font-weight:800;font-size:44px">${esc(text)}</div>
+<div class="w"><span style="font-weight:300">Light</span><span style="font-weight:400">Regular</span><span style="font-weight:500">Medium</span><span style="font-weight:700">Bold</span><span style="font-weight:700">Rp 128.500 · 07:45</span></div>
+<div class="b">Teks isi di ukuran 17 px: pesan, ringkasan, dan label yang dibaca setiap hari. Angka 0123456789, huruf besar ABCDEFG.</div></div>`,
+  )
+  .join("")}`;
+const page = join(out, "fonts.html");
+writeFileSync(page, html);
+
+const session = `satgas-fonts-${process.pid}`;
+const ab = (...a) => execFileSync("agent-browser", ["--session", session, ...a], { encoding: "utf8", timeout: 90_000 });
+try {
+  ab("open", "about:blank");
+  ab("set", "viewport", "1200", String(80 + found.length * 300));
+  ab("open", pathToFileURL(page).href);
+  ab("wait", "2500");
+  ab("screenshot", "--full", join(out, "fonts.png"));
+} finally {
+  try {
+    ab("close");
+  } catch {}
+}
+console.log(`${join(out, "fonts.png")}
+${found.map((f) => `${f.family} (${f.source}): <link rel="stylesheet" href="${f.link}">`).join("\n")}
+Open the picture and choose by eye. Put the chosen links in index.html and the families in src/index.css.`);

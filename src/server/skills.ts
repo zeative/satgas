@@ -90,6 +90,9 @@ export async function loadSkills(): Promise<Index> {
 
 // Writes the built-in skills out from the copy inside Satgas, then rebuilds what the agents read. Runs at every start.
 export async function prepareSkills() {
+  // A built-in skill Satgas no longer ships leaves with the update, instead of staying on as a stray folder.
+  const gone = await readdir(builtinRoot()).catch(() => [] as string[]);
+  for (const name of gone) if (!Object.hasOwn(BUILTIN, name)) await rm(join(builtinRoot(), name), { recursive: true, force: true });
   for (const [name, files] of Object.entries(BUILTIN)) {
     const dir = join(builtinRoot(), name);
     await rm(dir, { recursive: true, force: true });

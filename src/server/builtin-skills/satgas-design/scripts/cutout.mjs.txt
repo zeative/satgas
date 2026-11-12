@@ -1,0 +1,57 @@
+#!/usr/bin/env node
+// Lifts the subject out of a photo onto a transparent background, trimmed to it: a product, a cup, a chair or a person
+// that can sit on a colour field or over type, the way featured shots place them. Runs rembg (MIT, isnet-general-use)
+// locally through uv; the first run downloads the model (about 170 MB), later ones take seconds.
+//   node cutout.mjs <photo> [more photos…] [--out public/images/cutout]
+import { execFileSync } from "node:child_process";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { basename, extname, join, resolve } from "node:path";
+
+const args = process.argv.slice(2);
+const at = args.indexOf("--out");
+const out = resolve(at >= 0 ? args[at + 1] : "public/images/cutout");
+const photos = args.filter((a, i) => !a.startsWith("--") && args[i - 1] !== "--out");
+if (!photos.length) {
+  console.error("Usage: node cutout.mjs <photo> [more photos…] [--out public/images/cutout]");
+  process.exit(1);
+}
+mkdirSync(out, { recursive: true });
+
+const py = `import sys
+from pathlib import Path
+from PIL import Image
+from rembg import new_session, remove
+session = new_session("isnet-general-use")
+out = Path(sys.argv[1])
+for src in sys.argv[2:]:
+    img = remove(Image.open(src).convert("RGB"), session=session)
+    alpha = img.getchannel("A").point(lambda a: 255 if a > 24 else 0)
+    box = alpha.getbbox()
+    if box:
+        pad = 8
+        img = img.crop((max(0, box[0] - pad), max(0, box[1] - pad), min(img.width, box[2] + pad), min(img.height, box[3] + pad)))
+    dest = out / (Path(src).stem + ".png")
+    img.save(dest, optimize=True)
+    print(f"{dest}  {img.width}x{img.height}")
+`;
+const dir = mkdtempSync(join(tmpdir(), "satgas-cutout-"));
+const script = join(dir, "cutout.py");
+writeFileSync(script, py);
+try {
+  const result = execFileSync(
+    "uv",
+    ["run", "--quiet", "--python", "3.12", "--with", "rembg[cpu]", "--with", "pillow", "python", script, out, ...photos.map((p) => resolve(p))],
+    { encoding: "utf8", timeout: 900_000, stdio: ["ignore", "pipe", "pipe"] },
+  );
+  process.stdout.write(result);
+  console.log(
+    `\nOpen each one on a colour before you use it: a cut that lost part of the subject or kept part of the room shows at once. Keep the source photo's credit in design/credits.md for the cut-out too.`,
+  );
+} catch (e) {
+  const why = String(e?.stderr || e?.message || e).slice(-600);
+  console.error(`Could not cut out ${photos.map((p) => basename(p, extname(p))).join(", ")}: ${why}\nThis needs uv (https://docs.astral.sh/uv/) and a network for the first model download.`);
+  process.exit(1);
+} finally {
+  rmSync(dir, { recursive: true, force: true });
+}

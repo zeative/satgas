@@ -26,6 +26,7 @@ import { useCoarsePointer } from "@/hooks/use-mobile";
 import { isMac, t } from "@/i18n";
 import { isLiveRun } from "@/lib/actions";
 import { cn } from "@/lib/utils";
+import { useFrames } from "@/stores/frames";
 import { usePanel } from "@/stores/panel";
 import { uploadImage, useRuns } from "@/stores/runs";
 import { setBoardSelection } from "@/stores/selection";
@@ -65,6 +66,7 @@ import { clearLanding, FOCUS_BOARD, pendingLanding } from "./focus";
 import { type Inset, unionRect, viewportFor, zoomAround } from "./frame";
 import { type Box, boundsOf, dragBox, type Guide, lockAngle, snapBox } from "./geometry";
 import { INBOX_ID, INBOX_W, InboxNode, type InboxNodeType, waiting } from "./inbox-node";
+import { Inspector } from "./inspector";
 import { modHeld } from "./keys";
 import { liveWork } from "./live";
 import { CursorNode, type CursorNodeType, SlotNode, type SlotNodeType } from "./live-nodes";
@@ -92,7 +94,7 @@ const PAN: Record<string, { x: number; y: number }> = {
 };
 const EMPTY = emptyBoard();
 const SNAP: [number, number] = [24, 24];
-const MIN_ZOOM = 0.2;
+const MIN_ZOOM = 0.1;
 const MAX_ZOOM = 4;
 // React Flow's own panOnScroll speed, so the drawing layers scroll like the board under them.
 const PAN_SPEED = 0.5;
@@ -107,7 +109,7 @@ const MAX_STROKE_POINTS = 8000;
 // The open side panel's width plus its margins, read when fitting so a resized panel never covers the board.
 const panelSpace = () => usePanel.getState().width + 48;
 const insetOf = (panelOpen: boolean): Inset => ({ top: 64, left: 72, bottom: 96, right: panelOpen ? panelSpace() : 48 });
-const FIT_MIN_ZOOM = 0.2;
+const FIT_MIN_ZOOM = 0.1;
 // A first visit opens close enough for cards to show their content instead of grey bars (see DETAIL_ZOOM).
 const OPEN_MIN_ZOOM = 0.5;
 const NO_SELECTION: ReadonlySet<string> = new Set();
@@ -390,7 +392,8 @@ function Canvas({ run, selectedTaskId, onSelectTask, panelOpen }: Props) {
       const erased = erasing.has(card.id);
       const size = measured[card.id];
       const maker = card.from ? taskById.get(card.from) : undefined;
-      const makerId = maker ? memberIdOf(maker) : undefined;
+      // A page of the app is the whole team's work, so its frame carries only the page's name.
+      const makerId = maker && !card.app ? memberIdOf(maker) : undefined;
       const makerName = makerId ? names.get(makerId) : undefined;
       return reuse(
         card.id,
@@ -444,7 +447,8 @@ function Canvas({ run, selectedTaskId, onSelectTask, panelOpen }: Props) {
   const flow = useMemo(() => flowLinks(run.nodes, board.cards), [run.nodes, board.cards]);
   // The team at work: where each running task's cards will land, and each teammate's pointer on what they touch now.
   const logs = useRuns((s) => s.logs);
-  const live = useMemo(() => (exporting ? { slots: [], cursors: [] } : liveWork(run, logs)), [run, logs, exporting]);
+  const layouts = useFrames();
+  const live = useMemo(() => (exporting ? { slots: [], cursors: [] } : liveWork(run, logs, layouts)), [run, logs, layouts, exporting]);
   const liveNodes = useMemo<BoardNode[]>(() => {
     const names = new Map(people.map((m) => [m.id, m.name]));
     const who = (task: NodeState) => {
@@ -473,7 +477,7 @@ function Canvas({ run, selectedTaskId, onSelectTask, panelOpen }: Props) {
                 id: `cursor:${c.task.id}`,
                 type: "cursor",
                 position: { x: c.x, y: c.y },
-                data: { who: w, now: c.now, typing: c.typing },
+                data: { who: w, now: c.now, typing: c.typing, area: c.area },
                 draggable: false,
                 selectable: false,
                 deletable: false,
@@ -1585,6 +1589,7 @@ function Canvas({ run, selectedTaskId, onSelectTask, panelOpen }: Props) {
               onStyle={handleStyle}
             />
             <ZoomPill onFit={handleFit} onZoom={zoomStep} shifted={panelOpen} />
+            <Inspector shifted={panelOpen} />
           </ReactFlow>
         </section>
       </FullDetail>

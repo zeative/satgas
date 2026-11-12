@@ -6,7 +6,7 @@
 
 **One request in. A task force out.**
 
-A self-hosted workspace where AI coding agents work as a team on a shared canvas.
+A self-hosted canvas where your Claude Code and Codex agents work as a team you can see.
 
 [![CI](https://github.com/zeative/satgas/actions/workflows/ci.yml/badge.svg)](https://github.com/zeative/satgas/actions/workflows/ci.yml)
 [![Version](https://img.shields.io/github/package-json/v/zeative/satgas?label=version)](package.json)
@@ -39,9 +39,13 @@ A self-hosted workspace where AI coding agents work as a team on a shared canvas
 
 ## Why Satgas
 
-A coding agent in a terminal is one long scroll, and running several at once means juggling windows. Satgas gives them one place to work. You say what you want, a lead hires the people the job needs and splits the work, and you watch each of them work on the board. What they make lands there too, as cards you can move, edit and build on.
+Four agent terminals open, and no idea which one is stuck, which one is done, or where the good output scrolled off to. Satgas puts them all in one place.
 
-The agents are the real [Claude Code](https://code.claude.com/docs) or [Codex](https://github.com/openai/codex) CLI, running on your machine or server, so the result is real files in a real folder. You pick one model, and Satgas uses whichever CLI serves it.
+- **See who is doing what.** You write one request. A lead picks the roles that request needs, splits the work, and each task shows who has it, what it waits on and how it is going.
+- **Keep what they make.** Results land on the board as cards: docs, tables, code and live previews of the pages they built. Move them, edit them, and build on them in the next request.
+- **Own the whole thing.** The agents are the real [Claude Code](https://code.claude.com/docs) or [Codex](https://github.com/openai/codex) CLI on your machine or server, so the result is real files in a real folder. Satgas is open source and runs where you put it.
+
+It is not only for code. The same team can research competitors, write a launch brief, or make a pitch deck.
 
 > _Satgas_ is Indonesian for _satuan tugas_, a task force.
 
@@ -68,6 +72,16 @@ flowchart LR
 2. **Plan.** The lead hires only the roles this request needs and plans up to 12 tasks, with who does what and what depends on what.
 3. **Work.** Tasks run as soon as what they depend on is done, three at a time by default. Each agent receives the reports it depends on. A failed task stops only its own branch.
 4. **Build on it.** Results land on the board. Send a follow-up and the same team picks it up with what it already knows.
+
+### Questions people ask
+
+**Can't I do this with tmux and git worktrees?** You can run the agents that way, and if it works for you, keep it. What Satgas adds is the whole job in one view: who waits on whom, and every output side by side as something you can edit.
+
+**Isn't a team of named agents just theater?** The names are there so you can tell who did what. The lead hires only what a request needs, and there is no fixed roster. Agents don't chat with each other by default. In one benchmark, letting them do so used 34% more input tokens and produced the same fix.
+
+**Who reviews all this?** You do, so Satgas keeps it small. A round holds at most 12 tasks, every task shows its diff and can be reverted on its own, and steps that are hard to undo can wait for your approval.
+
+**Does my code leave my machine?** Only what the agent CLIs send to the model provider you chose, and what goes through connectors or channels you turn on. Satgas itself calls GitHub for the update check, the star count and the skills you install. See [Security](#security).
 
 ## Features
 
@@ -277,9 +291,8 @@ Satgas ships these as built-in skills, each with its license beside it in `src/s
 
 - [agent-skills](https://github.com/addyosmani/agent-skills) by Addy Osmani (MIT)
 - [security-audit](https://github.com/cloudflare/security-audit-skill) by Cloudflare (MIT)
-- [Hallmark](https://github.com/Nutlope/hallmark) by Together AI (MIT)
 
-To update one, clone its repository and run `bun scripts/vendor-skills.ts <path to the clone> [agent-skills | security-audit | hallmark]`.
+To update one, clone its repository and run `bun scripts/vendor-skills.ts <path to the clone> [agent-skills | security-audit]`.
 
 Team avatars are [DiceBear Notionists](https://www.dicebear.com/styles/notionists/) (CC0).
 

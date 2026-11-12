@@ -94,7 +94,7 @@ import { MAIN_SESSION, sessionOf, sessionsOf } from "../../../shared/sessions";
 import type { SetupRecord } from "../../../shared/setup";
 import type { TeamAsk, TeamTalk } from "../../../shared/talk";
 import { crew, type Member, memberIdOf } from "../../../shared/team";
-import type { Aside, NodeState, PlanDraft, QueuedPrompt, RoundOrigin, Run } from "../../../shared/types";
+import type { Aside, LogLine, NodeState, PlanDraft, QueuedPrompt, RoundOrigin, Run } from "../../../shared/types";
 import { keyedSrc } from "../board/context";
 import { requestSnapshot } from "../board/export";
 import { MiniFace } from "../team/face";
@@ -111,7 +111,7 @@ import { AskedNote, QuestionComposer } from "./questions";
 import { type Round, roundsOf } from "./rounds";
 import { SessionBar, SessionEmpty, sessionTitle } from "./sessions";
 import { SetupLine } from "./setup-line";
-import { KIND_ICON, knownFromRefs, TokenField, TokenText, useTokenCatalog } from "./token-field";
+import { knownFromRefs, TokenField, TokenText, useTokenCatalog } from "./token-field";
 
 const MARK = { claude: ClaudeMark, codex: CodexMark };
 
@@ -319,7 +319,8 @@ export const ChatPanel = memo(function ChatPanel({ run, onOpenTask, onOpenReport
           data-cite
           // Both gutters kept, so the column lines up with the composer whether or not the thread scrolls.
           className={cn(
-            "flex min-h-0 flex-1 flex-col overflow-y-auto",
+            // Only up and down: a long word or address wraps, and tables or code scroll inside their own box.
+            "flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto",
             page ? "items-center px-6 pt-8 pb-8 [scrollbar-gutter:stable_both-edges]" : "px-3.5 py-4",
           )}
         >
@@ -409,6 +410,10 @@ function RoundView({
   const done = round.tasks.filter((n) => n.status === "done").length;
   const failed = round.tasks.find((n) => n.status === "failed");
   const started = run.startedAt ?? run.createdAt;
+  // The closing report is in the words of the task that wrote it, when one task did.
+  const finals = round.tasks.filter((n) => round.finals.has(n.id));
+  const writer = finals.length === 1 ? people.get(memberIdOf(finals[0] as NodeState)) : undefined;
+  const reporter: Who = writer ? { id: writer.id, name: writer.name, role: writer.role } : lead;
 
   return (
     <section className={cn("flex flex-col", page ? "gap-4" : "gap-3")}>
@@ -419,10 +424,12 @@ function RoundView({
       {round.asked && <AskedNote asked={round.asked} waiting={latest && run.status === "asking"} />}
       {/* What the lead already said about these words while the team was still on the round before. */}
       {run.replies?.[round.index]?.map((r) => (
-        <Report key={r} text={r} page={page} />
+        <Say key={r} who={lead}>
+          <Report text={r} page={page} />
+        </Say>
       ))}
 
-      <div className="flex flex-col gap-2.5 text-sm">
+      <div className="flex flex-col gap-3 text-sm">
         <LeadTrace round={round.index} planning={planning} cwd={run.cwd} />
         {planning ? (
           <LeadDraft
@@ -434,32 +441,24 @@ function RoundView({
         ) : (
           round.tasks.length > 0 && (
             <>
+              {/* The lead speaks first: what the team will do, and how far it got. */}
+              <Say who={lead}>
+                {latest && run.summary ? <p>{run.summary}</p> : null}
+                <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-xs text-muted-foreground tabular-nums">
+                  <span>{t.chat.planned(round.tasks.length)}</span>
+                  {latest && isLiveRun(run) && (
+                    <>
+                      <span aria-hidden="true">·</span>
+                      <span>{t.chat.progress(done, round.tasks.length)}</span>
+                      <span aria-hidden="true">·</span>
+                      <span>{fmtElapsed(now - started)}</span>
+                    </>
+                  )}
+                </p>
+              </Say>
               <LeadActions run={run} round={round.index} />
-              {/* One line for the plan: how big it is, how far along, and who joined for it. */}
-              <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground tabular-nums">
-                <span>{t.chat.planned(round.tasks.length)}</span>
-                {latest && isLiveRun(run) && (
-                  <>
-                    <span aria-hidden="true">·</span>
-                    <span>{t.chat.progress(done, round.tasks.length)}</span>
-                    <span aria-hidden="true">·</span>
-                    <span>{fmtElapsed(now - started)}</span>
-                  </>
-                )}
-                {hired.length > 0 && (
-                  <>
-                    <span aria-hidden="true">·</span>
-                    <span>{t.chat.hired}</span>
-                    {hired.map((m) => (
-                      <span key={m.id} className="inline-flex items-center gap-1.5" title={`${m.name} · ${m.role}`}>
-                        <MiniFace seed={m.id} className="size-4" />
-                        <span className="text-foreground">{m.name}</span>
-                      </span>
-                    ))}
-                  </>
-                )}
-              </p>
-              <TaskList round={round} people={people} onOpenTask={onOpenTask} cwd={run.cwd} />
+              {hired.length > 0 && <TeamStep hired={hired} />}
+              <Conversation round={round} people={people} onOpenTask={onOpenTask} cwd={run.cwd} />
             </>
           )
         )}
@@ -500,18 +499,24 @@ function RoundView({
           </p>
         )}
 
-        {round.answer && <Report text={round.answer} page={page} />}
-        {round.report && <Report text={round.report} page={page} onOpen={latest ? onOpenReport : undefined} />}
+        {round.answer && (
+          <Say who={lead}>
+            <Report text={round.answer} page={page} />
+          </Say>
+        )}
+        {round.report && (
+          <Say who={reporter}>
+            <Report text={round.report} page={page} onOpen={latest ? onOpenReport : undefined} />
+          </Say>
+        )}
 
         {!round.tasks.length && <LeadActions run={run} round={round.index} />}
-        {round.cards.length > 0 &&
-          (onOpenCanvas ? (
-            <Suspense fallback={<MadeList cards={round.cards} />}>
-              <CardPreviews run={run} cards={round.cards} onOpen={onOpenCanvas} />
-            </Suspense>
-          ) : (
-            <MadeList cards={round.cards} />
-          ))}
+        {/* Beside the board the cards are right there, so the chat lists none; Chat Only shows them in full. */}
+        {round.cards.length > 0 && onOpenCanvas && (
+          <Suspense fallback={null}>
+            <CardPreviews run={run} cards={round.cards} onOpen={onOpenCanvas} />
+          </Suspense>
+        )}
         <RoundFiles runId={run.id} cards={round.cards} tasks={round.tasks} />
       </div>
     </section>
@@ -520,53 +525,6 @@ function RoundView({
 
 // Card bodies bring the board's renderer along; only Chat Only shows them here, and only once a round has made cards.
 const CardPreviews = lazy(() => import("./card-previews").then((m) => ({ default: m.CardPreviews })));
-
-const TASKS_SHOWN = 8;
-
-// A long plan folds to its first few rows, and whatever is running, failed or waiting on the person stays out in the open.
-function TaskList({
-  round,
-  people,
-  onOpenTask,
-  cwd,
-}: {
-  round: Round;
-  people: Map<string, Member>;
-  onOpenTask: (id: string) => void;
-  cwd?: string;
-}) {
-  const [open, setOpen] = useState(false);
-  const urgent = (n: NodeState) => n.status === "running" || n.status === "failed" || !!n.held;
-  const folds = round.tasks.length > TASKS_SHOWN + 2;
-  const shown = folds && !open ? round.tasks.filter((n, i) => i < TASKS_SHOWN || urgent(n)) : round.tasks;
-  return (
-    <ul className="flex flex-col overflow-hidden rounded-xl border">
-      {shown.map((n) => (
-        <TaskRow
-          key={n.id}
-          task={n}
-          member={people.get(memberIdOf(n))}
-          isFinal={round.finals.has(n.id)}
-          onOpen={() => onOpenTask(n.id)}
-          cwd={cwd}
-        />
-      ))}
-      {folds && (
-        <li>
-          <button
-            type="button"
-            aria-expanded={open}
-            onClick={() => setOpen((v) => !v)}
-            className="flex h-9 w-full items-center gap-1.5 ps-3 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:bg-muted focus-visible:outline-none"
-          >
-            {open ? t.chat.showLess : t.chat.madeMore(round.tasks.length - shown.length)}
-            {open ? <ChevronUp className="size-3" aria-hidden="true" /> : <ChevronDown className="size-3" aria-hidden="true" />}
-          </button>
-        </li>
-      )}
-    </ul>
-  );
-}
 
 const AGENT_NAME = { claude: "Claude Code", codex: "Codex" } as const;
 
@@ -948,151 +906,286 @@ function RoundFiles({ runId, cards, tasks }: { runId: string; cards: Card[]; tas
   );
 }
 
-// What a round put on the board: one quiet row per card, icons in one column, the first few shown and the rest a click away.
-const MADE_SHOWN = 8;
-function MadeList({ cards }: { cards: Card[] }) {
-  const [open, setOpen] = useState(false);
-  // Folding away a single chip saves nothing.
-  const folds = cards.length > MADE_SHOWN + 1;
-  const shown = folds && !open ? cards.slice(0, MADE_SHOWN) : cards;
+// A task in the chat: its status and agent, and on demand what the agent said and did, folded like a coding chat.
+
+type Beat =
+  | { kind: "start" | "end"; t: number; task: NodeState; who: Who }
+  | { kind: "say"; t: number; who: Who; texts: string[] }
+  | { kind: "steps"; t: number; key: string; task: NodeState; who: Who; lines: LogLine[]; live: boolean };
+
+const BEATS_SHOWN = 40;
+
+const whoOf = (task: NodeState, people: Map<string, Member>): Who => {
+  const m = people.get(memberIdOf(task));
+  return m ? { id: m.id, name: m.name, role: m.role } : { id: task.agent, name: AGENT_NAME[task.agent] };
+};
+
+// The round as one conversation in the order it happened, across every task: who started what, what each said in
+// their own words, the steps they took between, folded, and who finished. A final task's closing words are the report.
+function beatsOf(round: Round, logs: Record<string, LogLine[]>, people: Map<string, Member>): Beat[] {
+  const out: Beat[] = [];
+  for (const task of round.tasks) {
+    const lines = logs[task.id] ?? [];
+    const start = task.startedAt ?? lines[0]?.t;
+    if (start === undefined) continue;
+    const who = whoOf(task, people);
+    const report = round.finals.has(task.id) ? task.output?.trim() : undefined;
+    out.push({ kind: "start", t: start, task, who });
+    let group: LogLine[] = [];
+    const flush = (live: boolean) => {
+      const first = group[0];
+      if (first) out.push({ kind: "steps", t: first.t, key: `${task.id}:${first.seq}`, task, who, lines: group, live });
+      group = [];
+    };
+    for (const l of lines) {
+      if (l.kind === "text") {
+        const text = stripBlocks(l.text).trim();
+        if (!text || (report && text === report)) continue;
+        flush(false);
+        out.push({ kind: "say", t: l.t, who, texts: [clip(text)] });
+      } else if (l.kind !== "think") group.push(l);
+    }
+    flush(task.status === "running");
+    if (task.status === "done" || task.status === "failed")
+      out.push({ kind: "end", t: Math.max(task.endedAt ?? 0, lines.at(-1)?.t ?? start), task, who });
+  }
+  out.sort((a, b) => a.t - b.t);
+  // One speaker saying several things in a row reads as one turn.
+  return out.reduce<Beat[]>((all, b) => {
+    const last = all.at(-1);
+    if (b.kind === "say" && last?.kind === "say" && last.who.id === b.who.id) last.texts.push(...b.texts);
+    else all.push(b.kind === "say" ? { ...b, texts: [...b.texts] } : b);
+    return all;
+  }, []);
+}
+
+function Conversation({
+  round,
+  people,
+  onOpenTask,
+  cwd,
+}: {
+  round: Round;
+  people: Map<string, Member>;
+  onOpenTask: (id: string) => void;
+  cwd?: string;
+}) {
+  const logs = useRuns((s) => s.logs);
+  const beats = useMemo(() => beatsOf(round, logs, people), [round, logs, people]);
+  const waiting = round.tasks.filter(
+    (n) => n.status === "pending" || (n.startedAt === undefined && !logs[n.id]?.length && n.status !== "done"),
+  );
+  const [all, setAll] = useState(false);
+  const hidden = all ? 0 : Math.max(0, beats.length - BEATS_SHOWN);
   return (
-    <div className="flex flex-col gap-1.5">
-      <p className="text-xs text-muted-foreground">
-        {t.chat.made} <span className="font-mono tabular-nums">{cards.length}</span>
-      </p>
-      {/* Small chips that wrap, several to a line; each zooms the board to its card. */}
-      <ul className="flex flex-wrap gap-1">
-        {shown.map((c) => {
-          const Icon = KIND_ICON[c.kind];
-          const label = chipLabel(c);
-          return (
-            <li key={c.id} className="min-w-0">
-              <button
-                type="button"
-                onClick={() => focusOnBoard(c.id)}
-                title={label}
-                className="flex h-6 max-w-48 items-center gap-1.5 rounded-md bg-muted px-2 text-xs transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-              >
-                <Icon className="size-3 shrink-0 text-muted-foreground" aria-hidden="true" />
-                <span className="truncate">{label}</span>
-              </button>
-            </li>
-          );
-        })}
-        {folds && (
-          <li>
-            <button
-              type="button"
-              onClick={() => setOpen((v) => !v)}
-              aria-expanded={open}
-              className="inline-flex h-6 items-center gap-1 rounded-md px-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-            >
-              {open ? t.chat.showLess : t.chat.madeMore(cards.length - MADE_SHOWN)}
-              {open ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />}
-            </button>
-          </li>
-        )}
-      </ul>
+    <div className="flex flex-col gap-3">
+      {hidden > 0 && (
+        <button
+          type="button"
+          onClick={() => setAll(true)}
+          className="flex h-7 w-fit items-center gap-1.5 rounded-md ps-[34px] text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
+        >
+          <ChevronUp className="size-3" aria-hidden="true" />
+          {t.actlog.earlier(hidden)}
+        </button>
+      )}
+      {beats.slice(hidden).map((b) =>
+        b.kind === "say" ? (
+          <Say key={`say:${b.t}:${b.who.id}`} who={b.who}>
+            <div className="flex flex-col gap-1.5">
+              {b.texts.map((text) => (
+                <p key={text} className="whitespace-pre-line">
+                  {text}
+                </p>
+              ))}
+            </div>
+          </Say>
+        ) : b.kind === "steps" ? (
+          <StepsBeat key={b.key} beat={b} cwd={cwd} />
+        ) : (
+          <TaskBeat key={`${b.kind}:${b.task.id}`} beat={b} onOpen={() => onOpenTask(b.task.id)} />
+        ),
+      )}
+      {waiting.map((n) => (
+        <TaskBeat key={`wait:${n.id}`} beat={{ kind: "start", t: 0, task: n, who: whoOf(n, people) }} onOpen={() => onOpenTask(n.id)} />
+      ))}
     </div>
   );
 }
 
-// Frames, stickies and text carry their name in the text itself, so the chip reads it instead of a bare kind.
-const NAMED_BY_TEXT = new Set<Card["kind"]>(["frame", "note", "text"]);
-function chipLabel(c: Card) {
-  const line = NAMED_BY_TEXT.has(c.kind) ? c.text?.trim().split("\n")[0] : undefined;
-  return c.title || line || kindName(c);
+// A task starting or finishing: one line, with a way into the task.
+function TaskBeat({ beat, onOpen }: { beat: Extract<Beat, { kind: "start" | "end" }>; onOpen: () => void }) {
+  const { task, who } = beat;
+  const end = beat.kind === "end";
+  const waiting = task.status === "pending";
+  const status: NodeState["status"] = end ? task.status : waiting ? "pending" : task.status === "running" ? "running" : "pending";
+  const label = end
+    ? task.status === "failed"
+      ? t.chat.failedTask(task.title)
+      : t.chat.finished(task.title)
+    : waiting
+      ? t.chat.waiting(task.title)
+      : t.chat.started(task.title);
+  return (
+    <div className="flex h-7 items-center gap-1">
+      <span className="flex w-6 shrink-0 justify-center">
+        <StatusIcon status={status} className="size-3.5" />
+      </span>
+      <span
+        className={cn(
+          "ms-1.5 min-w-0 flex-1 truncate text-xs text-muted-foreground",
+          !end && task.status === "running" && "satgas-shimmer",
+        )}
+      >
+        {label}
+      </span>
+      <span className="relative shrink-0" title={`${who.name}${who.role ? ` · ${who.role}` : ""} · ${AGENT_NAME[task.agent]}`}>
+        <MiniFace seed={who.id} className="size-4" />
+      </span>
+      <button
+        type="button"
+        onClick={onOpen}
+        aria-label={`${t.chat.openTask}: ${task.title}`}
+        title={t.chat.openTask}
+        className="flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
+      >
+        <ArrowUpRight className="size-3.5" />
+      </button>
+    </div>
+  );
 }
 
-// A task in the chat: its status and agent, and on demand what the agent said and did, folded like a coding chat.
-function TaskRow({
-  task,
-  member,
-  isFinal,
-  onOpen,
-  cwd,
-}: {
-  task: NodeState;
-  member?: Member;
-  isFinal: boolean;
-  onOpen: () => void;
-  cwd?: string;
-}) {
-  const Mark = MARK[task.agent];
-  const lines = useRuns((s) => s.logs[task.id]);
-  const live = task.status === "running";
-  // A working task shows what it is doing and folds when it is done, unless the person chose otherwise.
-  const [chosen, setChosen] = useState<boolean | null>(null);
-  const open = chosen ?? live;
-  // A final task's closing message is the report shown under the task list, so its timeline leaves it out.
-  const items = useMemo(() => {
-    const report = isFinal ? task.output?.trim() : undefined;
-    // Native-card blocks show up as cards, not as raw fences in the activity.
-    return timeline(lines ?? [])
-      .filter((i) => !(i.type === "text" && report && i.text === report))
-      .map((i) => (i.type === "text" ? { ...i, text: stripBlocks(i.text) } : i))
-      .filter((i) => i.type !== "text" || i.text);
-  }, [lines, task.output, isFinal]);
-  const summary = useMemo(
-    () =>
-      summarize(
-        items.flatMap((i) => (i.type === "group" ? i.acts : [])),
-        t.actlog,
-      ),
-    [items],
-  );
-
+// The steps a teammate took between two things they said, folded to a count and what they were.
+function StepsBeat({ beat, cwd }: { beat: Extract<Beat, { kind: "steps" }>; cwd?: string }) {
+  const [open, setOpen] = useState(false);
+  const items = useMemo(() => timeline(beat.lines), [beat.lines]);
+  const acts = useMemo(() => items.flatMap((i) => (i.type === "group" ? i.acts : [])), [items]);
+  const summary = useMemo(() => summarize(acts, t.actlog), [acts]);
+  if (!items.length) return null;
   return (
-    <li className="border-b last:border-b-0">
-      <div className="flex items-center">
+    <Step
+      status={beat.live ? "running" : "done"}
+      label={t.chat.steps(beat.who.name, acts.length)}
+      meta={summary}
+      live={beat.live}
+      who={beat.who}
+      badge={MARK[beat.task.agent]}
+      open={open}
+      onToggle={() => setOpen(!open)}
+    >
+      <ActivityRows items={items} live={beat.live} cwd={cwd} />
+    </Step>
+  );
+}
+
+const clip = (text: string, max = 280) => (text.length > max ? `${text.slice(0, max - 1).trimEnd()}…` : text);
+
+type Who = { id: string; name: string; role?: string };
+const lead: Who = { id: "Lead", name: t.team.lead, role: t.chat.leadRole };
+
+// One turn in the team's conversation: who speaks, with their face and role, and what they said.
+function Say({ who, children }: { who: Who; children: React.ReactNode }) {
+  return (
+    <div className="flex gap-2.5">
+      <MiniFace seed={who.id} className="mt-0.5 size-6 shrink-0" />
+      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+        <p className="truncate text-xs text-muted-foreground">
+          <span className="font-medium text-foreground">{who.name}</span>
+          {who.role ? ` · ${who.role}` : ""}
+        </p>
+        <div className="min-w-0 text-[13px] leading-5 [overflow-wrap:anywhere] text-foreground">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+// A step someone took, folded to one quiet line with its status, their face and a way into it; the details open under it.
+function Step({
+  status,
+  label,
+  meta,
+  live,
+  who,
+  badge: Badge,
+  title,
+  open,
+  onToggle,
+  onOpen,
+  openLabel,
+  children,
+}: {
+  status: NodeState["status"];
+  label: string;
+  meta?: string;
+  live?: boolean;
+  who: Who;
+  badge?: React.ComponentType<{ className?: string }>;
+  title?: string;
+  open: boolean;
+  onToggle: () => void;
+  onOpen?: () => void;
+  openLabel?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-col">
+      <div className="flex h-7 items-center gap-1">
         <button
           type="button"
           aria-expanded={open}
-          onClick={() => setChosen(!open)}
+          onClick={onToggle}
           title={open ? t.actlog.hide : t.actlog.show}
-          className="flex min-h-9 min-w-0 flex-1 items-center gap-2.5 py-1.5 ps-3 pe-2.5 text-start transition-colors hover:bg-muted focus-visible:bg-muted focus-visible:outline-none"
+          className="group flex h-7 min-w-0 flex-1 items-center gap-2.5 rounded-md text-start focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
         >
-          <StatusIcon status={task.status} />
-          <span className="min-w-0 flex-1">
-            <span className={cn("block truncate text-[13px]", live && "satgas-shimmer")}>{task.title}</span>
-            {!open && summary && <span className="block truncate text-[11px] text-muted-foreground">{summary}</span>}
+          <span className="flex w-6 shrink-0 justify-center">
+            <StatusIcon status={status} className="size-3.5" />
           </span>
-          {/* Who does it, with the agent that runs them as a badge, so the row carries one mark instead of a name and two logos. */}
-          <span
-            className="relative shrink-0"
-            title={member ? `${member.name} · ${member.role} · ${AGENT_NAME[task.agent]}` : AGENT_NAME[task.agent]}
+          <span className={cn("min-w-0 truncate text-xs text-muted-foreground group-hover:text-foreground", live && "satgas-shimmer")}>
+            {label}
+          </span>
+          {meta && <span className="min-w-0 flex-1 truncate text-[11px] text-muted-foreground/70">· {meta}</span>}
+          <span className="ms-auto flex shrink-0 items-center gap-1.5" title={title}>
+            <span className="relative">
+              <MiniFace seed={who.id} className="size-4" />
+              {Badge && (
+                <span className="absolute -end-1 -bottom-1 flex size-2.5 items-center justify-center rounded-full bg-background">
+                  <Badge className="size-2" />
+                </span>
+              )}
+            </span>
+            <ChevronRight className={cn("size-3.5 text-muted-foreground transition-transform", open && "rotate-90")} />
+          </span>
+        </button>
+        {onOpen && (
+          <button
+            type="button"
+            onClick={onOpen}
+            aria-label={openLabel}
+            title={t.chat.openTask}
+            className="flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
           >
-            {member ? <MiniFace seed={member.id} className="size-5" /> : <Mark className="size-4" />}
-            {member && (
-              <span className="absolute -end-1 -bottom-1 flex size-3 items-center justify-center rounded-full bg-background">
-                <Mark className="size-2.5" />
-              </span>
-            )}
-          </span>
-          <ChevronRight className={cn("size-3.5 shrink-0 text-muted-foreground transition-transform", open && "rotate-90")} />
-        </button>
-        <button
-          type="button"
-          onClick={onOpen}
-          aria-label={`${t.chat.openTask}: ${task.title}`}
-          title={t.chat.openTask}
-          className="flex size-9 shrink-0 items-center justify-center text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:bg-muted focus-visible:outline-none"
-        >
-          <ArrowUpRight className="size-3.5" />
-        </button>
+            <ArrowUpRight className="size-3.5" />
+          </button>
+        )}
       </div>
-      {open && (
-        <div className="flex flex-col gap-0.5 border-t px-3 py-1.5">
-          {items.length === 0 ? (
-            <p className={cn("py-1 text-xs text-muted-foreground", live && "satgas-shimmer")}>
-              {live ? t.plotting : task.status === "done" ? t.actlog.none : t.actlog.empty}
-            </p>
-          ) : (
-            <ActivityRows items={items} live={live} cwd={cwd} />
-          )}
-        </div>
-      )}
-    </li>
+      {open && <div className="ms-[34px] flex flex-col gap-0.5 pt-0.5 pb-1">{children}</div>}
+    </div>
+  );
+}
+
+// The lead putting the team together, folded: who joined and as what.
+function TeamStep({ hired }: { hired: Member[] }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <Step status="done" label={t.chat.formedTeam} who={lead} open={open} onToggle={() => setOpen(!open)}>
+      {hired.map((m) => (
+        <p key={m.id} className="flex h-6 items-center gap-2 text-xs">
+          <MiniFace seed={m.id} className="size-4" />
+          <span className="text-foreground">{m.name}</span>
+          <span className="truncate text-muted-foreground">· {m.role}</span>
+        </p>
+      ))}
+    </Step>
   );
 }
 

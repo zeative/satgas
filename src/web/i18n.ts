@@ -21,60 +21,40 @@ export const en = {
         prompt:
           "Build a landing page for {Kopi Senja, a small coffee roastery in Bandung}: what it sells, why people come back, three best sellers with prices, opening hours and one clear way to order. Write all the copy, and use believable sample details where you need them.",
       },
-      poster: {
-        name: "Poster",
+      store: {
+        name: "Online store",
         prompt:
-          "Make a portrait A3 poster for {Pasar Malam Rasa, a night food market on 14 December at Taman Kota}, saved as a PNG. The name, date and place must read from across a room.",
+          "Build an online store for {Batik Lestari, handmade batik from Solo}: a home page, a catalogue with filters, a product page and a cart with checkout. Use believable sample products with prices in rupiah.",
       },
-      social: {
-        name: "Social carousel",
+      booking: {
+        name: "Booking app",
         prompt:
-          "Make a 5-slide Instagram carousel for {a gym's 30-day program for beginners}: a hook on the first slide, one idea on each slide and a call to action on the last. Save each slide as a 1080x1350 PNG and write the caption.",
-      },
-      deck: {
-        name: "Pitch deck",
-        prompt:
-          "Make a 10-slide pitch deck for {Rute, an app that plans delivery routes for small couriers}, saved as a .pptx: problem, solution, product, market, business model, traction, team and the ask. Mark every sample number as sample.",
+          "Build a booking web app for {Cukur Rapi, a barbershop in Jogja}: a home page, services and prices, booking by service, date and time with taken slots blocked, and an admin page that lists the bookings. Keep the bookings in its own server.",
       },
       dashboard: {
-        name: "Dashboard",
+        name: "Admin dashboard",
         prompt:
-          "Build a sales dashboard for {an online shoe store} with 90 days of labelled sample data: revenue, orders, best sellers and the change against the month before, with a date filter. Run it so I can open it on the board.",
+          "Build an admin dashboard for {an online shoe store} with 90 days of labelled sample data: an overview with revenue, orders and the change against the month before, an orders page with search and filters, and a products page.",
       },
-      invitation: {
-        name: "Invitation",
+      saas: {
+        name: "SaaS app",
         prompt:
-          "Make a wedding invitation for {Rania and Dimas, 20 December at 10:00, Gedung Serbaguna Bogor}, saved as a 1080x1920 PNG ready to share on WhatsApp, with the date, the place and a short warm line.",
+          "Build a web app for {Rute, route planning for small courier teams}: sign-in, a dashboard of today's deliveries, a page to plan a route with its stops, and settings. Use believable sample data.",
       },
-      businessCard: {
-        name: "Business card",
+      portfolio: {
+        name: "Portfolio",
         prompt:
-          "Design a business card for {Maya Putri, interior designer at Studio Ruang, maya@studioruang.example, +62 812 0000 0000}: front and back at 90x55 mm, saved as a print-ready PDF and as PNGs.",
+          "Build a portfolio site for {Maya Putri, an interior designer in Jakarta}: a home page with her best work, a projects page, a project detail page and a contact page. Use sample projects I can replace.",
+      },
+      mobile: {
+        name: "Mobile web app",
+        prompt:
+          "Build a mobile-first web app for {tracking daily habits}: today's habits with a streak, adding a habit, a weekly summary and settings. It should feel like a native app on a phone.",
       },
       game: {
         name: "Browser game",
         prompt:
-          "Build a browser game: {a space courier dodging asteroids to deliver parcels on time}. It starts right away on the keyboard, gets harder as it goes, and keeps a score and a restart. Run it so I can play it on the board.",
-      },
-      cv: {
-        name: "CV",
-        prompt:
-          "Write a one-page CV for {Arif Nugroho, a product designer with 6 years of experience}, with sample work history I can replace, easy for recruitment software to read, saved as a PDF.",
-      },
-      research: {
-        name: "Competitor research",
-        prompt:
-          "Research the main competitors of {Notion for small teams}: pricing, main features, who each one suits and where each one is weak, with a source link for every fact. Put the comparison in a table on the board and end with what to do differently.",
-      },
-      certificate: {
-        name: "Certificate",
-        prompt:
-          "Make a certificate for {Best Speaker at the Campus Debate 2026, awarded to Salma Hakim}: A4 landscape with the organiser's name, the date and two signature lines, saved as a PDF and a PNG.",
-      },
-      budget: {
-        name: "Budget sheet",
-        prompt:
-          "Build a budget workbook for {a 3-day company offsite for 40 people}, saved as an .xlsx: categories, estimate against actual, totals and what is left, with working formulas and labelled sample figures.",
+          "Build a browser game: {a space courier dodging asteroids to deliver parcels on time}. It starts right away on the keyboard, gets harder as it goes, and keeps a score and a restart.",
       },
     },
   },
@@ -488,6 +468,13 @@ export const en = {
     disclaimer: "Agents can make mistakes. Check what they make.",
     planned: (n: number) => `${n} ${n === 1 ? "task" : "tasks"} planned`,
     hired: "hired",
+    leadRole: "Team lead",
+    formedTeam: "Lead put the team together",
+    started: (title: string) => `Started ${title}`,
+    finished: (title: string) => `Finished ${title}`,
+    failedTask: (title: string) => `${title} failed`,
+    waiting: (title: string) => `Up next: ${title}`,
+    steps: (name: string, n: number) => `${name} worked · ${n} ${n === 1 ? "step" : "steps"}`,
     scrollEnd: "Scroll to end",
     leadReading: "The lead is reading",
     queued: "Queued",
@@ -1088,6 +1075,53 @@ export const en = {
       copyLink: "Copy link",
       copied: "Link copied",
       failed: "Could not do that.",
+    },
+    browser: {
+      back: "Back",
+      forward: "Forward",
+      address: "Page address",
+      inspect: "Select an element",
+      device: "Screen size",
+      devices: { desktop: "Desktop", tablet: "Tablet", phone: "Phone" },
+      newFrame: "Open this page in a new frame",
+    },
+    inspect: {
+      label: "Element properties",
+      close: "Close",
+      layout: "Layout",
+      typography: "Text",
+      fill: "Fill",
+      stroke: "Stroke",
+      effects: "Effects",
+      content: "Content",
+      width: "Width",
+      height: "Height",
+      padX: "Horizontal padding",
+      padY: "Vertical padding",
+      gap: "Gap",
+      radius: "Corner radius",
+      font: "Font",
+      weight: "Weight",
+      size: "Size",
+      lineHeight: "Line height",
+      letterSpacing: "Letter spacing",
+      align: "Text align",
+      aligns: { left: "Left", center: "Center", right: "Right", justify: "Justify" },
+      color: "Text color",
+      background: "Background",
+      border: "Border width",
+      borderColor: "Border color",
+      opacity: "Opacity",
+      shadow: "Shadow",
+      shadows: { none: "None", sm: "Small", md: "Medium", lg: "Large", custom: "Custom" },
+      noColor: "None",
+      ask: "Describe a change",
+      askHint: "Make this the main action",
+      apply: "Apply",
+      reset: "Reset",
+      changes: (n: number) => (n === 1 ? "1 change" : `${n} changes`),
+      sent: "Sent to the team",
+      empty: "Pick an element in a frame to see its properties",
     },
     noteHint: "Double-click to write",
     uploadFailed: "Could not add the image.",
@@ -1704,62 +1738,42 @@ export const id: typeof en = {
       website: {
         name: "Landing page",
         prompt:
-          "Buatkan landing page untuk {Kopi Senja, roastery kopi kecil di Bandung}: apa yang dijual, kenapa orang balik lagi, tiga menu terlaris dengan harga, jam buka, dan satu cara pesan yang jelas. Tulis semua teksnya, dan pakai detail contoh yang masuk akal kalau perlu.",
+          "Bikin landing page untuk {Kopi Senja, roastery kopi kecil di Bandung}: apa yang dijual, kenapa orang balik lagi, tiga menu terlaris dengan harga, jam buka, dan satu cara pesan yang jelas. Tulis semua copy-nya, pakai detail contoh yang masuk akal kalau perlu.",
       },
-      poster: {
-        name: "Poster",
+      store: {
+        name: "Toko online",
         prompt:
-          "Buatkan poster A3 potret untuk {Pasar Malam Rasa, pasar kuliner malam 14 Desember di Taman Kota}, simpan sebagai PNG. Nama, tanggal, dan tempatnya harus terbaca dari seberang ruangan.",
+          "Bikin toko online untuk {Batik Lestari, batik tulis dari Solo}: halaman utama, katalog dengan filter, halaman produk, dan keranjang sampai checkout. Pakai contoh produk yang masuk akal dengan harga rupiah.",
       },
-      social: {
-        name: "Carousel sosmed",
+      booking: {
+        name: "Aplikasi booking",
         prompt:
-          "Buatkan carousel Instagram 5 slide untuk {program 30 hari untuk pemula di sebuah gym}: pemancing di slide pertama, satu ide di tiap slide, dan ajakan di slide terakhir. Simpan tiap slide sebagai PNG 1080x1350 dan tulis caption-nya.",
-      },
-      deck: {
-        name: "Pitch deck",
-        prompt:
-          "Buatkan pitch deck 10 slide untuk {Rute, aplikasi yang mengatur rute antar untuk kurir kecil}, simpan sebagai .pptx: masalah, solusi, produk, pasar, model bisnis, traksi, tim, dan permintaannya. Tandai setiap angka contoh sebagai contoh.",
+          "Bikin web app booking untuk {Cukur Rapi, barbershop di Jogja}: halaman utama, layanan dan harga, booking per layanan, tanggal dan jam dengan slot terisi yang tidak bisa dipilih, dan halaman admin untuk melihat booking. Booking disimpan di server-nya sendiri.",
       },
       dashboard: {
-        name: "Dashboard",
+        name: "Dashboard admin",
         prompt:
-          "Buatkan dashboard penjualan untuk {toko sepatu online} dengan data contoh 90 hari yang diberi label: pendapatan, pesanan, produk terlaris, dan perubahan dibanding bulan sebelumnya, plus filter tanggal. Jalankan supaya bisa kubuka di board.",
+          "Bikin dashboard admin untuk {toko sepatu online} dengan contoh data 90 hari yang diberi label: ringkasan omzet, pesanan, dan perubahan dibanding bulan lalu, halaman pesanan dengan pencarian dan filter, dan halaman produk.",
       },
-      invitation: {
-        name: "Undangan",
+      saas: {
+        name: "Aplikasi SaaS",
         prompt:
-          "Buatkan undangan pernikahan untuk {Rania dan Dimas, 20 Desember pukul 10.00, Gedung Serbaguna Bogor}, simpan sebagai PNG 1080x1920 yang siap dibagikan di WhatsApp, berisi tanggal, tempat, dan satu kalimat hangat.",
+          "Bikin web app untuk {Rute, perencana rute untuk tim kurir kecil}: masuk akun, dashboard pengiriman hari ini, halaman merencanakan rute dengan titik-titiknya, dan pengaturan. Pakai contoh data yang masuk akal.",
       },
-      businessCard: {
-        name: "Kartu nama",
+      portfolio: {
+        name: "Portofolio",
         prompt:
-          "Desain kartu nama untuk {Maya Putri, desainer interior di Studio Ruang, maya@studioruang.example, +62 812 0000 0000}: depan dan belakang ukuran 90x55 mm, simpan sebagai PDF siap cetak dan PNG.",
+          "Bikin situs portofolio untuk {Maya Putri, desainer interior di Jakarta}: beranda dengan karya terbaiknya, halaman proyek, detail proyek, dan halaman kontak. Pakai contoh proyek yang bisa saya ganti.",
+      },
+      mobile: {
+        name: "Web app HP",
+        prompt:
+          "Bikin web app yang dirancang untuk HP untuk {mencatat kebiasaan harian}: kebiasaan hari ini dengan streak, tambah kebiasaan, ringkasan mingguan, dan pengaturan. Rasanya harus seperti aplikasi native di HP.",
       },
       game: {
         name: "Game browser",
         prompt:
-          "Buatkan game browser: {kurir luar angkasa yang menghindari asteroid untuk mengantar paket tepat waktu}. Langsung main pakai keyboard, makin lama makin sulit, ada skor dan tombol main lagi. Jalankan supaya bisa kumainkan di board.",
-      },
-      cv: {
-        name: "CV",
-        prompt:
-          "Tuliskan CV satu halaman untuk {Arif Nugroho, product designer dengan pengalaman 6 tahun}, dengan riwayat kerja contoh yang bisa kuganti, mudah dibaca software rekrutmen, simpan sebagai PDF.",
-      },
-      research: {
-        name: "Riset pesaing",
-        prompt:
-          "Riset pesaing utama {Notion untuk tim kecil}: harga, fitur utama, cocok untuk siapa, dan kelemahan masing-masing, dengan tautan sumber untuk setiap fakta. Taruh perbandingannya dalam tabel di board dan akhiri dengan apa yang sebaiknya dilakukan berbeda.",
-      },
-      certificate: {
-        name: "Sertifikat",
-        prompt:
-          "Buatkan sertifikat untuk {Pembicara Terbaik Debat Kampus 2026, diberikan kepada Salma Hakim}: A4 lanskap dengan nama penyelenggara, tanggal, dan dua kolom tanda tangan, simpan sebagai PDF dan PNG.",
-      },
-      budget: {
-        name: "Anggaran",
-        prompt:
-          "Buatkan workbook anggaran untuk {outing kantor 3 hari untuk 40 orang}, simpan sebagai .xlsx: kategori, perkiraan dibanding realisasi, total, dan sisa, dengan rumus yang berfungsi dan angka contoh yang diberi label.",
+          "Bikin game browser: {kurir luar angkasa yang menghindari asteroid supaya paket sampai tepat waktu}. Langsung mulai pakai keyboard, makin lama makin susah, ada skor dan tombol ulang.",
       },
     },
   },
@@ -2172,6 +2186,13 @@ export const id: typeof en = {
     disclaimer: "Agen bisa keliru. Periksa hasil kerjanya.",
     planned: (n) => `${n} tugas direncanakan`,
     hired: "merekrut",
+    leadRole: "Ketua tim",
+    formedTeam: "Lead membentuk tim",
+    started: (title) => `Mulai: ${title}`,
+    finished: (title) => `Selesai: ${title}`,
+    failedTask: (title) => `Gagal: ${title}`,
+    waiting: (title) => `Berikutnya: ${title}`,
+    steps: (name, n) => `${name} bekerja · ${n} langkah`,
     scrollEnd: "Ke paling bawah",
     leadReading: "Lead sedang membaca",
     queued: "Antre",
@@ -2774,6 +2795,53 @@ export const id: typeof en = {
       copyLink: "Salin link",
       copied: "Link disalin",
       failed: "Tidak bisa melakukannya.",
+    },
+    browser: {
+      back: "Kembali",
+      forward: "Maju",
+      address: "Alamat halaman",
+      inspect: "Pilih elemen",
+      device: "Ukuran layar",
+      devices: { desktop: "Desktop", tablet: "Tablet", phone: "HP" },
+      newFrame: "Buka halaman ini di frame baru",
+    },
+    inspect: {
+      label: "Properti elemen",
+      close: "Tutup",
+      layout: "Tata letak",
+      typography: "Teks",
+      fill: "Isi",
+      stroke: "Garis",
+      effects: "Efek",
+      content: "Isi teks",
+      width: "Lebar",
+      height: "Tinggi",
+      padX: "Padding samping",
+      padY: "Padding atas-bawah",
+      gap: "Jarak",
+      radius: "Sudut",
+      font: "Font",
+      weight: "Ketebalan",
+      size: "Ukuran",
+      lineHeight: "Tinggi baris",
+      letterSpacing: "Jarak huruf",
+      align: "Rata teks",
+      aligns: { left: "Kiri", center: "Tengah", right: "Kanan", justify: "Rata" },
+      color: "Warna teks",
+      background: "Latar",
+      border: "Tebal garis",
+      borderColor: "Warna garis",
+      opacity: "Opasitas",
+      shadow: "Bayangan",
+      shadows: { none: "Tanpa", sm: "Kecil", md: "Sedang", lg: "Besar", custom: "Kustom" },
+      noColor: "Tanpa",
+      ask: "Tulis perubahan",
+      askHint: "Jadikan ini tombol utama",
+      apply: "Terapkan",
+      reset: "Batalkan",
+      changes: (n) => `${n} perubahan`,
+      sent: "Dikirim ke tim",
+      empty: "Pilih elemen di frame untuk melihat propertinya",
     },
     noteHint: "Klik dua kali untuk menulis",
     uploadFailed: "Gambar gagal ditambahkan.",

@@ -36,6 +36,98 @@ function Bar({ x, y, w, h = 2.5, fill = "#d4d4d8" }: { x: number; y: number; w: 
 const INK = "#18181b";
 
 const ART: Record<string, ReactNode> = {
+  store: (
+    <>
+      <Sheet x={22} y={14} w={60} h={62} tilt={-7} fill="#fda4af" />
+      <Sheet x={34} y={12} w={72} h={68} tilt={4}>
+        <path d="M0 3a3 3 0 0 1 3-3h66a3 3 0 0 1 3 3v5H0z" fill="#ececf1" />
+        <Bar x={5} y={12} w={22} h={3.5} fill={INK} />
+        <rect x={5} y={20} width={19} height={19} rx={2} fill="#fed7aa" />
+        <rect x={27} y={20} width={19} height={19} rx={2} fill="#bbf7d0" />
+        <rect x={49} y={20} width={18} height={19} rx={2} fill="#bfdbfe" />
+        <Bar x={5} y={42} w={14} />
+        <Bar x={27} y={42} w={14} />
+        <Bar x={49} y={42} w={13} />
+        <Bar x={5} y={47} w={9} fill={INK} />
+        <Bar x={27} y={47} w={9} fill={INK} />
+        <Bar x={49} y={47} w={9} fill={INK} />
+        <rect x={5} y={56} width={62} height={7} rx={3.5} fill={INK} />
+      </Sheet>
+    </>
+  ),
+  booking: (
+    <>
+      <Sheet x={22} y={14} w={60} h={62} tilt={-6} fill="#fcd34d" />
+      <Sheet x={34} y={12} w={72} h={68} tilt={4} fill="#18181b">
+        <Bar x={6} y={7} w={26} h={3.5} fill="#fafafa" />
+        {[0, 1, 2, 3, 4, 5, 6].map((i) => (
+          <rect key={`d${i}`} x={6 + i * 9} y={16} width={7} height={7} rx={1.5} fill={i === 3 ? "#f59e0b" : "#3f3f46"} />
+        ))}
+        {[0, 1, 2].map((r) =>
+          [0, 1, 2].map((c) => (
+            <rect
+              key={`t${r}${c}`}
+              x={6 + c * 21}
+              y={30 + r * 10}
+              width={18}
+              height={7}
+              rx={2}
+              fill={r === 1 && c === 1 ? "#f59e0b" : r === 0 && c === 2 ? "#27272a" : "#3f3f46"}
+            />
+          )),
+        )}
+        <rect x={6} y={60} width={60} height={6} rx={3} fill="#fafafa" />
+      </Sheet>
+    </>
+  ),
+  saas: (
+    <>
+      <Sheet x={20} y={16} w={62} h={58} tilt={-7} fill="#93c5fd" />
+      <Sheet x={30} y={12} w={78} h={66} tilt={3}>
+        <path d="M0 3a3 3 0 0 1 3-3h20v66H3a3 3 0 0 1-3-3z" fill="#f4f4f5" />
+        <rect x={4} y={5} width={8} height={8} rx={2} fill={INK} />
+        <Bar x={4} y={18} w={15} />
+        <Bar x={4} y={24} w={12} fill={INK} />
+        <Bar x={4} y={30} w={14} />
+        <Bar x={4} y={36} w={11} />
+        <Bar x={28} y={7} w={26} h={3.5} fill={INK} />
+        <rect x={28} y={16} width={44} height={22} rx={2} fill="#eff6ff" />
+        <path d="M30 34l8-6 7 3 8-8 8 4 9-7" stroke="#2563eb" strokeWidth={1.4} fill="none" />
+        <rect x={28} y={42} width={44} height={5} rx={1} fill="#f4f4f5" />
+        <rect x={28} y={50} width={44} height={5} rx={1} fill="#f4f4f5" />
+        <rect x={28} y={58} width={44} height={5} rx={1} fill="#f4f4f5" />
+      </Sheet>
+    </>
+  ),
+  portfolio: (
+    <>
+      <Sheet x={22} y={14} w={60} h={62} tilt={-7} fill="#86efac" />
+      <Sheet x={34} y={12} w={72} h={68} tilt={4} fill="#fafaf9">
+        <Bar x={5} y={7} w={30} h={4} fill={INK} />
+        <Bar x={5} y={14} w={44} />
+        <rect x={5} y={22} width={38} height={26} rx={2} fill="url(#art-dusk)" />
+        <rect x={46} y={22} width={21} height={12} rx={2} fill="#d6d3d1" />
+        <rect x={46} y={36} width={21} height={12} rx={2} fill="#a8a29e" />
+        <rect x={5} y={51} width={21} height={13} rx={2} fill="#78716c" />
+        <rect x={29} y={51} width={38} height={13} rx={2} fill="#e7e5e4" />
+      </Sheet>
+    </>
+  ),
+  mobile: (
+    <>
+      <Sheet x={30} y={12} w={36} h={66} tilt={-9} fill="#c4b5fd" r={7} />
+      <Sheet x={50} y={8} w={38} h={70} tilt={5} fill="#18181b" r={7}>
+        <rect x={3} y={3} width={32} height={64} rx={5} fill="#fafafa" />
+        <rect x={14} y={5} width={10} height={2.5} rx={1.25} fill="#18181b" />
+        <Bar x={7} y={12} w={16} h={3.5} fill={INK} />
+        <circle cx={19} cy={30} r={10} fill="none" stroke="#e4e4e7" strokeWidth={3} />
+        <path d="M19 20a10 10 0 0 1 9.5 13" fill="none" stroke="#8b5cf6" strokeWidth={3} strokeLinecap="round" />
+        <rect x={7} y={45} width={24} height={5} rx={2} fill="#f4f4f5" />
+        <rect x={7} y={52} width={24} height={5} rx={2} fill="#f4f4f5" />
+        <rect x={7} y={59} width={24} height={5} rx={2.5} fill="#8b5cf6" />
+      </Sheet>
+    </>
+  ),
   website: (
     <>
       <Sheet x={22} y={12} w={60} h={66} tilt={-7} fill="#a78bfa" />
@@ -83,153 +175,6 @@ const ART: Record<string, ReactNode> = {
         <rect x={40} y={50} width={11} height={7} rx={2} fill="#ef4444" />
         <rect x={42} y={47} width={7} height={4} rx={1.5} fill="#fecaca" />
         <Bar x={8} y={8} w={15} h={3} fill="#fafafa" />
-      </Sheet>
-    </>
-  ),
-  poster: (
-    <>
-      <Sheet x={30} y={10} w={50} h={72} tilt={-8} fill="#a78bfa" />
-      <Sheet x={46} y={8} w={54} h={76} tilt={5} fill="#fef3c7" r={2}>
-        <circle cx={27} cy={25} r={17} fill="#ef4444" />
-        <circle cx={35} cy={18} r={8} fill="#fbbf24" />
-        <rect y={44} width={54} height={8} fill={INK} />
-        <Bar x={5} y={56} w={38} h={5} fill={INK} />
-        <Bar x={5} y={64} w={26} h={3} fill="#a16207" />
-      </Sheet>
-    </>
-  ),
-  deck: (
-    <>
-      <Sheet x={30} y={10} w={72} h={46} tilt={-7} fill="#c4b5fd" />
-      <Sheet x={28} y={20} w={78} h={50} tilt={-1} fill="#4f46e5">
-        <Bar x={7} y={9} w={32} h={5} fill="#fff" />
-        <Bar x={7} y={19} w={26} fill="#c7d2fe" />
-        <Bar x={7} y={25} w={30} fill="#c7d2fe" />
-        <Bar x={7} y={31} w={20} fill="#c7d2fe" />
-        <circle cx={58} cy={25} r={11} fill="none" stroke="#818cf8" strokeWidth={6} />
-        <circle cx={58} cy={25} r={11} fill="none" stroke="#fbbf24" strokeWidth={6} strokeDasharray="42 70" transform="rotate(-90 58 25)" />
-      </Sheet>
-    </>
-  ),
-  research: (
-    <>
-      <Sheet x={26} y={14} w={60} h={64} tilt={-7} fill="#a3e635" />
-      <Sheet x={36} y={12} w={72} h={72} tilt={3}>
-        <path d="M0 3a3 3 0 0 1 3-3h66a3 3 0 0 1 3 3v9H0z" fill={INK} />
-        <Bar x={25} y={5} w={12} fill="#fff" />
-        <Bar x={43} y={5} w={12} fill="#fff" />
-        <Bar x={58} y={5} w={10} fill="#fff" />
-        {[17, 30, 43, 56].map((y, i) => (
-          <g key={y}>
-            <Bar x={5} y={y} w={14} fill="#71717a" />
-            <circle cx={31} cy={y + 1} r={3.5} fill={i % 3 === 2 ? "#fecaca" : "#bbf7d0"} />
-            <circle cx={49} cy={y + 1} r={3.5} fill={i % 2 ? "#bbf7d0" : "#fecaca"} />
-            <circle cx={63} cy={y + 1} r={3.5} fill={i === 0 ? "#fecaca" : "#bbf7d0"} />
-            <path d={`M0 ${y + 9}h72`} stroke="#f4f4f5" />
-          </g>
-        ))}
-      </Sheet>
-    </>
-  ),
-  invitation: (
-    <>
-      <Sheet x={46} y={6} w={46} h={60} tilt={3} fill="#fffbeb">
-        <path d="M23 18c-3-5-10-2-8 3 1 3 5 6 8 8 3-2 7-5 8-8 2-5-5-8-8-3z" fill="#e11d48" />
-        <Bar x={10} y={34} w={26} h={3} fill="#9f1239" />
-        <Bar x={14} y={40} w={18} fill="#d6a4ae" />
-      </Sheet>
-      <g transform="rotate(-4 68 66)">
-        <rect x={32} y={45} width={74} height={44} rx={3} fill="#fb7185" />
-        <path d="M32 47l37 22 37-22v42H32z" fill="#f43f5e" />
-        <path d="M32 89l27-27m47 27L79 62" stroke="#be123c" strokeOpacity={0.4} />
-      </g>
-    </>
-  ),
-  businessCard: (
-    <>
-      <Sheet x={30} y={14} w={70} h={42} tilt={-9} fill="#18181b">
-        <rect x={7} y={7} width={11} height={11} rx={2} fill="#fbbf24" />
-        <Bar x={7} y={26} w={30} fill="#a1a1aa" />
-      </Sheet>
-      <Sheet x={36} y={36} w={72} h={44} tilt={5} fill="#fef9ec">
-        <rect x={7} y={8} width={11} height={11} rx={5.5} fill="#ca8a04" />
-        <Bar x={7} y={25} w={36} h={4} fill={INK} />
-        <Bar x={7} y={33} w={24} fill="#a8a29e" />
-      </Sheet>
-    </>
-  ),
-  cv: (
-    <>
-      <Sheet x={28} y={14} w={54} h={70} tilt={-8} fill="#5eead4" />
-      <Sheet x={44} y={8} w={58} h={78} tilt={4}>
-        <path d="M0 3a3 3 0 0 1 3-3h17v78H3a3 3 0 0 1-3-3z" fill="#0f766e" />
-        <circle cx={10} cy={12} r={6} fill="#fcd34d" />
-        <path d="M4 22a6 6 0 0 1 12 0z" fill="#fcd34d" />
-        <Bar x={4} y={30} w={12} fill="#99f6e4" />
-        <Bar x={4} y={36} w={9} fill="#99f6e4" />
-        <Bar x={4} y={42} w={11} fill="#99f6e4" />
-        <Bar x={25} y={7} w={26} h={4} fill={INK} />
-        <Bar x={25} y={15} w={18} />
-        <Bar x={25} y={26} w={14} h={3} fill="#0f766e" />
-        <Bar x={25} y={33} w={28} />
-        <Bar x={25} y={39} w={24} />
-        <Bar x={25} y={50} w={14} h={3} fill="#0f766e" />
-        <Bar x={25} y={57} w={28} />
-        <Bar x={25} y={63} w={20} />
-      </Sheet>
-    </>
-  ),
-  certificate: (
-    <>
-      <Sheet x={36} y={8} w={70} h={48} tilt={-8} fill="#fde68a" />
-      <Sheet x={28} y={20} w={80} h={56} tilt={2} fill="#fffdf5">
-        <rect x={3} y={3} width={74} height={50} rx={1.5} fill="none" stroke="#b45309" strokeWidth={1} />
-        <Bar x={22} y={11} w={36} h={4} fill={INK} />
-        <Bar x={16} y={20} w={48} fill="#a8a29e" />
-        <Bar x={24} y={26} w={32} fill="#a8a29e" />
-        <path d="M34 41l-3 11 6-3 6 3-3-11z" fill="#1d4ed8" />
-        <circle cx={37} cy={38} r={7} fill="#f59e0b" />
-        <circle cx={37} cy={38} r={4} fill="#fde68a" />
-      </Sheet>
-    </>
-  ),
-  social: (
-    <>
-      <Sheet x={24} y={22} w={44} h={52} tilt={-9} fill="#fde047">
-        <Bar x={6} y={8} w={26} h={5} fill={INK} />
-        <Bar x={6} y={17} w={20} h={5} fill={INK} />
-      </Sheet>
-      <Sheet x={68} y={18} w={44} h={52} tilt={9} fill="#38bdf8">
-        <circle cx={22} cy={22} r={11} fill="#fff" />
-      </Sheet>
-      <Sheet x={44} y={14} w={46} h={58} tilt={1} r={4} fill="url(#art-rose)">
-        <path d="M23 21c-3-5-10-2-8 3 1 3 5 6 8 8 3-2 7-5 8-8 2-5-5-8-8-3z" fill="#fff" />
-        <Bar x={9} y={40} w={28} h={3} fill="#fff" />
-        <circle cx={18} cy={50} r={1.3} fill="#fff" />
-        <circle cx={23} cy={50} r={1.3} fill="#fff" opacity={0.5} />
-        <circle cx={28} cy={50} r={1.3} fill="#fff" opacity={0.5} />
-      </Sheet>
-    </>
-  ),
-  budget: (
-    <>
-      <Sheet x={26} y={14} w={60} h={62} tilt={-7} fill="#86efac" />
-      <Sheet x={34} y={12} w={74} h={70} tilt={3}>
-        <path d="M0 3a3 3 0 0 1 3-3h68a3 3 0 0 1 3 3v10H0z" fill="#15803d" />
-        <Bar x={5} y={5} w={18} fill="#fff" />
-        <Bar x={33} y={5} w={12} fill="#fff" />
-        <Bar x={55} y={5} w={12} fill="#fff" />
-        {[18, 28, 38].map((y) => (
-          <g key={y}>
-            <Bar x={5} y={y} w={20} fill="#71717a" />
-            <Bar x={33} y={y} w={14} />
-            <Bar x={55} y={y} w={14} />
-          </g>
-        ))}
-        <path d="M0 24h74M0 34h74M0 44h74M29 13v44M51 13v44" stroke="#e4e4e7" strokeWidth={0.75} />
-        <rect y={46} width={74} height={11} fill="#dcfce7" />
-        <Bar x={5} y={50} w={14} h={3} fill="#15803d" />
-        <Bar x={55} y={50} w={14} h={3} fill="#15803d" />
       </Sheet>
     </>
   ),

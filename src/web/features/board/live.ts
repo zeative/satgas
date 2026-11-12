@@ -2,6 +2,7 @@ import type { Card } from "../../../shared/board";
 import { flowSources } from "../../../shared/flow";
 import { placeInFlow } from "../../../shared/placement";
 import type { LogLine, NodeState, Run } from "../../../shared/types";
+import type { Box, FileBox, FrameLayout } from "../../stores/frames";
 import { type ActKind, classify } from "../missions/activity";
 import { type Tail, tailOf } from "../team/tail";
 
@@ -40,21 +41,49 @@ export interface Cursor {
   now: Tail | null;
   // Writing a file this moment, rather than reading or running something.
   typing: boolean;
+  // On a live page: the part it works on, relative to the pointer, drawn as its selection the way Figma shows a collaborator's.
+  area?: Box;
 }
 
 const base = (p: string) => p.split(/[\\/]/).filter(Boolean).at(-1) ?? p;
 
 // The newest step that says what the task is doing, and the file it touches when it reads or writes one.
-function latest(lines: LogLine[] | undefined): { now: Tail | null; file: string | null; typing: boolean } {
+function latest(lines: LogLine[] | undefined): { now: Tail | null; file: string | null; typing: boolean; span?: [number, number] } {
   for (let i = (lines?.length ?? 0) - 1; i >= 0; i--) {
     const line = lines?.[i];
     const now = line ? tailOf(line) : null;
     if (!line || !now) continue;
     const act = line.kind === "tool" ? classify(line.text) : null;
     const file = act && (act.kind === "edit" || act.kind === "read" || act.kind === "image") && act.detail ? act.detail : null;
-    return { now, file, typing: act?.kind === "edit" };
+    return { now, file, typing: act?.kind === "edit", span: line.lines };
   }
   return { now: null, file: null, typing: false };
+}
+
+// A shell command that writes a source file (a heredoc into it, sed in place, tee), or reads one: agents often do this
+// instead of using their file tools, and the pointer should follow it all the same.
+const SOURCE = String.raw`[\w./@-]+\.(?:tsx|jsx|ts|js|css|html|vue|svelte|astro)`;
+const WRITTEN = new RegExp(String.raw`(?:>>?|\btee\s+(?:-a\s+)?)\s*["']?(${SOURCE})`, "g");
+const SED = new RegExp(String.raw`\bsed\s+-i\b.*?\s["']?(${SOURCE})["']?\s*(?:$|[;&|])`);
+const MENTIONED = new RegExp(String.raw`(?:^|[\s"'=])((?:\./)?(?:src|app|pages|components)/${SOURCE})`, "g");
+export function shellFile(command: string): { file: string; typing: boolean } | null {
+  const wrote = [...command.matchAll(WRITTEN)].at(-1)?.[1] ?? SED.exec(command)?.[1];
+  if (wrote) return { file: wrote, typing: true };
+  const seen = [...command.matchAll(MENTIONED)].at(-1)?.[1];
+  return seen ? { file: seen, typing: false } : null;
+}
+
+// The newest file a task read or edited, and its lines: on a live page the pointer stays on that part while the task runs
+// commands in between, and moves only when the work moves to another part.
+function lastFile(lines: LogLine[] | undefined): { file: string; span?: [number, number]; typing: boolean } | null {
+  for (let i = (lines?.length ?? 0) - 1; i >= 0; i--) {
+    const line = lines?.[i];
+    if (line?.kind !== "tool") continue;
+    const act = classify(line.text);
+    if ((act.kind === "edit" || act.kind === "read") && act.detail)
+      return { file: act.detail, span: line.lines, typing: act.kind === "edit" };
+  }
+  return null;
 }
 
 export const STEPS_SHOWN = 5;
@@ -92,12 +121,95 @@ function cardFor(file: string, cards: Card[]): Card | undefined {
   return cards.find((c) => c.title && (c.title === file || file.endsWith(`/${c.title}`) || base(c.title) === name));
 }
 
+// The bar above a live frame's page.
+const BAR_H = 32;
+const frac = (step: number, salt: number) => 0.2 + (((Math.imul(step + salt, 2654435761) >>> 8) % 100) / 100) * 0.6;
+const matches = (key: string, file: string) => key === file || file.endsWith(`/${key}`) || key.endsWith(`/${file}`);
+
+// The part of a frame's card where its page shows, on the board.
+function pageWindow(card: Card): Box {
+  return { x: card.x, y: card.y + BAR_H, w: card.w, h: Math.max(0, card.h - BAR_H) };
+}
+
+// What on the page the lines in work draw: the elements those lines open, or else the one they sit inside, or else
+// everything the file draws.
+function partOf(f: FileBox, lines: [number, number] | undefined): Box {
+  if (!lines || !f.els?.length) return f;
+  const [from, to] = lines;
+  let hit = f.els.filter(([line]) => line >= from && line <= to);
+  if (!hit.length) {
+    const before = f.els.filter(([line]) => line < from);
+    const near = Math.max(...before.map(([line]) => line));
+    hit = before.filter(([line]) => line === near);
+  }
+  if (!hit.length) return f;
+  const x = Math.min(...hit.map((e) => e[1]));
+  const y = Math.min(...hit.map((e) => e[2]));
+  return { x, y, w: Math.max(...hit.map((e) => e[1] + e[3])) - x, h: Math.max(...hit.map((e) => e[2] + e[4])) - y };
+}
+
+// Where the part of the file a task touches shows on a live page, on the board, cut to what the frame shows.
+function sectionFor(file: string, lines: [number, number] | undefined, frames: Card[], layouts: Record<string, FrameLayout>) {
+  let best: { box: Box; area: number } | undefined;
+  for (const card of frames) {
+    const l = layouts[card.id];
+    const key = l && Object.keys(l.files).find((k) => matches(k, file));
+    const f = key ? l?.files[key] : undefined;
+    if (!l || !f) continue;
+    const r = partOf(f, lines);
+    const win = pageWindow(card);
+    const shown = win.h / (l.scale || 1);
+    // Off screen, the selection waits at the edge it would scroll in from.
+    const top = Math.min(Math.max(r.y, l.scrollY), l.scrollY + shown - 24);
+    const bottom = Math.max(Math.min(r.y + r.h, l.scrollY + shown), top + 16);
+    const box = {
+      x: win.x + l.left + r.x * l.scale,
+      y: win.y + (top - l.scrollY) * l.scale,
+      w: Math.max(16, Math.min(r.w * l.scale, win.w)),
+      h: Math.max(16, (bottom - top) * l.scale),
+    };
+    const area = box.w * box.h;
+    // The same file drawn on several frames: the desktop one, where the most of it shows.
+    if (!best || area > best.area) best = { box, area };
+  }
+  return best?.box;
+}
+
+// The frame a task works on when its file draws nothing on a page yet: the page named like the file, or one of them.
+function frameFor(file: string | null, frames: Card[], index: number): Card | undefined {
+  const name = (file ? base(file) : "").toLowerCase().replace(/\.[a-z]+$/, "");
+  const named = name ? frames.find((f) => (f.route ?? "/").toLowerCase().split("/").filter(Boolean).at(-1) === name) : undefined;
+  return named ?? frames[index % Math.max(1, frames.length)];
+}
+
 // Where the team's running work is: a slot for each running task where its cards will land, and a cursor on the card
 // the task is touching right now, or on its slot. Several running tasks get their slots one under the other.
-export function liveWork(run: Run, logs: Record<string, LogLine[]>): { slots: Slot[]; cursors: Cursor[] } {
+export function liveWork(
+  run: Run,
+  logs: Record<string, LogLine[]>,
+  layouts: Record<string, FrameLayout> = {},
+): { slots: Slot[]; cursors: Cursor[] } {
   const running = run.nodes.filter((n) => n.status === "running");
   if (!running.length) return { slots: [], cursors: [] };
   const cards = run.board?.cards ?? [];
+  // A board building an app shows only its pages: each teammate's pointer works on the page itself, with no slot.
+  const frames = cards.filter((c) => c.kind === "preview" && c.app);
+  if (frames.length) {
+    const cursors = running.flatMap((task, i): Cursor[] => {
+      const { now } = latest(logs[task.id]);
+      const work = lastFile(logs[task.id]);
+      const step = now?.seq ?? 0;
+      const part = work ? sectionFor(work.file, work.span, frames, layouts) : undefined;
+      if (part)
+        return [{ task, x: part.x, y: part.y, step, now, typing: work?.typing ?? false, area: { x: 0, y: 0, w: part.w, h: part.h } }];
+      // Nothing on a page yet: the pointer waits at the top of the page the work belongs to.
+      const card = frameFor(work?.file ?? null, frames, i);
+      if (!card) return [];
+      const win = pageWindow(card);
+      return [{ task, x: win.x + win.w * frac(i, 3), y: win.y + 48, step, now, typing: false }];
+    });
+    return { slots: [], cursors };
+  }
   const sources = flowSources(run.nodes, cards);
   const slots: Slot[] = [];
   const cursors: Cursor[] = [];

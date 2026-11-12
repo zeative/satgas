@@ -130,6 +130,8 @@ function TaskChanges({ run, task, who }: { run: Run; task: NodeState; who: strin
         title={task.title}
         hint={who}
         count={changes.files.length}
+        // Folded so a round reads as who did what; a task's files can run to dozens.
+        defaultOpen={false}
         icon={<MiniFace seed={memberIdOf(task)} className="size-4 shrink-0 rounded-full" />}
         actions={
           canUndo && left.length > 0 ? (

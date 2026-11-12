@@ -12,6 +12,7 @@ import { fillVariables } from "../shared/widgets";
 import { runClaude } from "./agents/claude";
 import { runCodex } from "./agents/codex";
 import type { AgentRequest } from "./agents/process";
+import { showScreens } from "./apps";
 import { cardsForTask, cardsFromReply, placeInFlow, relativeInside, reuseFileCards, withMoves } from "./artifacts";
 import { askLeadAside } from "./aside";
 import { changes, snapshot } from "./changes";
@@ -19,6 +20,7 @@ import { cloudBlocked, cloudReport } from "./cloud";
 import { config } from "./config";
 import { editBoard } from "./edits";
 import { savePicture } from "./files";
+import { fontsNote, recentFonts } from "./fonts-used";
 import { changeList, checkpoint } from "./history";
 import { applyMemory, getMemory } from "./memory";
 import { plan } from "./planner";
@@ -36,6 +38,7 @@ import { appendLog, boardOps, createRun, getLogs, getRun, patchNode, patchRun } 
 import { describeSystem } from "./system";
 import { closeTeamSession, openTeamSession, trackFile } from "./team";
 import { blindAgents, type Sight, seeAttachments } from "./vision";
+import { checkMessage, reviewScreens, visualCheck } from "./visual-check";
 import { closeTree, inFolder, openTree, type TaskTree, treesFor } from "./worktrees";
 
 type Live = Map<string, { ctrl: AbortController; done: Promise<void> }>;
@@ -611,6 +614,7 @@ async function runWithRecovery(run: Run, planned: NodeState, sight: Sight["blind
   await awaitApproval(run, node, signal);
   try {
     await runNode(run, node, sight[node.agent], signal, undefined, trees);
+    await designGate(run, node.id, sight, signal);
   } catch (e) {
     if (signal.aborted) throw e;
     const error = (e as Error).message;
@@ -627,6 +631,30 @@ async function runWithRecovery(run: Run, planned: NodeState, sight: Sight["blind
     patchNode(run.id, node.id, { agent: to, error: undefined });
     await runNode(run, { ...node, agent: to }, sight[to], signal, undefined, trees);
   }
+}
+
+const UI_FILE = /(^|\/)src\/(pages|components|app|routes|kit)\/.*\.(tsx|jsx|vue|svelte|astro|css)$|(^|\/)src\/index\.css$/;
+
+// A task that built screens is not done until Satgas itself has checked them: agents skip their own review unless made
+// to. Satgas runs the design system's ui-check and takes a picture of every page at desktop and phone width, then hands
+// the findings and pictures back to the same task, in its own session, for one more turn.
+async function designGate(run: Run, id: string, sight: Sight["blind"], signal: AbortSignal) {
+  const node = getRun(run.id)?.nodes.find((n) => n.id === id);
+  if (node?.status !== "done" || node.access === "read" || signal.aborted) return;
+  if (!node.changes?.files.some((f) => UI_FILE.test(f.path))) return;
+  const check = await visualCheck(run.id, id.slice(0, 24)).catch(() => null);
+  if (!check || signal.aborted || (check.clean && !check.shots.length)) return;
+  // A model that cannot see pictures cannot review them; it falls back to the builder's own look at its shots.
+  const review = sight[node.agent] ? null : await reviewScreens(run.id, check, node.agent, signal).catch(() => null);
+  if (signal.aborted) return;
+  const scores = review?.pages.map((p) => `${p.route} ${p.score}/10`).join(", ");
+  appendLog(run.id, id, {
+    kind: "info",
+    text: `Satgas checked the screens: ${check.clean ? "the design system check is clean" : "the design system check found problems"}, ${check.shots.length} page pictures taken${scores ? `, a fresh reviewer scored them ${scores}` : ""}; one more turn to fix`,
+  });
+  await runNode(getRun(run.id) ?? run, { ...node, status: "running" }, sight[node.agent], signal, {
+    message: checkMessage(check, run.cwd, review),
+  });
 }
 
 // Tasks held for the person's Allow, by board and task; answering one resolves its wait.
@@ -738,11 +766,9 @@ async function runNode(
   const remembered = describeForTasks(getMemory().entries, run.cwd);
   const rules = workingRules(
     enabledSkills().some((s) => s.builtin && s.name === "satgas"),
-    describeSystem(),
+    `${describeSystem()}${fontsNote(recentFonts(run.id))}`,
     commitRule(getSettings().commitStyle),
     remembered.rules,
-    enabledSkills().some((s) => s.builtin && s.name === "hallmark"),
-    enabledSkills().some((s) => s.builtin && s.name === "satgas-design"),
   );
   // The live run, so the board the agent sees includes the lead's edits and what earlier tasks added.
   const prompt = buildNodePrompt(getRun(run.id) ?? run, node, config.upstreamChars, blind, {
@@ -878,7 +904,11 @@ async function runNode(
     }
     if (rel.size) {
       const after = mark ? await checkpoint(run, `after ${node.id}`) : null;
-      patchNode(run.id, node.id, { changes: { ...(mark && after ? { before: mark, after } : {}), files: changeList(rel) } });
+      // A task given another turn keeps what its first turn changed, and its undo still reaches back to before both.
+      const prior = resume ? getRun(run.id)?.nodes.find((n) => n.id === node.id)?.changes : undefined;
+      const before = prior?.before ?? mark;
+      const merged = new Map([...(prior?.files ?? []), ...changeList(rel)].map((f) => [f.path, f] as const));
+      patchNode(run.id, node.id, { changes: { ...(before && after ? { before, after } : {}), files: [...merged.values()] } });
     }
     if (!signal.aborted && (files.size || output)) await showOnBoard(run, node, files, output);
   }
@@ -891,7 +921,9 @@ async function showOnBoard(run: Run, node: NodeState, written: Map<string, FileC
     const edits = editBlocks(output);
     if (edits.length) editBoard(run.id, node.round ?? 0, edits, node.id);
     const units = cardsFromReply(run, node, output);
-    const { fresh: files, ops } = reuseFileCards(run, written.size ? await cardsForTask(run, node, written) : []);
+    // A board that builds an app shows its pages and nothing else: the files stay in the Changes tab.
+    const apps = Object.values(getRun(run.id)?.apps ?? {});
+    const { fresh: files, ops } = reuseFileCards(run, written.size && !apps.length ? await cardsForTask(run, node, written) : []);
     // Each block takes one spot (a framed board moves as one), next to what the work came from; what it holds keeps
     // its place inside.
     const anchors = placeInFlow(getRun(run.id) ?? run, node, [...units.map((u) => u.anchor), ...files]);
@@ -903,6 +935,8 @@ async function showOnBoard(run: Run, node: NodeState, written: Map<string, FileC
     for (const [i, unit] of units.entries())
       for (const [j, l] of unit.links.entries()) ops.push({ op: "link", link: { id: `l-${node.id.slice(0, 40)}-${i}-${j}`, ...l } });
     if (ops.length) boardOps(run.id, ops);
+    // Pages the task added to the app's list get their frames.
+    for (const app of apps) if (app.status === "running") await showScreens(run.id, app.name, node.id);
   } catch (e) {
     appendLog(run.id, node.id, { kind: "error", text: `Could not add the results to the board: ${(e as Error).message}` });
   }

@@ -1,0 +1,49 @@
+import { animate, motion, useInView, useReducedMotion } from "motion/react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
+
+// The product's motion, in one place: one entrance per page, numbers that count up, and nothing that loops. Every page
+// uses these instead of its own animations, and all of it stands still for people who ask for reduced motion.
+
+const EASE = [0.22, 1, 0.36, 1] as const;
+
+// The page's main content rises in once, its children one after another.
+export function Reveal({ children, delay = 0 }: { children: ReactNode; delay?: number }) {
+  const still = useReducedMotion();
+  return (
+    <motion.div
+      initial={still ? false : "hidden"}
+      animate="shown"
+      variants={{ hidden: {}, shown: { transition: { staggerChildren: 0.06, delayChildren: delay } } }}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+// One child of a Reveal, or a block that comes in as it scrolls into view.
+export function RevealItem({ children, onScroll = false }: { children: ReactNode; onScroll?: boolean }) {
+  const still = useReducedMotion();
+  const hidden = { opacity: 0, y: 14 };
+  const shown = { opacity: 1, y: 0, transition: { duration: 0.45, ease: EASE } };
+  if (still) return <div>{children}</div>;
+  return onScroll ? (
+    <motion.div initial={hidden} whileInView={shown} viewport={{ once: true, margin: "-80px" }}>
+      {children}
+    </motion.div>
+  ) : (
+    <motion.div variants={{ hidden, shown }}>{children}</motion.div>
+  );
+}
+
+export function CountUp({ value, format = (n) => n.toLocaleString() }: { value: number; format?: (n: number) => string }) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const seen = useInView(ref, { once: true });
+  const still = useReducedMotion();
+  const [shown, setShown] = useState(still ? value : 0);
+  useEffect(() => {
+    if (!seen || still) return setShown(value);
+    const controls = animate(0, value, { duration: 0.9, ease: EASE, onUpdate: (n) => setShown(n) });
+    return () => controls.stop();
+  }, [seen, still, value]);
+  return <span ref={ref}>{format(Number.isInteger(value) ? Math.round(shown) : shown)}</span>;
+}

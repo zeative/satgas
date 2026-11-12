@@ -1,0 +1,134 @@
+import type { ReactNode } from "react";
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { cn } from "@/lib/cn";
+import { CountUp } from "./motion";
+
+// Data pieces for dashboards: one stat card, one table and one chart style, so every dashboard page reads as one product.
+
+export function StatCard({
+  label,
+  value,
+  format = (n) => n.toLocaleString(),
+  delta,
+  hint,
+}: {
+  label: string;
+  value: number;
+  format?: (n: number) => string;
+  // The change against the period named in `hint`, as a share: 0.12 is +12%.
+  delta?: number;
+  hint?: string;
+}) {
+  return (
+    <div className="flex flex-col gap-3 rounded-card bg-surface p-5 ring-1 ring-border shadow-card">
+      <p className="text-sm text-muted-foreground">{label}</p>
+      <p className="font-display text-h2 tracking-tight tabular-nums">
+        <CountUp value={value} format={format} />
+      </p>
+      {(delta !== undefined || hint) && (
+        <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
+          {delta !== undefined && (
+            <span className={cn("font-medium tabular-nums", delta >= 0 ? "text-success" : "text-danger")}>
+              {delta >= 0 ? "+" : ""}
+              {(delta * 100).toFixed(1)}%
+            </span>
+          )}
+          {hint}
+        </p>
+      )}
+    </div>
+  );
+}
+
+export interface Column<T> {
+  key: string;
+  header: string;
+  align?: "start" | "end";
+  cell: (row: T) => ReactNode;
+}
+
+export function DataTable<T>({ columns, rows, rowKey, empty }: { columns: Column<T>[]; rows: T[]; rowKey: (row: T) => string; empty?: ReactNode }) {
+  return (
+    <div className="overflow-hidden rounded-card bg-surface ring-1 ring-border shadow-card">
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-border">
+              {columns.map((c) => (
+                <th key={c.key} className={cn("h-11 px-5 font-medium whitespace-nowrap text-muted-foreground", c.align === "end" ? "text-end" : "text-start")}>
+                  {c.header}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={rowKey(r)} className="border-b border-border transition-colors last:border-0 hover:bg-muted/60">
+                {columns.map((c) => (
+                  <td key={c.key} className={cn("h-14 px-5 whitespace-nowrap", c.align === "end" ? "text-end tabular-nums" : "text-start")}>
+                    {c.cell(r)}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {!rows.length && empty}
+    </div>
+  );
+}
+
+const css = (name: string) => `var(--color-${name})`;
+
+// One chart look for the whole product: the accent carries the series, the grid and labels stay quiet.
+export function Chart({
+  data,
+  x,
+  y,
+  kind = "area",
+  height = 260,
+  format = (n: number) => n.toLocaleString(),
+}: {
+  data: Record<string, string | number>[];
+  x: string;
+  y: string;
+  kind?: "area" | "bar";
+  height?: number;
+  format?: (n: number) => string;
+}) {
+  const axis = { stroke: css("muted-foreground"), fontSize: 12, tickLine: false, axisLine: false };
+  const tip = {
+    contentStyle: { background: css("surface"), border: `1px solid ${css("border")}`, borderRadius: 10, fontSize: 13 },
+    formatter: (v: unknown) => format(Number(v)),
+  };
+  return (
+    <div style={{ height }}>
+      <ResponsiveContainer width="100%" height="100%">
+        {kind === "bar" ? (
+          <BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+            <CartesianGrid vertical={false} stroke={css("border")} />
+            <XAxis dataKey={x} {...axis} />
+            <YAxis {...axis} width={56} tickFormatter={(v) => format(Number(v))} />
+            <Tooltip cursor={{ fill: css("muted") }} {...tip} />
+            <Bar dataKey={y} fill={css("accent")} radius={[6, 6, 0, 0]} />
+          </BarChart>
+        ) : (
+          <AreaChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+            <defs>
+              <linearGradient id="kit-area" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={css("accent")} stopOpacity={0.22} />
+                <stop offset="100%" stopColor={css("accent")} stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid vertical={false} stroke={css("border")} />
+            <XAxis dataKey={x} {...axis} />
+            <YAxis {...axis} width={56} tickFormatter={(v) => format(Number(v))} />
+            <Tooltip {...tip} />
+            <Area type="monotone" dataKey={y} stroke={css("accent")} strokeWidth={2} fill="url(#kit-area)" />
+          </AreaChart>
+        )}
+      </ResponsiveContainer>
+    </div>
+  );
+}

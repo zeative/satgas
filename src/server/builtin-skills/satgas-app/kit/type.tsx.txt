@@ -1,0 +1,57 @@
+import type { ReactNode } from "react";
+import { cn } from "@/lib/cn";
+
+// Type from the scale in DESIGN.md: a few sizes with a clear step between them, set once here.
+
+const HEADING = {
+  display: "font-display text-display leading-[1.02] tracking-tight",
+  h1: "font-display text-h1 leading-[1.08] tracking-tight",
+  h2: "font-display text-h2 leading-[1.15] tracking-tight",
+  h3: "text-h3 leading-snug font-semibold",
+} as const;
+const TAG = { display: "h1", h1: "h1", h2: "h2", h3: "h3" } as const;
+const TONE = { default: "text-foreground", muted: "text-muted-foreground", accent: "text-accent", inherit: "" } as const;
+
+export function Heading({
+  level = "h2",
+  as,
+  tone = "default",
+  balance = true,
+  children,
+}: {
+  level?: keyof typeof HEADING;
+  as?: "h1" | "h2" | "h3" | "h4" | "p";
+  tone?: keyof typeof TONE;
+  balance?: boolean;
+  children: ReactNode;
+}) {
+  const Tag = as ?? TAG[level];
+  return <Tag className={cn(HEADING[level], TONE[tone], balance && "text-balance")}>{children}</Tag>;
+}
+
+const TEXT = { lg: "text-lg leading-relaxed", md: "text-base leading-relaxed", sm: "text-sm leading-normal" } as const;
+
+export function Text({
+  size = "md",
+  tone = "muted",
+  weight = "normal",
+  measure = true,
+  children,
+}: {
+  size?: keyof typeof TEXT;
+  tone?: keyof typeof TONE;
+  weight?: "normal" | "medium" | "semibold";
+  measure?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <p className={cn(TEXT[size], TONE[tone], { normal: "font-normal", medium: "font-medium", semibold: "font-semibold" }[weight], measure && "max-w-prose text-pretty")}>
+      {children}
+    </p>
+  );
+}
+
+// A number set to be read at a glance: tabular figures, so a column of them lines up.
+export function Figure({ size = "lg", children }: { size?: "md" | "lg" | "xl"; children: ReactNode }) {
+  return <span className={cn("font-display tabular-nums tracking-tight", { md: "text-2xl", lg: "text-h2", xl: "text-h1" }[size])}>{children}</span>;
+}

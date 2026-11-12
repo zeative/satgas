@@ -3,11 +3,12 @@
 // on a laptop and on a VPS where nothing but Satgas's address is reachable. A task's own background processes are
 // stopped when it ends; these outlive it, and stop by themselves after two hours nobody opened them.
 
-import { resolve, sep } from "node:path";
+import { join, resolve, sep } from "node:path";
 import type { Subprocess } from "bun";
-import { type BoardOp, type Card, DEFAULT_SIZE } from "../shared/board";
+import type { BoardOp, Card } from "../shared/board";
 import type { RunApp } from "../shared/types";
 import { ANSI, childEnv } from "./agents/process";
+import bridgeSource from "./app-bridge.js.txt" with { type: "text" };
 import { placeInFlow } from "./artifacts";
 import { appKey, COOKIE, validAppKey } from "./auth";
 import { boardOps, getRun, patchRun } from "./store";
@@ -189,7 +190,7 @@ export async function startApp(runId: string, name: string, command?: string, di
     }
     if (await answers(port)) {
       setApp(runId, name, { status: "running", error: undefined });
-      if (from) showApp(runId, name, from);
+      await showScreens(runId, name, from);
       return { ok: true, app: { ...app, status: "running" }, port };
     }
     await Bun.sleep(500);
@@ -228,21 +229,110 @@ export function shareApp(runId: string, name: string, shared: boolean) {
   setApp(runId, name, { shared: shared || undefined });
 }
 
-// The app's card on the board, put there once, next to the work of the task that started it.
-function showApp(runId: string, name: string, from: string) {
+// The pages an app lists for the board, one frame each: `.satgas/screens.json` in its folder, as
+// [{ "route": "/", "name": "Home" }], or { "device": "phone", "screens": [...] } for a phone app. An app that lists none
+// shows its first page.
+const SCREENS_FILE = ".satgas/screens.json";
+const MAX_SCREENS = 12;
+const FRAME = { w: 960, h: 1000 };
+const PHONE_FRAME = { w: 420, h: 876 };
+const FRAME_GAP = 80;
+
+export interface Screen {
+  route: string;
+  name: string;
+  device?: "phone";
+  // The picture this page was cloned from (a reference or one of its parts), so it can be judged against it.
+  target?: string;
+}
+
+export async function screensOf(runId: string, name: string): Promise<Screen[]> {
   const run = getRun(runId);
-  if (!run || run.board?.cards.some((c) => c.kind === "preview" && c.app === name)) return;
-  const card: Omit<Card, "x" | "y"> = {
-    id: `app-${name}-${Date.now().toString(36)}`,
+  const app = run?.apps?.[name];
+  const folder = run && app ? folderOf(run.cwd, app.dir) : null;
+  const list: unknown = folder
+    ? await Bun.file(join(folder, SCREENS_FILE))
+        .json()
+        .catch(() => null)
+    : null;
+  const doc = list as { device?: unknown; screens?: unknown } | null;
+  const items = Array.isArray(list) ? list : Array.isArray(doc?.screens) ? doc.screens : [];
+  const phone = !Array.isArray(list) && doc?.device === "phone";
+  const seen = new Set<string>();
+  const out: Screen[] = [];
+  for (const s of items) {
+    const route = typeof s?.route === "string" ? `/${s.route.trim().replace(/^\/+/, "")}` : null;
+    if (!route || route.length > 200 || seen.has(route)) continue;
+    seen.add(route);
+    const title = typeof s?.name === "string" && s.name.trim() ? s.name.trim().slice(0, 80) : route;
+    const target =
+      typeof s?.target === "string" && /^design\/[\w./-]+\.(png|jpe?g|webp)$/i.test(s.target) && !s.target.includes("..") ? s.target : null;
+    out.push({
+      route,
+      name: title,
+      ...(phone || s?.device === "phone" ? { device: "phone" as const } : {}),
+      ...(target ? { target } : {}),
+    });
+    if (out.length >= MAX_SCREENS) break;
+  }
+  return out;
+}
+
+// Every page of the app gets its own frame, side by side in one row like a design file's screens, with the first page
+// once more at phone width in front. A phone app's pages are all phone frames, never stretched to desktop. Pages already
+// shown keep their frame; new ones join the end of the row.
+export async function showScreens(runId: string, name: string, from?: string) {
+  const listed = await screensOf(runId, name);
+  const run = getRun(runId);
+  if (!run?.apps?.[name]) return;
+  const screens = listed.length ? listed : [{ route: "/", name }];
+  const cards = run.board?.cards ?? [];
+  const frames = cards.filter((c) => c.kind === "preview" && c.app === name);
+  const phoneApp = screens.every((s) => s.device === "phone");
+  const shown = new Set(frames.filter((c) => (c.device === "phone") === phoneApp).map((c) => c.route ?? "/"));
+  const missing = screens.filter((s) => !shown.has(s.route));
+  const phone = phoneApp || frames.some((c) => c.device === "phone");
+  // A page renamed in the list renames its frames.
+  const renames: BoardOp[] = frames.flatMap((c) => {
+    const s = screens.find((x) => x.route === (c.route ?? "/"));
+    return s && listed.length && c.title !== s.name ? [{ op: "patch" as const, id: c.id, patch: { title: s.name } }] : [];
+  });
+  if (!missing.length && phone) {
+    if (renames.length) boardOps(runId, renames);
+    return;
+  }
+  const now = Date.now();
+  const base = (s: Screen, i: number, size: { w: number; h: number }): Omit<Card, "x" | "y"> => ({
+    id: `app-${name}-${(now + i).toString(36)}`,
     kind: "preview",
     app: name,
-    title: name,
-    from,
-    createdAt: Date.now(),
-    ...DEFAULT_SIZE.preview,
-  };
-  const [placed] = placeInFlow(run, { id: from }, [card]);
-  if (placed) boardOps(runId, [{ op: "put", card: placed } satisfies BoardOp]);
+    title: s.name,
+    createdAt: now,
+    ...(from ? { from } : {}),
+    ...(s.route !== "/" ? { route: s.route } : {}),
+    ...size,
+  });
+  const fresh: Omit<Card, "x" | "y">[] = [
+    ...(phone ? [] : [{ ...base(screens[0] as Screen, 0, PHONE_FRAME), device: "phone" as const }]),
+    ...missing.map((s, i) => (s.device === "phone" ? { ...base(s, i + 1, PHONE_FRAME), device: "phone" as const } : base(s, i + 1, FRAME))),
+  ];
+  // The row starts where the app's frames already are, or where the work that started it sits.
+  let x: number;
+  let y: number;
+  if (frames.length) {
+    x = Math.max(...frames.map((c) => c.x + c.w)) + FRAME_GAP;
+    y = Math.min(...frames.map((c) => c.y));
+  } else {
+    const [spot] = from ? placeInFlow(run, { id: from }, [{ ...FRAME, ...(fresh[0] as Omit<Card, "x" | "y">) }]) : [];
+    x = spot?.x ?? 0;
+    y = spot?.y ?? 0;
+  }
+  const ops: BoardOp[] = fresh.map((c) => {
+    const card = { ...c, x, y } as Card;
+    x += c.w + FRAME_GAP;
+    return { op: "put", card };
+  });
+  boardOps(runId, [...renames, ...ops]);
 }
 
 // Apps nobody opened for two hours stop; their cards start them again with one click.
@@ -270,6 +360,9 @@ export async function stopAllApps() {
 const SANDBOX =
   "sandbox allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-modals allow-downloads allow-pointer-lock; frame-ancestors 'self'";
 const STORAGE_SHIM = `<script>(()=>{const mk=()=>{const m=new Map();return{get length(){return m.size},key:(i)=>[...m.keys()][i]??null,getItem:(k)=>m.has(String(k))?m.get(String(k)):null,setItem:(k,v)=>{m.set(String(k),String(v))},removeItem:(k)=>{m.delete(String(k))},clear:()=>m.clear()}};for(const n of["localStorage","sessionStorage"]){try{window[n].length}catch{try{Object.defineProperty(window,n,{value:mk(),configurable:true})}catch{}}}try{document.cookie}catch{let c="";try{Object.defineProperty(document,"cookie",{get:()=>c,set:(v)=>{c=String(v).split(";")[0]},configurable:true})}catch{}}})();</script>`;
+
+// Lets the canvas frame follow the page, pick an element and preview style edits on it; it does nothing outside a frame.
+const BRIDGE = `<script>${bridgeSource}</script>`;
 
 export interface AppSocket {
   kind: "app";
@@ -333,6 +426,9 @@ export async function serveApp(
   }
   const headers = new Headers(req.headers);
   for (const h of ["host", "connection", "upgrade", "content-length"]) headers.delete(h);
+  // A page gets Satgas's bridge added on the way out, so the app's own validators say nothing about what the browser
+  // holds: asking again always gets the whole page.
+  if (isPage) for (const h of ["if-none-match", "if-modified-since"]) headers.delete(h);
   // The page is sandboxed, so its requests look cross-site and dev servers such as Astro's refuse them. The key already gates them.
   for (const h of ["sec-fetch-site", "sec-fetch-mode"]) headers.delete(h);
   if (headers.get("origin") === "null") headers.delete("origin");
@@ -372,11 +468,15 @@ export async function serveApp(
   if (req.headers.get("origin") === "null") out.set("access-control-allow-origin", "*");
   if (!(out.get("content-type") ?? "").includes("text/html")) return new Response(res.body, { status: res.status, headers: out });
   out.set("content-security-policy", SANDBOX);
+  // The page carries Satgas's bridge, which changes with Satgas, so a cached copy must never stand in for it.
+  out.set("cache-control", "no-store");
+  out.delete("etag");
+  out.delete("last-modified");
   out.delete("content-length");
   const html = await res.text();
   const at = html.search(/<head[^>]*>/i);
   const end = at < 0 ? 0 : at + (html.slice(at).match(/<head[^>]*>/i)?.[0].length ?? 0);
-  return new Response(html.slice(0, end) + STORAGE_SHIM + html.slice(end), { status: res.status, headers: out });
+  return new Response(html.slice(0, end) + STORAGE_SHIM + BRIDGE + html.slice(end), { status: res.status, headers: out });
 }
 
 // The socket between the person's page and the app's own, both ways, holding what arrives before the app's end opens.

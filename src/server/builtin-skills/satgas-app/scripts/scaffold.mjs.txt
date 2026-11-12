@@ -1,0 +1,319 @@
+#!/usr/bin/env node
+// Satgas app starter: Vite + React + TypeScript + Tailwind CSS v4 + React Router, ready for app_start, with every
+// element tagged by the file that draws it so the canvas can follow the work.
+//   node scaffold.mjs [dir] [--name "Cukur Rapi"] [--home "Beranda"] [--phone] [--api] [--force]
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
+// The design kit and the UI check ship beside this script; the project gets its own copy of both.
+const here = dirname(fileURLToPath(import.meta.url));
+
+const args = process.argv.slice(2);
+const flag = (f) => args.includes(f);
+const opt = (f) => {
+  const i = args.indexOf(f);
+  return i >= 0 ? args[i + 1] : undefined;
+};
+const dir = resolve(args.find((a, i) => !a.startsWith("--") && !["--name", "--home"].includes(args[i - 1] ?? "")) ?? ".");
+const title = opt("--name") ?? "App";
+const home = opt("--home") ?? "Home";
+const api = flag("--api");
+// A phone app: every page is a phone screen on the canvas, never a desktop frame.
+const phone = flag("--phone");
+const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "app";
+
+if (existsSync(join(dir, "package.json")) && !flag("--force")) {
+  console.error(`${join(dir, "package.json")} already exists. This folder already has a project; build on it instead, or pass --force.`);
+  process.exit(1);
+}
+
+const files = {
+  "package.json": `${JSON.stringify(
+    {
+      name: slug,
+      private: true,
+      type: "module",
+      scripts: {
+        dev: "vite",
+        build: "tsc --noEmit && vite build",
+        typecheck: "tsc --noEmit",
+        "check:ui": "node scripts/ui-check.mjs",
+      },
+      dependencies: {
+        "react": "^19.1.0",
+        "react-dom": "^19.1.0",
+        "react-router": "^7.6.0",
+        "lucide-react": ">=0.500.0",
+        "motion": "^12.0.0",
+        "recharts": "^3.0.0",
+        "clsx": "^2.1.1",
+        "tailwind-merge": "^3.3.0",
+      },
+      devDependencies: {
+        "@tailwindcss/vite": "^4.1.0",
+        "@types/node": "^24.0.0",
+        "@types/react": "^19.1.0",
+        "@types/react-dom": "^19.1.0",
+        "@vitejs/plugin-react": "^5.0.0",
+        "tailwindcss": "^4.1.0",
+        "typescript": "^5.8.0",
+        "vite": "^7.0.0",
+        ...(api ? { "@types/bun": "latest" } : {}),
+      },
+    },
+    null,
+    2,
+  )}\n`,
+  "vite.config.ts": `${api ? 'import { spawn } from "node:child_process";\n' : ""}import { relative } from "node:path";
+import tailwindcss from "@tailwindcss/vite";
+import react from "@vitejs/plugin-react";
+import { defineConfig${api ? ", type Plugin" : ""} } from "vite";
+
+// Satgas: tags every HTML element with the file and line that draws it, so the canvas can show which section a
+// teammate is working on and the inspector can name its source. Only while developing; a build stays clean.
+function satgasLoc() {
+  // biome-ignore lint/suspicious/noExplicitAny: a Babel plugin, typed loosely to need no extra packages.
+  return ({ types: t }: { types: any }) => ({
+    visitor: {
+      // biome-ignore lint/suspicious/noExplicitAny: see above.
+      JSXOpeningElement(path: any, state: any) {
+        const name = path.node.name;
+        if (name.type !== "JSXIdentifier" || !/^[a-z]/.test(name.name)) return;
+        // biome-ignore lint/suspicious/noExplicitAny: see above.
+        if (path.node.attributes.some((a: any) => a.type === "JSXAttribute" && a.name?.name === "data-satgas-loc")) return;
+        const file = relative(process.cwd(), state.filename ?? "").split("\\\\").join("/");
+        const at = \`\${file}:\${path.node.loc?.start.line ?? 0}\`;
+        path.node.attributes.push(t.jsxAttribute(t.jsxIdentifier("data-satgas-loc"), t.stringLiteral(at)));
+      },
+    },
+  });
+}
+
+const base = process.env.SATGAS_APP_BASE || "/";
+${
+  api
+    ? `const apiPort = Number(process.env.API_PORT) || Number(process.env.PORT || 5173) + 1;
+
+// The app's API (server/index.ts) starts and stops with the dev server, so one app_start runs both.
+function satgasApi(): Plugin {
+  return {
+    name: "satgas-api",
+    configureServer(server) {
+      const child = spawn("bun", ["--watch", "server/index.ts"], { stdio: "inherit", env: { ...process.env, API_PORT: String(apiPort) } });
+      const stop = () => child.kill();
+      server.httpServer?.on("close", stop);
+      process.on("exit", stop);
+    },
+  };
+}
+`
+    : ""
+}
+export default defineConfig(({ command }) => ({
+  base,
+  plugins: [react({ babel: { plugins: command === "serve" ? [satgasLoc()] : [] } }), tailwindcss()${api ? ", satgasApi()" : ""}],
+  server: {
+    host: "127.0.0.1",
+    port: Number(process.env.PORT) || 5173,
+    strictPort: true,${
+      api
+        ? `
+    // The API runs beside Vite; the page calls it under the same base, so it works behind Satgas too.
+    proxy: {
+      [\`\${base}api\`]: {
+        target: \`http://127.0.0.1:\${apiPort}\`,
+        rewrite: (p) => p.slice(base.length - 1),
+      },
+    },`
+        : ""
+    }
+  },
+}));
+`,
+  "tsconfig.json": `${JSON.stringify(
+    {
+      compilerOptions: {
+        target: "ES2022",
+        lib: ["ES2022", "DOM", "DOM.Iterable"],
+        module: "ESNext",
+        moduleResolution: "bundler",
+        jsx: "react-jsx",
+        strict: true,
+        noEmit: true,
+        skipLibCheck: true,
+        isolatedModules: true,
+        resolveJsonModule: true,
+        types: ["vite/client", "node"],
+        baseUrl: ".",
+        paths: { "@/*": ["src/*"] },
+      },
+      include: ["src", "vite.config.ts"],
+    },
+    null,
+    2,
+  )}\n`,
+  "index.html": `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>${title}</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+`,
+  "src/main.tsx": `import { StrictMode } from "react";
+import { createRoot } from "react-dom/client";
+import { BrowserRouter } from "react-router";
+import App from "./App";
+import "./index.css";
+
+// Behind Satgas the app lives under a path, so routes start from the base Vite was given.
+const basename = import.meta.env.BASE_URL.replace(/\\/$/, "") || "/";
+
+// biome-ignore lint/style/noNonNullAssertion: index.html always has the root.
+createRoot(document.getElementById("root")!).render(
+  <StrictMode>
+    <BrowserRouter basename={basename}>
+      <App />
+    </BrowserRouter>
+  </StrictMode>,
+);
+`,
+  "src/App.tsx": `import { Route, Routes } from "react-router";
+import Home from "./pages/Home";
+
+// Every page is a route, and every route is listed in .satgas/screens.json so it gets its own frame on the canvas.
+export default function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<Home />} />
+    </Routes>
+  );
+}
+`,
+  "src/pages/Home.tsx": `import { Heading, Section } from "@/kit";
+
+export default function Home() {
+  return (
+    <Section space="lg">
+      <Heading level="display">${home}</Heading>
+    </Section>
+  );
+}
+`,
+  "src/index.css": `@import "tailwindcss";
+
+/* The design system's tokens, from DESIGN.md. Set them before building any page; pages and the kit use only these. */
+@theme {
+  --color-background: #ffffff;
+  --color-surface: #ffffff;
+  --color-foreground: #0a0a0a;
+  --color-muted: #f4f4f5;
+  --color-muted-foreground: #71717a;
+  --color-border: #e4e4e7;
+  --color-accent: #0a0a0a;
+  --color-accent-foreground: #ffffff;
+  --color-success: #15803d;
+  --color-warning: #b45309;
+  --color-danger: #b91c1c;
+
+  /* Not chosen yet: pick a display and a text face from satgas-design's fonts.md (ui-check fails until you do). */
+  --font-sans: ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-sans);
+
+  /* The type scale: five steps, each clearly larger than the last. */
+  --text-display: clamp(2.75rem, 1.6rem + 4.2vw, 5.5rem);
+  --text-h1: clamp(2.25rem, 1.6rem + 2.4vw, 3.5rem);
+  --text-h2: clamp(1.75rem, 1.4rem + 1.2vw, 2.5rem);
+  --text-h3: 1.25rem;
+
+  /* One radius family and one shadow recipe. */
+  --radius-control: 10px;
+  --radius-card: 16px;
+  --radius-panel: 24px;
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.04), 0 1px 1px rgb(0 0 0 / 0.02);
+  --shadow-lift: 0 8px 24px rgb(0 0 0 / 0.08), 0 2px 6px rgb(0 0 0 / 0.04);
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+body {
+  background: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-sans);
+}
+`,
+  "DESIGN.md": `# ${title} design system
+
+The one source of truth for how this product looks. Pages are built only from \`src/kit\` and these tokens.
+
+## Direction
+(The chosen direction: its name, the main Dribbble target and its link, and the one memorable element.)
+
+## Colour
+(Each token in src/index.css with its hex and its role.)
+
+## Type
+(Families and where each is used; the scale: display, h1, h2, h3, body.)
+
+## Shape and space
+(Radius family, shadow recipe, container width, section spacing.)
+
+## Motion
+(The page entrance and any signature motion; everything else stays still.)
+
+## Hub screens
+(One finished screen per kind of page, saved in design/hubs/, and which pages derive from each.)
+`,
+  "src/lib/cn.ts": `import { type ClassValue, clsx } from "clsx";
+import { twMerge } from "tailwind-merge";
+
+export const cn = (...inputs: ClassValue[]) => twMerge(clsx(inputs));
+`,
+  ".satgas/screens.json": `${JSON.stringify(phone ? { device: "phone", screens: [{ route: "/", name: home }] } : [{ route: "/", name: home }], null, 2)}\n`,
+  ".gitignore": "node_modules\ndist\n*.db\n",
+  ...(api
+    ? {
+        "server/index.ts": `import { Database } from "bun:sqlite";
+
+// The app's own API and data. Vite proxies <base>api/* here, so pages call \`\${import.meta.env.BASE_URL}api/...\`.
+const db = new Database("data.db", { create: true });
+db.run("create table if not exists items (id integer primary key, name text not null, created_at integer not null)");
+
+const port = Number(process.env.API_PORT) || Number(process.env.PORT || 5173) + 1;
+
+Bun.serve({
+  hostname: "127.0.0.1",
+  port,
+  routes: {
+    "/api/health": () => Response.json({ ok: true }),
+  },
+  fetch: () => new Response("Not found", { status: 404 }),
+});
+`,
+      }
+    : {}),
+};
+
+for (const name of readdirSync(join(here, "..", "kit"))) files[`src/kit/${name.replace(/\.txt$/, "")}`] = readFileSync(join(here, "..", "kit", name), "utf8");
+files["scripts/ui-check.mjs"] = readFileSync(join(here, "ui-check.mjs"), "utf8");
+
+for (const [path, text] of Object.entries(files)) {
+  const full = join(dir, path);
+  mkdirSync(dirname(full), { recursive: true });
+  writeFileSync(full, text);
+}
+
+console.log(`Scaffolded ${title} in ${dir}${api ? " with an API (server/index.ts, SQLite)" : ""}.
+Next:
+  1. cd ${dir} && bun install
+  2. app_start with name "web", command "bun run dev"${dir === process.cwd() ? "" : `, dir "${dir}"`}
+  3. Write DESIGN.md and set its tokens in src/index.css, build every page from src/kit, keep .satgas/screens.json listing
+     every route, and run \`bun run check:ui\` until it is clean.`);

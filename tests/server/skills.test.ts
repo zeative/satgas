@@ -241,18 +241,6 @@ test("Cloudflare's security-audit ships on, can be switched off and back, and ca
   expect(await Bun.file(join(config.dataDir, "skills-builtin", "security-audit", "validate-findings.cjs")).exists()).toBe(true);
 });
 
-test("Hallmark ships on for every interface, can be switched off, and carries its scripts but not its pictures", async () => {
-  await prepareSkills();
-  const hallmark = () => listSkills().then((all) => all.find((s) => s.name === "hallmark"));
-  expect(await hallmark()).toMatchObject({ enabled: true, optional: true, repo: "Nutlope/hallmark" });
-  const dir = join(config.dataDir, "skills-builtin", "hallmark");
-  expect(await Bun.file(join(dir, "scripts", "sloplint.mjs")).exists()).toBe(true);
-  expect(await Bun.file(join(dir, "references", "themes", "almanac.jpg")).exists()).toBe(false);
-  expect(await setSkillEnabled("hallmark", false)).toBe("ok");
-  expect(enabledSkills().some((s) => s.name === "hallmark")).toBe(false);
-  expect(await setSkillEnabled("hallmark", true)).toBe("ok");
-});
-
 test("shows a skill's files one by one and hands the folder over as a zip", async () => {
   await prepareSkills();
   expect((await skillFiles("satgas"))?.map((f) => f.path).sort()).toEqual([
@@ -292,4 +280,14 @@ test("agent-skills come tagged as one pack, so the Skills page can show them as 
   expect(all.find((s) => s.name === "spec-driven-development")).toMatchObject({ pack: "agent-skills", source: { kind: "builtin" } });
   expect(all.find((s) => s.name === "satgas")?.pack).toBeUndefined();
   expect(all.filter((s) => s.pack === "agent-skills").length).toBeGreaterThanOrEqual(20);
+});
+
+// A built-in skill Satgas stopped shipping must not linger in an existing install and keep reaching the agents.
+test("a built-in skill Satgas no longer ships is cleared at start", async () => {
+  const stale = join(config.dataDir, "skills-builtin", "hallmark");
+  await mkdir(stale, { recursive: true });
+  await writeFile(join(stale, "SKILL.md"), "---\nname: hallmark\ndescription: old\n---\n");
+  await prepareSkills();
+  expect(await lstat(stale).catch(() => null)).toBeNull();
+  expect((await listSkills()).some((s) => s.name === "hallmark")).toBe(false);
 });

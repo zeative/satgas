@@ -1,0 +1,90 @@
+#!/usr/bin/env node
+// Real photos for the design, saved into the project with their credits. Pexels and Unsplash give studio-grade photos
+// (free keys: PEXELS_API_KEY, UNSPLASH_ACCESS_KEY); without a key it falls back to StockSnap.
+//   node photos.mjs "<what is in the picture>" [--n 6] [--orientation landscape|portrait|square] [--out public/images] [--name hero] [--any]
+import { appendFileSync, mkdirSync, writeFileSync } from "node:fs";
+import { join, resolve } from "node:path";
+
+const [query, ...rest] = process.argv.slice(2);
+const opt = (f, d) => {
+  const i = rest.indexOf(f);
+  return i >= 0 ? rest[i + 1] : d;
+};
+if (!query) {
+  console.error('Usage: node photos.mjs "<what is in the picture>" [--n 6] [--orientation landscape|portrait|square] [--name hero]');
+  process.exit(1);
+}
+const n = Number(opt("--n", "6"));
+const orientation = opt("--orientation", "landscape");
+const out = resolve(opt("--out", "public/images"));
+const name = (opt("--name", query) ?? "photo").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40);
+const q = encodeURIComponent(query);
+const json = (url, headers = {}) =>
+  fetch(url, { headers: { "user-agent": "satgas-design", ...headers }, signal: AbortSignal.timeout(30_000) }).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+
+async function pexels() {
+  const key = process.env.PEXELS_API_KEY;
+  if (!key) return [];
+  const d = await json(`https://api.pexels.com/v1/search?query=${q}&per_page=${n}&orientation=${orientation}`, { authorization: key });
+  return (d?.photos ?? []).map((p) => ({ url: p.src.large2x, by: p.photographer, link: p.url, license: "Pexels License", source: "Pexels" }));
+}
+async function unsplash() {
+  const key = process.env.UNSPLASH_ACCESS_KEY;
+  if (!key) return [];
+  const d = await json(`https://api.unsplash.com/search/photos?query=${q}&per_page=${n}&orientation=${orientation === "square" ? "squarish" : orientation}`, {
+    authorization: `Client-ID ${key}`,
+  });
+  return (d?.results ?? []).map((p) => ({ url: `${p.urls.raw}&w=1800&q=80&fm=jpg`, by: p.user?.name, link: p.links?.html, license: "Unsplash License", source: "Unsplash" }));
+}
+// Without a key, StockSnap (through Openverse) is the only open source shot like stock photography; the rest of Openverse
+// and Commons is archive scans, snapshots and clip art, which read as amateur next to a Dribbble target.
+async function openverse() {
+  const ratio = { landscape: "wide", portrait: "tall", square: "square" }[orientation] ?? "wide";
+  const d = await json(
+    `https://api.openverse.org/v1/images/?q=${q}&page_size=${n * 2}&license_type=commercial&mature=false&aspect_ratio=${ratio}&category=photograph&source=stocksnap`,
+  );
+  return (d?.results ?? []).map((p) => ({ url: p.url, by: p.creator, link: p.foreign_landing_url, license: `${p.license?.toUpperCase()} ${p.license_version ?? ""}`.trim(), source: "StockSnap" }));
+}
+async function wikimedia() {
+  const d = await json(
+    `https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=${q}&gsrnamespace=6&gsrlimit=${n * 2}&prop=imageinfo&iiprop=url|extmetadata|size&iiurlwidth=1800&format=json&origin=*`,
+  );
+  return Object.values(d?.query?.pages ?? {})
+    .map((p) => p.imageinfo?.[0])
+    .filter((i) => i?.thumburl && /\.(jpe?g|png|webp)$/i.test(i.url) && i.width >= 1200)
+    .map((i) => ({
+      url: i.thumburl,
+      by: (i.extmetadata?.Artist?.value ?? "").replace(/<[^>]+>/g, "").trim(),
+      link: i.descriptionurl,
+      license: i.extmetadata?.LicenseShortName?.value ?? "",
+      source: "Wikimedia Commons",
+    }));
+}
+
+let photos = [];
+for (const find of [pexels, unsplash, openverse, ...(rest.includes("--any") ? [wikimedia] : [])]) {
+  photos = await find();
+  if (photos.length) break;
+}
+if (!photos.length) {
+  console.error(
+    "No photos found. Describe what is in the picture more plainly (\"woman wearing batik shirt\", not \"elegant heritage\"), or in English. --any also searches Wikimedia Commons, whose photos are rarely good enough. Never use archive scans, vintage portraits or clip art; a product interface or initials are better than a weak photo.",
+  );
+  process.exit(1);
+}
+
+mkdirSync(out, { recursive: true });
+mkdirSync("design", { recursive: true });
+let saved = 0;
+for (const p of photos) {
+  if (saved >= n) break;
+  const res = await fetch(p.url, { headers: { "user-agent": "satgas-design" }, signal: AbortSignal.timeout(60_000) }).catch(() => null);
+  const type = res?.headers.get("content-type") ?? "";
+  if (!res?.ok || !type.startsWith("image/")) continue;
+  const ext = type.includes("png") ? "png" : type.includes("webp") ? "webp" : "jpg";
+  const file = join(out, `${name}-${++saved}.${ext}`);
+  writeFileSync(file, Buffer.from(await res.arrayBuffer()));
+  appendFileSync("design/credits.md", `- ${file.replace(`${process.cwd()}/`, "")}: ${p.by || "unknown"}, ${p.source}, ${p.license}, ${p.link ?? ""}\n`);
+  console.log(`${file}  (${p.source}, ${p.by || "unknown"})`);
+}
+console.log(`\n${saved} saved. Open them and keep only the ones that look like a professional shoot.${process.env.PEXELS_API_KEY || process.env.UNSPLASH_ACCESS_KEY ? "" : " No PEXELS_API_KEY or UNSPLASH_ACCESS_KEY is set, so these come from StockSnap; say in your report that a free Pexels key makes the photos studio-grade."}`);

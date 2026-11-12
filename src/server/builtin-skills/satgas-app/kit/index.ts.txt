@@ -1,0 +1,8 @@
+// The design kit: pages are built from these and from layout utilities, never from raw colours or one-off sizes.
+// Change the look in src/index.css (the tokens) and DESIGN.md, not page by page.
+export { type Column, Chart, DataTable, StatCard } from "./data";
+export { Container, Grid, Section, Stack } from "./layout";
+export { CountUp, Reveal, RevealItem } from "./motion";
+export { AppShell, MobileShell, type NavItem, SiteHeader } from "./shell";
+export { Figure, Heading, Text } from "./type";
+export { Badge, Button, Card, EmptyState, Photo, Skeleton } from "./ui";

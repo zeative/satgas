@@ -2,7 +2,6 @@
 // Usage: bun scripts/vendor-skills.ts <path to a clone> [name, default agent-skills]
 //   agent-skills:   a clone of github.com/addyosmani/agent-skills
 //   security-audit: a clone of github.com/cloudflare/security-audit-skill
-//   hallmark:       a clone of github.com/Nutlope/hallmark (a sparse checkout of skills/hallmark is enough)
 import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, join, posix, relative } from "node:path";
 

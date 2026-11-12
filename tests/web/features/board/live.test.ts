@@ -70,3 +70,81 @@ test("a slot shows the task's latest steps, oldest first, a few at most", () => 
   expect(slot?.steps).toHaveLength(STEPS_SHOWN);
   expect(slot?.steps.every((s) => s.kind === "command")).toBe(true);
 });
+
+// A board that builds an app shows its pages as frames; the pointer works on the page itself, on the section it edits.
+const frame = (id: string, x: number, route?: string): Card =>
+  ({ id, kind: "preview", app: "web", x, y: 0, w: 960, h: 1032, createdAt: 1, ...(route ? { route } : {}) }) as Card;
+const layout = (files: Record<string, { x: number; y: number; w: number; h: number }>, scrollY = 0) => ({
+  files,
+  scrollY,
+  vh: 800,
+  scale: 0.75,
+  left: 0,
+});
+
+test("on an app board the pointer goes to the section the task is editing, and no slot is drawn", () => {
+  const r = run([task("home", "running")], [frame("f1", 0)]);
+  const { slots, cursors } = liveWork(
+    r,
+    { home: [tool(1, "Edit /work/src/components/home/Hero.tsx")] },
+    { f1: layout({ "src/components/home/Hero.tsx": { x: 0, y: 400, w: 1280, h: 600 } }) },
+  );
+  expect(slots).toEqual([]);
+  const c = cursors[0];
+  // The hero sits 400 to 1000 px down the page, drawn at 0.75 under the 32 px bar: 332 to 782 on the board.
+  expect(c && c.y >= 332 && c.y <= 782).toBe(true);
+  expect(c?.area).toEqual(expect.objectContaining({ w: 960, h: 450 }));
+});
+
+test("a section scrolled out of the frame keeps the pointer at the frame's edge", () => {
+  const r = run([task("home", "running")], [frame("f1", 0)]);
+  const { cursors } = liveWork(
+    r,
+    { home: [tool(1, "Edit /work/src/components/home/Footer.tsx")] },
+    { f1: layout({ "src/components/home/Footer.tsx": { x: 0, y: 4000, w: 1280, h: 300 } }) },
+  );
+  const c = cursors[0];
+  expect(c && c.y >= 32 && c.y <= 1032).toBe(true);
+});
+
+test("a file that draws nothing yet puts the pointer on the page named like it", () => {
+  const r = run([task("book", "running")], [frame("f1", 0), frame("f2", 1040, "/booking")]);
+  const { cursors } = liveWork(r, { book: [tool(1, "Write /work/src/pages/Booking.tsx")] }, {});
+  const c = cursors[0];
+  expect(c && c.x >= 1040 && c.x <= 2000).toBe(true);
+});
+
+test("an edit's lines put the selection on the element those lines draw, and it stays there through commands", () => {
+  const r = run([task("home", "running")], [frame("f1", 0)]);
+  const files = {
+    "src/pages/Home.tsx": {
+      x: 0,
+      y: 0,
+      w: 1280,
+      h: 2000,
+      els: [
+        [3, 0, 0, 1280, 2000],
+        [10, 80, 200, 400, 120],
+        [24, 80, 900, 600, 300],
+      ] as [number, number, number, number, number][],
+    },
+  };
+  const edit: LogLine = { ...tool(1, "Edit /work/src/pages/Home.tsx"), lines: [24, 30] };
+  const at = (lines: LogLine[]) => liveWork(r, { home: lines }, { f1: layout(files) }).cursors[0];
+  const one = at([edit]);
+  // The element opened on line 24 sits 80 px in and 900 px down the page, at 0.75 under the 32 px bar.
+  expect([one?.x, one?.y, one?.area?.w]).toEqual([60, 707, 450]);
+  const two = at([edit, tool(2, "Bash bunx tsc --noEmit")]);
+  expect([two?.x, two?.y]).toEqual([one?.x, one?.y]);
+});
+
+test("a source file written or read through the shell counts as the part in work", async () => {
+  const { shellFile } = await import("../../../../src/web/features/board/live");
+  expect(shellFile("mkdir -p src/components/booking && cat > src/components/booking/SlotPicker.tsx <<'EOF'")).toEqual({
+    file: "src/components/booking/SlotPicker.tsx",
+    typing: true,
+  });
+  expect(shellFile("sed -i '' 's|Harga|Tarif|' src/pages/Layanan.tsx")).toEqual({ file: "src/pages/Layanan.tsx", typing: true });
+  expect(shellFile("cat src/components/home/Hero.tsx")).toEqual({ file: "src/components/home/Hero.tsx", typing: false });
+  expect(shellFile("bunx tsc --noEmit")).toBeNull();
+});

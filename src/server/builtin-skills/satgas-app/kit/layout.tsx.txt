@@ -1,0 +1,81 @@
+import type { ReactNode } from "react";
+import { cn } from "@/lib/cn";
+
+// Layout primitives. Pages compose these instead of inventing widths, gaps and rhythm, so every page lines up on the
+// same grid. They take variants, not class names: a one-off style belongs in the kit, where every page gets it.
+
+const WIDTH = { prose: "max-w-3xl", default: "max-w-7xl", wide: "max-w-[90rem]" } as const;
+
+export function Container({ width = "default", children }: { width?: keyof typeof WIDTH; children: ReactNode }) {
+  return <div className={cn("mx-auto w-full px-5 md:px-8", WIDTH[width])}>{children}</div>;
+}
+
+const SPACE = { sm: "py-12 md:py-16", md: "py-16 md:py-24", lg: "py-20 md:py-32" } as const;
+const TONE = { default: "bg-background text-foreground", muted: "bg-surface text-foreground", inverse: "bg-foreground text-background" } as const;
+
+export function Section({
+  space = "md",
+  tone = "default",
+  id,
+  children,
+}: {
+  space?: keyof typeof SPACE;
+  tone?: keyof typeof TONE;
+  id?: string;
+  children: ReactNode;
+}) {
+  return (
+    <section id={id} className={cn(SPACE[space], TONE[tone])}>
+      <Container>{children}</Container>
+    </section>
+  );
+}
+
+const GAP = { xs: "gap-2", sm: "gap-3", md: "gap-5", lg: "gap-8", xl: "gap-12" } as const;
+
+export function Stack({
+  gap = "md",
+  direction = "column",
+  align = "stretch",
+  justify = "start",
+  wrap = false,
+  children,
+}: {
+  gap?: keyof typeof GAP;
+  direction?: "column" | "row" | "responsive";
+  align?: "start" | "center" | "end" | "stretch" | "baseline";
+  justify?: "start" | "center" | "end" | "between";
+  wrap?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <div
+      className={cn(
+        "flex",
+        direction === "column" && "flex-col",
+        direction === "row" && "flex-row",
+        direction === "responsive" && "flex-col md:flex-row",
+        { start: "items-start", center: "items-center", end: "items-end", stretch: "items-stretch", baseline: "items-baseline" }[align],
+        { start: "justify-start", center: "justify-center", end: "justify-end", between: "justify-between" }[justify],
+        wrap && "flex-wrap",
+        GAP[gap],
+      )}
+    >
+      {children}
+    </div>
+  );
+}
+
+const COLS = {
+  2: "md:grid-cols-2",
+  3: "sm:grid-cols-2 lg:grid-cols-3",
+  4: "sm:grid-cols-2 lg:grid-cols-4",
+  "1-2": "lg:grid-cols-[1fr_2fr]",
+  "2-1": "lg:grid-cols-[2fr_1fr]",
+  "5-7": "lg:grid-cols-12 [&>*:first-child]:lg:col-span-5 [&>*:last-child]:lg:col-span-7",
+  "7-5": "lg:grid-cols-12 [&>*:first-child]:lg:col-span-7 [&>*:last-child]:lg:col-span-5",
+} as const;
+
+export function Grid({ cols = 3, gap = "md", align = "stretch", children }: { cols?: keyof typeof COLS; gap?: keyof typeof GAP; align?: "start" | "center" | "stretch"; children: ReactNode }) {
+  return <div className={cn("grid grid-cols-1", COLS[cols], GAP[gap], { start: "items-start", center: "items-center", stretch: "items-stretch" }[align])}>{children}</div>;
+}

@@ -1,30 +1,18 @@
 import { Handle, type Node, type NodeProps, NodeResizer, Position, type ReactFlowState, useStore } from "@xyflow/react";
-import { Check, Download, ExternalLink, Globe, Link2, Lock, Maximize2, Monitor, RotateCw, Smartphone } from "lucide-react";
-import {
-  type CSSProperties,
-  lazy,
-  memo,
-  Suspense,
-  useContext,
-  useDeferredValue,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "react";
+import { Download, ExternalLink, Lock, Maximize2, Monitor, RotateCw, Smartphone } from "lucide-react";
+import { type CSSProperties, lazy, memo, Suspense, useContext, useDeferredValue, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { LinkedText } from "@/components/linked-text";
 import { InlineText, Markdown } from "@/components/markdown";
 import { openExternal } from "@/components/outbound-link";
-import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { t } from "@/i18n";
 import { cn } from "@/lib/utils";
-import { useRuns } from "@/stores/runs";
 import { type Card, isPdf } from "../../../shared/board";
 import { MiniFace } from "../team/face";
+import { AppBody } from "./app-frame";
 import { FullDetail, keyedSrc, useBoard } from "./context";
 import { useShiftKey } from "./keys";
+import { BarButton, PageFrame } from "./page-frame";
 import { PALETTE } from "./palette";
 import { savedStrokePath } from "./stroke";
 import { TableEditor } from "./table-editor";
@@ -256,21 +244,6 @@ function FarBody({ card }: { card: Card }) {
     <div aria-hidden="true" className="size-full p-4">
       <div className="satgas-far-lines size-full w-5/6" />
     </div>
-  );
-}
-
-function BarButton({ label, onClick, children }: { label: string; onClick: () => void; children: React.ReactNode }) {
-  return (
-    <Button
-      variant="ghost"
-      size="icon"
-      className="size-6 text-muted-foreground hover:text-foreground [&_svg]:size-3.5"
-      aria-label={label}
-      title={label}
-      onClick={onClick}
-    >
-      {children}
-    </Button>
   );
 }
 
@@ -747,12 +720,6 @@ function TableBody({ rows }: { rows: string[][] }) {
   );
 }
 
-// The page runs sandboxed in an opaque origin; it only takes clicks while its card is selected, so the board stays draggable.
-// A page renders at a real screen width and is shrunk to fit, so a small card shows the page as built instead of reflowing
-// it to the card's width. Phones are where pages break; the card shows one at a common phone width, centred.
-const DESKTOP_W = 1280;
-const PHONE_W = 390;
-
 function PreviewBody({ card, interactive }: { card: Card; interactive: boolean }) {
   const [nonce, setNonce] = useState(0);
   const [phone, setPhone] = useState(false);
@@ -777,219 +744,12 @@ function PreviewBody({ card, interactive }: { card: Card; interactive: boolean }
         src={keyedSrc(card.src, runId, fileKey)}
         title={card.title ?? card.src ?? "preview"}
         page={page}
-        phone={phone}
+        device={phone ? "phone" : "desktop"}
         interactive={interactive}
         w={card.w}
         h={card.h}
       />
     </div>
-  );
-}
-
-// A page at a real screen width, shrunk to fit its card, so a small card shows it as built instead of reflowing it. The
-// page runs sandboxed and only takes clicks while its card is selected, so the board stays draggable.
-function PageFrame({
-  src,
-  title,
-  page,
-  phone,
-  interactive,
-  w,
-  h,
-}: {
-  src: string | undefined;
-  title: string;
-  page: boolean;
-  phone: boolean;
-  interactive: boolean;
-  w: number;
-  h: number;
-}) {
-  const box = useRef<HTMLDivElement>(null);
-  const [size, setSize] = useState({ w, h: Math.max(h - 32, 0) });
-  useLayoutEffect(() => {
-    const el = box.current;
-    if (!el) return;
-    // Layout size, untouched by the canvas zoom, so the page keeps one width whatever the zoom.
-    const ro = new ResizeObserver(([e]) => e && setSize({ w: e.contentRect.width, h: e.contentRect.height }));
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
-  const view = phone ? PHONE_W : Math.max(DESKTOP_W, size.w);
-  const scale = size.w > 0 ? Math.min(1, size.w / view) : 1;
-  return (
-    <div ref={box} className="relative min-h-0 flex-1 overflow-hidden">
-      <iframe
-        src={src}
-        title={title}
-        // A PDF needs the browser's own viewer, which a sandboxed frame refuses; it carries no page script to contain.
-        sandbox={page ? "allow-scripts allow-forms allow-popups allow-modals" : undefined}
-        loading="lazy"
-        style={
-          page
-            ? {
-                width: view,
-                height: size.h / scale,
-                left: Math.max(0, (size.w - view * scale) / 2),
-                transform: scale < 1 ? `scale(${scale})` : undefined,
-              }
-            : undefined
-        }
-        className={cn(
-          "nodrag nowheel absolute top-0 left-0 origin-top-left bg-white",
-          !page && "size-full",
-          phone && "border-x",
-          !interactive && "pointer-events-none",
-        )}
-      />
-    </div>
-  );
-}
-
-const appCall = async (runId: string, name: string, action: "start" | "stop" | "share" | "unshare") => {
-  const res = await fetch(`/api/runs/${runId}/apps/${name}/${action}`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: "{}",
-  });
-  if (!res.ok) throw new Error(((await res.json().catch(() => null)) as { error?: string } | null)?.error ?? t.board.app.failed);
-};
-
-// A web app the team runs, live on the board: its status, start and stop, sharing, and the app itself once it answers.
-function AppBody({ card, interactive }: { card: Card; interactive: boolean }) {
-  const { runId } = useBoard();
-  const name = card.app ?? "";
-  const app = useRuns((s) => (s.run?.id === runId ? s.run.apps?.[name] : undefined));
-  const [nonce, setNonce] = useState(0);
-  const [phone, setPhone] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const status = app?.status ?? "stopped";
-  const act = (action: "start" | "stop") => {
-    setBusy(true);
-    appCall(runId, name, action)
-      .catch((e: Error) => toast.error(e.message))
-      .finally(() => setBusy(false));
-  };
-  return (
-    <div className="flex size-full flex-col">
-      <div className="card-handle flex h-8 shrink-0 items-center gap-2 border-b bg-muted/40 px-2.5">
-        <span
-          aria-hidden="true"
-          className={cn(
-            "size-1.5 shrink-0 rounded-full",
-            status === "running"
-              ? "bg-emerald-500"
-              : status === "starting"
-                ? "bg-signal-ink"
-                : status === "failed"
-                  ? "bg-destructive"
-                  : "bg-muted-foreground/50",
-          )}
-        />
-        <span className="min-w-0 flex-1 truncate font-mono text-xs text-muted-foreground">
-          {name} · {t.board.app.status[status]}
-        </span>
-        {app && <AppShare runId={runId} name={name} shared={!!app.shared} path={app.path} />}
-        <Button
-          variant="ghost"
-          size="sm"
-          disabled={busy || status === "starting"}
-          className="nodrag h-6 px-2 text-xs text-muted-foreground hover:text-foreground"
-          onClick={() => act(status === "running" ? "stop" : "start")}
-        >
-          {status === "running" ? t.board.app.stop : t.board.app.start}
-        </Button>
-        <BarButton label={phone ? t.board.desktop : t.board.mobile} onClick={() => setPhone((v) => !v)}>
-          {phone ? <Monitor /> : <Smartphone />}
-        </BarButton>
-        {app && (
-          <BarButton label={t.board.open} onClick={() => openExternal(`${location.origin}${app.path}`)}>
-            <ExternalLink />
-          </BarButton>
-        )}
-        <BarButton label={t.board.reload} onClick={() => setNonce((n) => n + 1)}>
-          <RotateCw />
-        </BarButton>
-      </div>
-      {status === "running" && app ? (
-        <PageFrame key={nonce} src={app.path} title={name} page phone={phone} interactive={interactive} w={card.w} h={card.h} />
-      ) : (
-        <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
-          {status === "starting" ? (
-            <p className="satgas-shimmer text-sm">{t.board.app.starting(name)}</p>
-          ) : (
-            <>
-              <p className="max-w-sm text-sm text-muted-foreground">
-                {status === "failed" ? t.board.app.failedLead : t.board.app.stoppedLead}
-              </p>
-              {status === "failed" && app?.error && (
-                <pre className="nowheel max-h-40 w-full max-w-xl overflow-auto rounded-md border bg-muted/40 p-2 text-start font-mono text-[11px] leading-4 whitespace-pre-wrap text-destructive">
-                  {app.error}
-                </pre>
-              )}
-              <Button size="sm" variant="secondary" className="nodrag" disabled={busy} onClick={() => act("start")}>
-                {t.board.app.start}
-              </Button>
-            </>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// Who may open the app, the way a document is shared: only the signed-in person, or anyone with the link.
-function AppShare({ runId, name, shared, path }: { runId: string; name: string; shared: boolean; path: string }) {
-  const set = (on: boolean) => void appCall(runId, name, on ? "share" : "unshare").catch((e: Error) => toast.error(e.message));
-  const link = `${location.origin}${path}`;
-  return (
-    <Popover>
-      <PopoverTrigger asChild>
-        <Button variant="ghost" size="sm" className="nodrag h-6 gap-1.5 px-2 text-xs text-muted-foreground hover:text-foreground">
-          {shared ? <Globe className="size-3.5" aria-hidden="true" /> : <Lock className="size-3.5" aria-hidden="true" />}
-          {t.board.app.share}
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent align="end" className="nodrag w-72 p-1">
-        <div className="flex h-9 items-center justify-between gap-2 ps-2">
-          <p className="truncate text-sm font-medium">{t.board.app.shareTitle(name)}</p>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 shrink-0 gap-1.5 px-2 text-xs text-muted-foreground hover:text-foreground"
-            onClick={() =>
-              void navigator.clipboard
-                ?.writeText(link)
-                .then(() => toast.success(t.board.app.copied))
-                .catch(() => toast.error(link))
-            }
-          >
-            <Link2 className="size-3.5" aria-hidden="true" />
-            {t.board.app.copyLink}
-          </Button>
-        </div>
-        <fieldset aria-label={t.board.app.access} className="m-0 flex flex-col border-0 p-0">
-          {[false, true].map((on) => (
-            <label
-              key={String(on)}
-              className="flex min-h-11 cursor-pointer items-center gap-2.5 rounded-md px-2 py-1.5 transition-colors hover:bg-muted has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring"
-            >
-              <input type="radio" name={`share-${runId}-${name}`} checked={shared === on} onChange={() => set(on)} className="sr-only" />
-              {on ? (
-                <Globe className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-              ) : (
-                <Lock className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-              )}
-              <span className="flex min-w-0 flex-1 flex-col">
-                <span className="text-sm">{on ? t.board.app.anyone : t.board.app.restricted}</span>
-                <span className="truncate text-xs text-muted-foreground">{on ? t.board.app.anyoneHint : t.board.app.restrictedHint}</span>
-              </span>
-              <Check className={cn("size-4 shrink-0", shared !== on && "invisible")} aria-hidden="true" />
-            </label>
-          ))}
-        </fieldset>
-      </PopoverContent>
-    </Popover>
   );
 }
 

@@ -1,3 +1,4 @@
+import { readFileSync, statSync } from "node:fs";
 import { stat } from "node:fs/promises";
 import type { Subprocess } from "bun";
 import type { FileChange } from "../../shared/board";
@@ -247,6 +248,32 @@ export function describeInput(input: any): string {
     input.description;
   const v = named ?? Object.entries(input).find(([k, x]) => typeof x === "string" && x.trim() && !SENSITIVE_ARG.test(k))?.[1];
   return v ? clip(String(v), 400) : "";
+}
+
+// The lines of a file a call works on: where an edit's old text sits (its new text starts there), or the window a read
+// asked for. A whole-file write or read touches no lines in particular.
+export function editLines(name: string, input: any): [number, number] | undefined {
+  const path = input?.file_path;
+  if (typeof path !== "string") return undefined;
+  if (name === "Read") {
+    const from = Number(input.offset);
+    const n = Number(input.limit);
+    return Number.isFinite(from) && from > 0 ? [from, from + (Number.isFinite(n) && n > 0 ? n : 1) - 1] : undefined;
+  }
+  const edit = name === "Edit" ? input : name === "MultiEdit" ? input.edits?.[0] : undefined;
+  const old = edit?.old_string;
+  if (typeof old !== "string" || !old) return undefined;
+  try {
+    if (statSync(path).size > 1_000_000) return undefined;
+    const text = readFileSync(path, "utf8");
+    const at = text.indexOf(old);
+    if (at < 0) return undefined;
+    const start = text.slice(0, at).split("\n").length;
+    const span = String(edit.new_string ?? old).split("\n").length;
+    return [start, start + span - 1];
+  } catch {
+    return undefined;
+  }
 }
 
 // What a tool gave back, kept readable for the chat: lines intact, terminal colours gone, and a long output cut to its

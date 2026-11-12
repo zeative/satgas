@@ -20,6 +20,7 @@ import {
   clipOutput,
   describeInput,
   type EnvChange,
+  editLines,
   logText,
   runJsonl,
 } from "./process";
@@ -191,8 +192,15 @@ export async function runClaude(req: AgentRequest, opts: ClaudeOptions = {}): Pr
               req.onLog({ kind: "think", text: logText(block.thinking.trim(), 2000) });
             else if (block.type === "tool_use") {
               // How the lead hands back its plan, which the chat already shows; not something it did.
-              if (block.name !== "StructuredOutput")
-                req.onLog({ kind: "tool", text: `${block.name} ${describeInput(block.input)}`.trim(), call: block.id });
+              if (block.name !== "StructuredOutput") {
+                const lines = editLines(block.name, block.input);
+                req.onLog({
+                  kind: "tool",
+                  text: `${block.name} ${describeInput(block.input)}`.trim(),
+                  call: block.id,
+                  ...(lines ? { lines } : {}),
+                });
+              }
               const path = block.input?.file_path ?? block.input?.notebook_path;
               if (typeof path === "string" && WRITES.has(block.name)) req.onFile?.(path, block.name === "Write" ? "added" : "modified");
             }

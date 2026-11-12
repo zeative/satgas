@@ -1,0 +1,96 @@
+#!/usr/bin/env node
+// Puts the page you built next to its target shot, at the same width, and once more laid over it at half opacity, in
+// one picture: design/review/compare-<n>.png. Judge the build from that picture, never from memory of the target.
+//   node compare.mjs <target image> <page url> [--width 1440] [--scroll 0] [--at 0] [--out design/review]
+// A full-page target is compared one screen at a time: --at is where that screen starts in the target, as a share of
+// its height (0.35 is a third of the way down), and --scroll is where the same section starts on your page, in px.
+import { execFileSync } from "node:child_process";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { basename, join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
+
+const [target, url, ...rest] = process.argv.slice(2);
+const opt = (f, d) => {
+  const i = rest.indexOf(f);
+  return i >= 0 ? rest[i + 1] : d;
+};
+if (!target || !url || !existsSync(target)) {
+  console.error("Usage: node compare.mjs <target image> <page url> [--width 1440] [--scroll 0]");
+  process.exit(1);
+}
+const width = Number(opt("--width", "1440"));
+const scroll = Number(opt("--scroll", "0"));
+const at = Math.min(1, Math.max(0, Number(opt("--at", "0"))));
+const out = resolve(opt("--out", "design/review"));
+
+// The target's size, read from its header, so the page is shot at the same proportions.
+function size(path) {
+  const b = readFileSync(path);
+  if (b.toString("ascii", 1, 4) === "PNG") return { w: b.readUInt32BE(16), h: b.readUInt32BE(20) };
+  if (b.toString("ascii", 0, 4) === "RIFF" && b.toString("ascii", 8, 12) === "WEBP") {
+    const kind = b.toString("ascii", 12, 16);
+    if (kind === "VP8X") return { w: 1 + b.readUIntLE(24, 3), h: 1 + b.readUIntLE(27, 3) };
+    if (kind === "VP8L") {
+      const v = b.readUInt32LE(21);
+      return { w: 1 + (v & 0x3fff), h: 1 + ((v >> 14) & 0x3fff) };
+    }
+    return { w: b.readUInt16LE(26) & 0x3fff, h: b.readUInt16LE(28) & 0x3fff };
+  }
+  for (let i = 2; i < b.length; ) {
+    if (b[i] !== 0xff) break;
+    const marker = b[i + 1];
+    const len = b.readUInt16BE(i + 2);
+    if (marker >= 0xc0 && marker <= 0xc3) return { w: b.readUInt16BE(i + 7), h: b.readUInt16BE(i + 5) };
+    i += 2 + len;
+  }
+  return { w: 1600, h: 1200 };
+}
+
+const t = size(target);
+const ratio = t.h / t.w;
+// A tall target is a whole page; one screen of it at a time is what can be compared.
+const tall = ratio > 1.2;
+const height = Math.round(width * (tall ? 0.625 : ratio));
+mkdirSync(out, { recursive: true });
+const n = readdirSync(out).filter((f) => /^compare-\d+\.png$/.test(f)).length + 1;
+const page = join(out, `page-${n}.png`);
+const session = `satgas-compare-${process.pid}`;
+const ab = (...args) => execFileSync("agent-browser", ["--session", session, ...args], { encoding: "utf8", timeout: 90_000 });
+
+try {
+  ab("open", "about:blank");
+  ab("set", "viewport", String(width), String(height));
+  ab("open", url);
+  ab("wait", "2500");
+  if (scroll) {
+    ab("eval", `window.scrollTo(0, ${scroll})`);
+    ab("wait", "800");
+  }
+  ab("screenshot", page);
+
+  const col = 960;
+  const rowH = Math.round((col * height) / width);
+  // The target drawn at the column's width, moved up so the chosen screen of it shows in the window.
+  const shift = Math.round(at * col * ratio);
+  const img = (p) => pathToFileURL(resolve(p)).href;
+  const html = `<!doctype html><meta charset="utf-8"><style>
+    body{margin:0;background:#111;color:#bbb;font:600 14px system-ui;padding:24px}
+    .row{display:flex;gap:24px;margin-bottom:24px}.win{position:relative;width:${col}px;height:${rowH}px;overflow:hidden;border-radius:6px}
+    .win img{position:absolute;left:0;width:${col}px}.win .t{top:-${shift}px}.win .o{top:0;height:${rowH}px;object-fit:cover;object-position:top}
+    .win .t+.o,.win .o+.t{opacity:.5}p{margin:0 0 8px}</style>
+    <div class="row"><div><p>Target${tall ? ` (from ${Math.round(at * 100)}% down)` : ""}</p><div class="win"><img class="t" src="${img(target)}"></div></div>
+    <div><p>Ours${scroll ? ` (scrolled ${scroll}px)` : ""}</p><div class="win"><img class="o" src="${img(page)}"></div></div></div>
+    <div class="row"><div><p>Ours with the target laid over it at half opacity</p><div class="win"><img class="o" src="${img(page)}"><img class="t" src="${img(target)}"></div></div></div>`;
+  const sheet = join(out, `compare-${n}.html`);
+  writeFileSync(sheet, html);
+  ab("set", "viewport", String(col * 2 + 72), String(rowH * 2 + 140));
+  ab("open", pathToFileURL(sheet).href);
+  ab("wait", "800");
+  ab("screenshot", join(out, `compare-${n}.png`));
+} finally {
+  try {
+    ab("close");
+  } catch {}
+}
+console.log(`${join(out, `compare-${n}.png`)}  (target ${basename(target)}, page shot at ${width}x${height})
+Open it. Go region by region, top to bottom, and write every difference in design/review.md before you change anything.`);

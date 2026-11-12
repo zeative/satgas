@@ -1,0 +1,190 @@
+#!/usr/bin/env node
+// Cuts a target shot into its parts the way a designer reads it: the screens or windows on the backdrop, then the
+// sections inside each, then the blocks inside those, split along the empty lines between them. Each part gets its box
+// (px and share of its parent), its own colours with how much of it they cover, and a sharp crop of its own to build
+// from and compare against. A model looking at a whole shot sees every part small and guesses; a crop it can read.
+//   node measure.mjs <target image> [--out design/refs/<name>]
+import { execFileSync } from "node:child_process";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { basename, extname, join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
+
+const [target, ...rest] = process.argv.slice(2);
+const opt = (f, d) => {
+  const i = rest.indexOf(f);
+  return i >= 0 ? rest[i + 1] : d;
+};
+if (!target || !existsSync(target)) {
+  console.error("Usage: node measure.mjs <target image> [--out design/refs/<name>]");
+  process.exit(1);
+}
+const name = basename(target, extname(target));
+const out = resolve(opt("--out", join("design", "refs", name)));
+mkdirSync(out, { recursive: true });
+
+const type = { ".png": "png", ".webp": "webp", ".jpg": "jpeg", ".jpeg": "jpeg", ".gif": "gif" }[extname(target).toLowerCase()] ?? "png";
+const data = `data:image/${type};base64,${readFileSync(target).toString("base64")}`;
+
+// Runs in the page: the image is a data URL, so its pixels can be read back from a canvas.
+const script = `
+const img = new Image();
+img.onload = () => {
+  const W = img.naturalWidth, H = img.naturalHeight;
+  const c = document.createElement("canvas"); c.width = W; c.height = H;
+  const g = c.getContext("2d"); g.drawImage(img, 0, 0);
+  const px = g.getImageData(0, 0, W, H).data;
+  const at = (x, y) => { const i = (y * W + x) * 4; return [px[i], px[i + 1], px[i + 2]]; };
+  const dist = (a, b) => Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) + Math.abs(a[2] - b[2]);
+  const hex = (c) => "#" + c.map((v) => v.toString(16).padStart(2, "0")).join("").toUpperCase();
+  // The colours of a box, binned to 16 levels a channel, most area first.
+  const palette = (b, k) => {
+    const n = new Map(); let total = 0;
+    const step = Math.max(1, Math.floor(Math.sqrt((b.w * b.h) / 40000)));
+    for (let y = b.y; y < b.y + b.h; y += step) for (let x = b.x; x < b.x + b.w; x += step) {
+      const p = at(x, y); const key = (p[0] >> 4) << 8 | (p[1] >> 4) << 4 | (p[2] >> 4);
+      const e = n.get(key) ?? { c: [0, 0, 0], n: 0 }; e.c[0] += p[0]; e.c[1] += p[1]; e.c[2] += p[2]; e.n++; n.set(key, e); total++;
+    }
+    return [...n.values()].sort((a, b) => b.n - a.n).slice(0, k)
+      .map((e) => ({ hex: hex(e.c.map((v) => Math.round(v / e.n))), share: Math.round((e.n / total) * 1000) / 10 }))
+      .filter((e) => e.share >= 0.5);
+  };
+  // A box's background is the colour most common along its edge.
+  const bgOf = (b) => {
+    const n = new Map(); let best = null, bn = 0;
+    const add = (x, y) => { const p = at(x, y); const k = (p[0] >> 3) << 10 | (p[1] >> 3) << 5 | (p[2] >> 3); const v = (n.get(k) ?? 0) + 1; n.set(k, v); if (v > bn) { bn = v; best = p; } };
+    for (let x = b.x; x < b.x + b.w; x += 2) { add(x, b.y); add(x, b.y + b.h - 1); }
+    for (let y = b.y; y < b.y + b.h; y += 2) { add(b.x, y); add(b.x + b.w - 1, y); }
+    return best;
+  };
+  // Content runs along one axis, split where a line across the box stays smooth for long enough: no edge along it, so
+  // a backdrop's gradient and the soft shadow under a phone count as empty, and a card border or a word does not.
+  const runs = (b, vertical) => {
+    const len = vertical ? b.w : b.h, across = vertical ? b.h : b.w;
+    const minGap = Math.max(6, Math.round(len * 0.012));
+    const empty = [];
+    for (let i = 0; i < len; i++) {
+      let edges = 0;
+      for (let j = 2; j < across && edges <= 2; j += 2) {
+        const p = vertical ? at(b.x + i, b.y + j) : at(b.x + j, b.y + i);
+        const q = vertical ? at(b.x + i, b.y + j - 2) : at(b.x + j - 2, b.y + i);
+        if (dist(p, q) > 30) edges++;
+      }
+      empty.push(edges <= 2);
+    }
+    const out = []; let start = -1, gap = 0;
+    for (let i = 0; i <= len; i++) {
+      const blank = i === len || empty[i];
+      if (!blank) { if (start < 0) start = i; gap = 0; continue; }
+      if (start < 0) continue;
+      gap++;
+      if (gap >= minGap || i === len) { out.push([start, i - gap + 1]); start = -1; gap = 0; }
+    }
+    return out.filter(([a, z]) => z - a >= 8).map(([a, z]) => vertical ? { x: b.x + a, y: b.y, w: z - a, h: b.h } : { x: b.x, y: b.y + a, w: b.w, h: z - a });
+  };
+  // Trims a box to its content, so a section's box is the section and not the margin around it.
+  const trim = (b) => {
+    const rows = runs(b, false), cols = runs(b, true);
+    if (!rows.length || !cols.length) return b;
+    const y0 = rows[0].y, y1 = rows.at(-1).y + rows.at(-1).h, x0 = cols[0].x, x1 = cols.at(-1).x + cols.at(-1).w;
+    return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
+  };
+  // Each box splits along the axis that gives it more parts: three phones side by side split into columns, a page into
+  // its sections.
+  const split = (b, depth) => {
+    const node = { ...b, bg: hex(bgOf(b)), palette: palette(b, 5), parts: [] };
+    if (depth >= 3 || b.w < 80 || b.h < 40) return node;
+    const rows = runs(b, false), cols = runs(b, true);
+    const [r, axis] = cols.length > rows.length ? [cols, "columns"] : [rows, "rows"];
+    if (r.length > 1) {
+      node.parts = r.map((p) => split(trim(p), depth + 1));
+      node.axis = axis;
+    } else if (depth === 0) {
+      const t = trim(b);
+      if (t.w < b.w * 0.95 || t.h < b.h * 0.95) node.parts = [split(t, depth + 1)];
+    }
+    return node;
+  };
+  const root = split({ x: 0, y: 0, w: W, h: H }, 0);
+  // A shot with no clean line to cut along (phones tilted on a grainy or photographed backdrop) is read through four
+  // overlapping zoomed quarters instead, so its type and detail are still large enough to read.
+  if (!root.parts.length) {
+    const w = Math.round(W * 0.58), h = Math.round(H * 0.58);
+    root.axis = "zoomed quarters";
+    root.parts = [[0, 0], [W - w, 0], [0, H - h], [W - w, H - h]].map(([x, y]) => ({ x, y, w, h, palette: palette({ x, y, w, h }, 5), parts: [] }));
+  }
+  // Crops of the parts worth building from: every screen or window, and every section inside one.
+  const crops = [];
+  const walk = (n, id, depth) => {
+    n.id = id;
+    if (depth > 0 && depth <= 2 && n.w * n.h >= W * H * 0.015 && crops.length < 24) {
+      const scale = Math.min(3, 1400 / n.w, 2400 / n.h);
+      const cc = document.createElement("canvas"); cc.width = Math.round(n.w * scale); cc.height = Math.round(n.h * scale);
+      const cg = cc.getContext("2d"); cg.imageSmoothingQuality = "high"; cg.drawImage(c, n.x, n.y, n.w, n.h, 0, 0, cc.width, cc.height);
+      crops.push({ id, data: cc.toDataURL("image/jpeg", 0.9) });
+      n.crop = true;
+    }
+    n.parts.forEach((p, i) => walk(p, id ? id + "." + (i + 1) : String(i + 1), depth + 1));
+  };
+  walk(root, "", 0);
+  window.__measure = { W, H, root, crops };
+};
+img.src = document.getElementById("src").textContent;
+`;
+const page = join(out, "measure.html");
+writeFileSync(page, `<!doctype html><meta charset="utf-8"><script id="src" type="text/plain">${data}</script><script>${script}</script>`);
+
+const session = `satgas-measure-${process.pid}`;
+const ab = (...args) => execFileSync("agent-browser", ["--session", session, ...args], { encoding: "utf8", timeout: 120_000, maxBuffer: 256 * 1024 * 1024 });
+const read = (js) => {
+  const line = ab("eval", js).trim().split("\n").filter(Boolean).at(-1) ?? "null";
+  const once = JSON.parse(line);
+  return typeof once === "string" ? JSON.parse(once) : once;
+};
+let result = null;
+try {
+  ab("open", pathToFileURL(page).href);
+  for (let i = 0; i < 40 && !result; i++) {
+    result = read("JSON.stringify(window.__measure ? { W: __measure.W, H: __measure.H, root: __measure.root, n: __measure.crops.length } : null)");
+    if (!result) ab("wait", "250");
+  }
+  if (result) {
+    for (let i = 0; i < result.n; i++) {
+      const crop = read(`JSON.stringify(__measure.crops[${i}])`);
+      writeFileSync(join(out, `part-${crop.id}.jpg`), Buffer.from(crop.data.split(",")[1], "base64"));
+    }
+  }
+} finally {
+  try {
+    ab("close");
+  } catch {}
+}
+if (!result) {
+  console.error("Could not read the image.");
+  process.exit(1);
+}
+
+const share = (n, of) => `${Math.round((n / of) * 1000) / 10}%`;
+const lines = [`# ${name}: ${result.W}x${result.H}`, ""];
+// Parts too small to build on their own (a dot, a word) stay in measure.json and out of the summary.
+const area = result.W * result.H;
+const describe = (n, parent, depth) => {
+  if (depth > 0 && n.w * n.h < area * 0.002) return;
+  if (depth > 0) {
+    const where = `${n.w}x${n.h} at ${n.x},${n.y}; ${share(n.w, parent.w)} of the width and ${share(n.h, parent.h)} of the height of its parent`;
+    const colours = n.palette.map((p) => `${p.hex} ${p.share}%`).join(", ");
+    lines.push(`${"  ".repeat(depth - 1)}- **${n.id}**${n.crop ? ` (part-${n.id}.jpg)` : ""}: ${where}. Colours: ${colours}.`);
+  } else lines.push(`Backdrop ${n.bg ?? ""}. Colours: ${n.palette.map((p) => `${p.hex} ${p.share}%`).join(", ")}.`, "");
+  if (n.parts.length) {
+    const gaps = n.parts.slice(1).map((p, i) => (n.axis === "columns" ? p.x - (n.parts[i].x + n.parts[i].w) : p.y - (n.parts[i].y + n.parts[i].h)));
+    if (depth > 0 && gaps.length) lines.push(`${"  ".repeat(depth)}  ${n.parts.length} ${n.axis}, gaps ${gaps.join(", ")} px`);
+  }
+  for (const p of n.parts) describe(p, n, depth + 1);
+};
+describe(result.root, result.root, 0);
+writeFileSync(join(out, "measure.json"), JSON.stringify(result.root, null, 1));
+writeFileSync(join(out, "measure.md"), `${lines.join("\n")}\n`);
+console.log(`${lines.filter((l) => !/^ {4,}/.test(l)).join("\n")}
+
+Saved in ${out}: measure.md (every level), measure.json and a crop of each screen and section (part-<id>.jpg).
+Open each crop before you build that part. The sizes are in the shot's own pixels: scale them by your page width over
+the part's width. Build one part at a time, then compare it with its crop: compare.mjs ${out}/part-<id>.jpg <page url>.`);

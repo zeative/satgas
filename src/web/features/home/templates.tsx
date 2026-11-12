@@ -15,17 +15,13 @@ const TONE = {
 
 const KINDS: { kind: keyof typeof t.templates.items; tone: keyof typeof TONE }[] = [
   { kind: "website", tone: "lilac" },
-  { kind: "poster", tone: "pink" },
-  { kind: "social", tone: "lilac" },
-  { kind: "deck", tone: "sky" },
-  { kind: "dashboard", tone: "lilac" },
-  { kind: "invitation", tone: "pink" },
-  { kind: "businessCard", tone: "amber" },
-  { kind: "game", tone: "lilac" },
-  { kind: "cv", tone: "lilac" },
-  { kind: "research", tone: "lime" },
-  { kind: "certificate", tone: "amber" },
-  { kind: "budget", tone: "sky" },
+  { kind: "store", tone: "pink" },
+  { kind: "booking", tone: "amber" },
+  { kind: "dashboard", tone: "sky" },
+  { kind: "saas", tone: "sky" },
+  { kind: "portfolio", tone: "lime" },
+  { kind: "mobile", tone: "lilac" },
+  { kind: "game", tone: "pink" },
 ];
 
 // A finished brief for the composer: nothing runs until the person sends it, changed or as it is.

@@ -1,7 +1,6 @@
 import guide from "../../../README.md" with { type: "text" };
 import type { PackId } from "../../shared/skills";
 import { AGENT_SKILLS } from "./agent-skills.gen";
-import { HALLMARK } from "./hallmark.gen";
 import apps from "./satgas/reference/apps.md" with { type: "text" };
 import board from "./satgas/reference/board.md" with { type: "text" };
 import branches from "./satgas/reference/branches.md" with { type: "text" };
@@ -11,9 +10,24 @@ import rounds from "./satgas/reference/rounds.md" with { type: "text" };
 import secrets from "./satgas/reference/secrets.md" with { type: "text" };
 import verify from "./satgas/reference/verify.md" with { type: "text" };
 import satgas from "./satgas/SKILL.md" with { type: "text" };
+import kitData from "./satgas-app/kit/data.tsx.txt" with { type: "text" };
+import kitIndex from "./satgas-app/kit/index.ts.txt" with { type: "text" };
+import kitLayout from "./satgas-app/kit/layout.tsx.txt" with { type: "text" };
+import kitMotion from "./satgas-app/kit/motion.tsx.txt" with { type: "text" };
+import kitShell from "./satgas-app/kit/shell.tsx.txt" with { type: "text" };
+import kitType from "./satgas-app/kit/type.tsx.txt" with { type: "text" };
+import kitUi from "./satgas-app/kit/ui.tsx.txt" with { type: "text" };
+import appSkill from "./satgas-app/SKILL.md" with { type: "text" };
+import appScaffold from "./satgas-app/scripts/scaffold.mjs.txt" with { type: "text" };
+import appUiCheck from "./satgas-app/scripts/ui-check.mjs.txt" with { type: "text" };
+import designFonts from "./satgas-design/fonts.md" with { type: "text" };
 import designSkill from "./satgas-design/SKILL.md" with { type: "text" };
-import designScript from "./satgas-design/scripts/source.mjs.txt" with { type: "text" };
-import designSources from "./satgas-design/sources.json";
+import designCompare from "./satgas-design/scripts/compare.mjs.txt" with { type: "text" };
+import designCutout from "./satgas-design/scripts/cutout.mjs.txt" with { type: "text" };
+import designFontsScript from "./satgas-design/scripts/fonts.mjs.txt" with { type: "text" };
+import designMeasure from "./satgas-design/scripts/measure.mjs.txt" with { type: "text" };
+import designPhotos from "./satgas-design/scripts/photos.mjs.txt" with { type: "text" };
+import designRefs from "./satgas-design/scripts/refs.mjs.txt" with { type: "text" };
 import { SECURITY_AUDIT } from "./security-audit.gen";
 
 // The README links its neighbours by relative path, which point nowhere inside the skill, so they go to the repository.
@@ -36,25 +50,40 @@ export const BUILTIN: Record<string, Record<string, string>> = {
     // The README itself, so the steps agents give about Satgas are the ones its docs give, in any install.
     "reference/satgas-guide.md": guideOf(guide),
   },
-  // Satgas's own: where a page's material comes from, with a script that takes the real files from licensed sources.
+  // Satgas's own method for apps: one live frame per page on the canvas, and a starter tagged so the canvas can follow.
+  "satgas-app": {
+    "SKILL.md": appSkill,
+    "scripts/scaffold.mjs": appScaffold,
+    "scripts/ui-check.mjs": appUiCheck,
+    // The design kit every new app starts from: tokens-only primitives, one shell, one chart, one motion.
+    "kit/index.ts": kitIndex,
+    "kit/layout.tsx": kitLayout,
+    "kit/type.tsx": kitType,
+    "kit/ui.tsx": kitUi,
+    "kit/data.tsx": kitData,
+    "kit/motion.tsx": kitMotion,
+    "kit/shell.tsx": kitShell,
+  },
+  // Satgas's own design method: clone a featured Dribbble shot's design, then check it against the shot in one picture.
   "satgas-design": {
     "SKILL.md": designSkill,
-    "sources.json": `${JSON.stringify(designSources, null, 2)}\n`,
-    "scripts/source.mjs": designScript,
+    "fonts.md": designFonts,
+    "scripts/fonts.mjs": designFontsScript,
+    "scripts/refs.mjs": designRefs,
+    "scripts/compare.mjs": designCompare,
+    "scripts/cutout.mjs": designCutout,
+    "scripts/measure.mjs": designMeasure,
+    "scripts/photos.mjs": designPhotos,
   },
   // Addy Osmani's agent-skills (MIT): the engineering workflow every task follows, from spec to ship.
   ...AGENT_SKILLS,
   // Cloudflare's security-audit (MIT): defensive reviews and full audits when a task asks for them.
   ...SECURITY_AUDIT,
-  // Hallmark by Together AI (MIT): the design floor and direction for every interface an agent builds or changes.
-  ...HALLMARK,
 };
 
 // Built-in skills the person may switch off, with the repo each came from for the credit on its card.
 export const OPTIONAL: Record<string, { repo: string }> = Object.fromEntries([
-  ["satgas-design", { repo: "zeative/satgas" }],
   ...Object.keys(SECURITY_AUDIT).map((name) => [name, { repo: "cloudflare/security-audit-skill" }]),
-  ...Object.keys(HALLMARK).map((name) => [name, { repo: "Nutlope/hallmark" }]),
 ]);
 
 // Which bundle a built-in skill belongs to, if any.

@@ -1,6 +1,6 @@
 # Web apps that need a server
 
-A plain HTML page with its CSS and scripts shows on the board by itself. Anything that needs a server to run (a Vite, Next, Astro or SvelteKit project, a game built with a bundler, an API, a backend with a page) goes through **`app_start`** in the satgas_team connector. You run it; the person never has to.
+A new app or website follows the **satgas-app** skill: its script scaffolds the project, every page is listed in `.satgas/screens.json`, and each listed page shows as its own live frame on the board. A plain HTML page with its CSS and scripts shows on the board by itself. Anything that needs a server to run (a Vite, Next, Astro or SvelteKit project, a game built with a bundler, an API, a backend with a page) goes through **`app_start`** in the satgas_team connector. You run it; the person never has to.
 
 - The person cannot reach your `localhost`: Satgas may run on a server, and even on their laptop a task's own background processes are stopped when it ends. Never answer with "run `npm run dev`" or a localhost address.
 - `app_start` runs your command in the board's folder, keeps it running after your task, puts it on the board as a live card and serves it at Satgas's own address. It returns once the app answers, with an address to check it at yourself and the one to give the person.

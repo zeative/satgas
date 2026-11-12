@@ -16,12 +16,13 @@ import { memo } from "react";
 import { t } from "@/i18n";
 import { avatarInk } from "@/lib/avatar";
 import { cn } from "@/lib/utils";
+import type { Box } from "@/stores/frames";
 import { MiniFace } from "../team/face";
 import type { Tail } from "../team/tail";
 import { SLOT_H, SLOT_PAD, SLOT_W, STEP_H, type Step } from "./live";
 
 export type SlotNodeType = Node<{ title: string; who: { id: string; name: string } | null; steps: Step[] }, "slot">;
-export type CursorNodeType = Node<{ who: { id: string; name: string }; now: Tail | null; typing: boolean }, "cursor">;
+export type CursorNodeType = Node<{ who: { id: string; name: string }; now: Tail | null; typing: boolean; area?: Box }, "cursor">;
 
 // Where a running task's work will land, showing the work as it happens: its latest steps, newest at the bottom.
 export const SlotNode = memo(function SlotNode({ data }: NodeProps<SlotNodeType>) {
@@ -98,23 +99,32 @@ const STEP_ICON: Partial<Record<Step["kind"], LucideIcon>> = {
 
 // A teammate's pointer on the board, on the card they touch this moment, tagged with their name in their own colour.
 export const CursorNode = memo(function CursorNode({ data }: NodeProps<CursorNodeType>) {
-  const { who, typing } = data;
+  const { who, typing, area } = data;
   const ink = avatarInk(who.id);
   return (
-    // While writing, the pointer runs along the line it is writing; otherwise it rests where its last step put it.
-    <div
-      className={cn(
-        "pointer-events-none flex items-start gap-0.5 text-xs leading-none font-medium text-[#0d0d0e]",
-        typing && "satgas-cursor-type",
+    // On a live page the part in work is outlined in the teammate's colour, as Figma shows a collaborator's selection,
+    // and the pointer rests on its corner until the work moves on. Elsewhere it runs along the line it writes.
+    <div className="pointer-events-none relative" aria-hidden="true">
+      {area && (
+        <div
+          className="absolute rounded-[3px] border-[1.5px]"
+          style={{ left: area.x, top: area.y, width: area.w, height: area.h, borderColor: ink }}
+        />
       )}
-      aria-hidden="true"
-    >
-      <svg viewBox="0 0 16 16" className="size-4 shrink-0">
-        <path d="M2 1.5 14 7.2 8.4 8.6 6 14.5Z" fill={ink} stroke="#0d0d0e" strokeWidth="1" />
-      </svg>
-      <span className="mt-3 rounded px-2 py-1 whitespace-nowrap" style={{ background: ink }}>
-        {who.name}
-      </span>
+      <div
+        className={cn(
+          "relative flex items-start gap-0.5 text-xs leading-none font-medium text-[#0d0d0e]",
+          !area && typing && "satgas-cursor-type",
+          area && "-translate-x-1 -translate-y-1",
+        )}
+      >
+        <svg viewBox="0 0 16 16" className="size-4 shrink-0">
+          <path d="M2 1.5 14 7.2 8.4 8.6 6 14.5Z" fill={ink} stroke="#0d0d0e" strokeWidth="1" />
+        </svg>
+        <span className="mt-3 rounded px-2 py-1 whitespace-nowrap" style={{ background: ink }}>
+          {who.name}
+        </span>
+      </div>
     </div>
   );
 });

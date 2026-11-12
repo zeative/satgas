@@ -52,6 +52,9 @@ export interface Card {
   src?: string;
   // On a preview: the board's web app it shows, by name, instead of a file.
   app?: string;
+  // On an app preview: the page of the app this frame shows, and the screen size it is drawn at.
+  route?: string;
+  device?: Device;
   files?: FileChange[];
   // drawing: flat [x, y, x, y, …] relative to the card's top-left corner
   points?: number[];
@@ -103,6 +106,9 @@ export interface Board {
   // Task nodes a person dragged away from the planner's layout.
   moved: Record<string, { x: number; y: number }>;
 }
+
+export const DEVICES = ["desktop", "tablet", "phone"] as const;
+export type Device = (typeof DEVICES)[number];
 
 export type BoardOp =
   | { op: "put"; card: Card }
@@ -228,6 +234,8 @@ const REMOVABLE = [
   "lang",
   "src",
   "app",
+  "route",
+  "device",
   "text",
   "rows",
   "files",
@@ -261,10 +269,14 @@ function cleanCardFields(input: Record<string, unknown>): Partial<Card> | null {
     if (!num(raw[k])) return null;
     out[k] = raw[k] as number;
   }
-  for (const k of ["from", "title", "lang", "src", "app", "group", "ref"] as const) {
+  for (const k of ["from", "title", "lang", "src", "app", "route", "group", "ref"] as const) {
     if (raw[k] === undefined) continue;
     if (!str(raw[k])) return null;
     out[k] = raw[k] as string;
+  }
+  if (raw.device !== undefined) {
+    if (!DEVICES.includes(raw.device as Device)) return null;
+    out.device = raw.device as Device;
   }
   if (raw.color !== undefined) {
     if (!COLORS.includes(raw.color as ColorName)) return null;

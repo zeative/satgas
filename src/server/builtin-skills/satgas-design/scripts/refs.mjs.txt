@@ -1,0 +1,120 @@
+#!/usr/bin/env node
+// Pulls real reference shots from Dribbble into design/refs, so the design is measured against work that is actually
+// featured, not against a guess. Dribbble refuses plain HTTP clients, so the search runs in agent-browser.
+//   node refs.mjs search "<query>" [--n 8] [--out design/refs]   top shots for a search, one image each
+//   node refs.mjs shot <dribbble shot url> [--out design/refs]   every image of one shot, at full size
+import { execFileSync } from "node:child_process";
+import { mkdirSync, writeFileSync, existsSync, readFileSync } from "node:fs";
+import { join, resolve } from "node:path";
+
+const [mode, target, ...rest] = process.argv.slice(2);
+
+// An image's size from its header (PNG, JPEG, WebP), without an image library.
+function size(b) {
+  if (b.toString("ascii", 1, 4) === "PNG") return { w: b.readUInt32BE(16), h: b.readUInt32BE(20) };
+  if (b.toString("ascii", 0, 4) === "RIFF" && b.toString("ascii", 8, 12) === "WEBP") {
+    const kind = b.toString("ascii", 12, 16);
+    if (kind === "VP8X") return { w: 1 + b.readUIntLE(24, 3), h: 1 + b.readUIntLE(27, 3) };
+    if (kind === "VP8L") {
+      const v = b.readUInt32LE(21);
+      return { w: 1 + (v & 0x3fff), h: 1 + ((v >> 14) & 0x3fff) };
+    }
+    return { w: b.readUInt16LE(26) & 0x3fff, h: b.readUInt16LE(28) & 0x3fff };
+  }
+  for (let i = 2; i < b.length - 8; ) {
+    if (b[i] !== 0xff) break;
+    const marker = b[i + 1];
+    if (marker >= 0xc0 && marker <= 0xc3) return { w: b.readUInt16BE(i + 7), h: b.readUInt16BE(i + 5) };
+    i += 2 + b.readUInt16BE(i + 2);
+  }
+  return { w: 0, h: 0 };
+}
+const opt = (f, d) => {
+  const i = rest.indexOf(f);
+  return i >= 0 ? rest[i + 1] : d;
+};
+const out = resolve(opt("--out", "design/refs"));
+const n = Number(opt("--n", "8"));
+if (!["search", "shot"].includes(mode) || !target) {
+  console.error('Usage: node refs.mjs search "<query>" [--n 8] | node refs.mjs shot <url>');
+  process.exit(1);
+}
+
+const session = `satgas-refs-${process.pid}`;
+const ab = (...args) => execFileSync("agent-browser", ["--session", session, ...args], { encoding: "utf8", timeout: 90_000 });
+const evalJson = (js) => {
+  const raw = ab("eval", `JSON.stringify((() => { ${js} })())`).trim();
+  // agent-browser prints the value, sometimes quoted once more.
+  const line = raw.split("\n").filter(Boolean).at(-1) ?? "null";
+  const once = JSON.parse(line);
+  return typeof once === "string" ? JSON.parse(once) : once;
+};
+
+// A search shows one cropped thumbnail per shot; a shot's own images come whole, so a full-page image keeps its length.
+const big = (src) => (mode === "shot" ? src.replace(/\?.*$/, "") : `${src.replace(/\?.*$/, "")}?format=webp&resize=1600x1200&vertical=center`);
+
+let found = [];
+try {
+  if (mode === "search") {
+    const slug = encodeURIComponent(target.trim().toLowerCase().replace(/\s+/g, "-"));
+    ab("open", `https://dribbble.com/search/${slug}`);
+    ab("wait", "2500");
+    for (let i = 0; i < 3 && found.length < n; i++) {
+      found = evalJson(`
+        const seen = new Set();
+        return [...document.querySelectorAll('li a[href*="/shots/"]')].flatMap((a) => {
+          const href = a.getAttribute("href") || "";
+          if (!/\\/shots\\/\\d+/.test(href) || seen.has(href)) return [];
+          const img = a.closest("li")?.querySelector('img[src*="cdn.dribbble.com/userupload"], img[srcset*="cdn.dribbble.com/userupload"]');
+          const src = img && (img.currentSrc || img.src);
+          if (!src || !src.includes("userupload")) return [];
+          seen.add(href);
+          return [{ title: (img.alt || a.textContent || "").trim().slice(0, 120), shot: "https://dribbble.com" + href.split("?")[0], src }];
+        });
+      `);
+      if (found.length < n) {
+        ab("scroll", "down", "2400");
+        ab("wait", "1500");
+      }
+    }
+  } else {
+    ab("open", target);
+    ab("wait", "3000");
+    found = evalJson(`
+      const seen = new Set();
+      return [...document.querySelectorAll('img[src*="cdn.dribbble.com/userupload"], img[srcset*="cdn.dribbble.com/userupload"]')]
+        .map((img) => img.currentSrc || img.src)
+        .filter((s) => s && !seen.has(s.replace(/\\?.*$/, "")) && seen.add(s.replace(/\\?.*$/, "")))
+        .map((src) => ({ title: document.title.replace(/ by .*$/, ""), shot: location.href, src }));
+    `);
+  }
+} finally {
+  try {
+    ab("close");
+  } catch {}
+}
+
+mkdirSync(out, { recursive: true });
+const index = join(out, "refs.json");
+const all = existsSync(index) ? JSON.parse(readFileSync(index, "utf8")) : [];
+let k = all.length;
+const saved = [];
+for (const f of found.slice(0, mode === "search" ? n : 16)) {
+  const res = await fetch(big(f.src), { headers: { "user-agent": "Mozilla/5.0" } }).catch(() => null);
+  if (!res?.ok) continue;
+  const type = res.headers.get("content-type") ?? "";
+  const ext = type.includes("png") ? "png" : type.includes("jpeg") ? "jpg" : type.includes("gif") ? "gif" : "webp";
+  const file = join(out, `ref-${String(++k).padStart(2, "0")}.${ext}`);
+  const bytes = Buffer.from(await res.arrayBuffer());
+  writeFileSync(file, bytes);
+  const { w, h } = size(bytes);
+  // A tall image shows the whole page, section after section: the reference for everything below the first screen.
+  saved.push({ ...f, file, w, h, fullPage: h > w * 1.4 });
+}
+writeFileSync(index, `${JSON.stringify([...all, ...saved], null, 2)}\n`);
+if (!saved.length) {
+  console.error("No shots came back. Try other words for the search, or pass a shot URL with: node refs.mjs shot <url>");
+  process.exit(1);
+}
+for (const s of saved) console.log(`${s.file}  ${s.w}x${s.h}${s.fullPage ? "  FULL PAGE" : ""}  ${s.title}  ${s.shot}`);
+console.log(`\n${saved.length} saved in ${out}. Open each one and look closely before you choose.${mode === "search" ? " Open the strongest shots with \`refs.mjs shot <url>\`: their own images are whole, and a FULL PAGE one is the reference for every section." : ""}`);

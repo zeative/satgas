@@ -191,3 +191,18 @@ test("an arrow between cards keeps its head", () => {
   });
   expect(sanitizeOps([{ op: "link", link: { id: "l", source: "a", target: "b", arrow: "yes" } }])).toBeNull();
 });
+
+describe("app frames", () => {
+  const frame = { id: "f", kind: "preview", app: "web", x: 0, y: 0, w: 960, h: 1000, createdAt: 1 };
+  test("keep the page they show and the screen size they draw it at", () => {
+    const ops = sanitizeOps([{ op: "put", card: { ...frame, route: "/booking", device: "phone" } }]);
+    expect(ops?.[0]).toEqual({ op: "put", card: expect.objectContaining({ route: "/booking", device: "phone" }) });
+  });
+  test("refuse a screen size Satgas does not draw", () => {
+    expect(sanitizeOps([{ op: "put", card: { ...frame, device: "watch" } }])).toBeNull();
+  });
+  test("go back to the first page and desktop when the patch removes them", () => {
+    const ops = sanitizeOps([{ op: "patch", id: "f", patch: { route: null, device: null } }]);
+    expect(ops).not.toBeNull();
+  });
+});

@@ -1,0 +1,316 @@
+(() => {
+  // Talks to the Satgas canvas the frame sits in: reports the page it is on, picks an element the person points at,
+  // and previews style changes on it until the team writes them into the source.
+  if (window.__satgas) return;
+  window.__satgas = true;
+  // Opened on its own, outside the board: a small credit that leads to Satgas, which the person can dismiss.
+  if (window.parent === window) {
+    const badge = () => {
+      if (!document.body || document.getElementById("satgas-badge")) return;
+      const host = document.createElement("div");
+      host.id = "satgas-badge";
+      host.style.cssText = "position:fixed;right:12px;bottom:12px;z-index:2147483647";
+      const root = host.attachShadow({ mode: "closed" });
+      root.innerHTML = `<style>
+        :host{all:initial}
+        .b{display:flex;align-items:center;height:24px;border-radius:6px;background:rgba(20,20,20,.9);border:1px solid rgba(255,255,255,.08);
+          font:400 11px/1 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;color:#a1a1aa}
+        a{display:flex;align-items:center;gap:4px;height:100%;padding:0 4px 0 8px;color:inherit;text-decoration:none;transition:color .15s}
+        a:hover{color:#fafafa}a:focus-visible,button:focus-visible{outline:2px solid #ffb90e;outline-offset:2px;border-radius:6px}
+        b{font-weight:600;color:#fafafa}svg{width:12px;height:12px;flex:none}
+        button{all:unset;display:flex;align-items:center;justify-content:center;width:20px;height:100%;cursor:pointer;color:#71717a;font-size:13px;transition:color .15s}
+        button:hover{color:#fafafa}</style>
+        <div class="b"><a href="https://github.com/zeative/satgas?utm_source=satgas-badge" target="_blank" rel="noopener">Edit with
+          <svg viewBox="2 2 20 20" aria-hidden="true"><path d="M8.5 12c3.5 0 3.5-6 7-6M8.5 12c3.5 0 3.5 6 7 6" fill="none" stroke="#f5f5f5" stroke-width="1.75" stroke-linecap="round"/>
+          <circle cx="6" cy="12" r="2.5" fill="#f5f5f5"/><circle cx="18" cy="6" r="2.5" fill="#ffb90e"/><circle cx="18" cy="18" r="2.5" fill="#f5f5f5"/></svg>
+          <b>Satgas</b></a><button type="button" aria-label="Dismiss">\u00d7</button></div>`;
+      root.querySelector("button").addEventListener("click", () => host.remove());
+      document.body.appendChild(host);
+    };
+    if (document.body) badge();
+    else addEventListener("DOMContentLoaded", badge);
+    return;
+  }
+  const post = (m) => window.parent.postMessage({ satgas: true, ...m }, "*");
+  let picking = false;
+  let hovered = null;
+  let picked = null;
+  let edits = {};
+  let box = null;
+  let hoverBox = null;
+
+  const nav = () => post({ type: "nav", path: location.pathname + location.search + location.hash, title: document.title });
+  for (const k of ["pushState", "replaceState"]) {
+    const orig = history[k];
+    history[k] = function (...a) {
+      const r = orig.apply(this, a);
+      queueMicrotask(nav);
+      return r;
+    };
+  }
+  addEventListener("popstate", nav);
+  addEventListener("hashchange", nav);
+  addEventListener("DOMContentLoaded", nav);
+  nav();
+
+  const outline = (dashed) => {
+    const d = document.createElement("div");
+    d.setAttribute("data-satgas-ui", "");
+    d.style.cssText = `position:fixed;pointer-events:none;z-index:2147483647;box-sizing:border-box;border:${dashed ? "1px dashed" : "2px solid"} #d97706;border-radius:2px;display:none`;
+    const tag = document.createElement("span");
+    tag.style.cssText =
+      "position:absolute;left:-2px;bottom:100%;margin-bottom:2px;padding:1px 4px;font:500 10px/14px ui-monospace,monospace;color:#fff;background:#d97706;border-radius:2px;white-space:nowrap";
+    d.appendChild(tag);
+    document.documentElement.appendChild(d);
+    return d;
+  };
+  const place = (d, el) => {
+    if (!d) return;
+    if (!el || !el.isConnected) {
+      d.style.display = "none";
+      return;
+    }
+    const r = el.getBoundingClientRect();
+    Object.assign(d.style, { display: "block", left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px`, height: `${r.height}px` });
+    const tag = d.firstChild;
+    tag.textContent = `${el.tagName.toLowerCase()}  ${Math.round(r.width)} × ${Math.round(r.height)}`;
+    tag.style.top = r.top < 18 ? "100%" : "";
+    tag.style.bottom = r.top < 18 ? "auto" : "100%";
+  };
+  const redraw = () => {
+    place(box, picked);
+    place(hoverBox, picking && hovered !== picked ? hovered : null);
+  };
+  addEventListener("scroll", redraw, true);
+  addEventListener("resize", redraw);
+
+  // Where each source file shows on the page (the starter tags elements with data-satgas-loc), so a teammate's pointer
+  // can go to the section whose file they are editing.
+  let layoutTimer = 0;
+  let lastLayout = "";
+  const layout = () => {
+    if (layoutTimer) return;
+    layoutTimer = setTimeout(() => {
+      layoutTimer = 0;
+      // Each file's area, and its elements by the line that opens them, so a pointer can go to the very lines in work.
+      const files = {};
+      let count = 0;
+      for (const el of document.querySelectorAll("[data-satgas-loc]")) {
+        const m = /^(.*):(\d+)(?::\d+)?$/.exec(el.getAttribute("data-satgas-loc"));
+        if (!m) continue;
+        const r = el.getBoundingClientRect();
+        if (r.width < 4 || r.height < 4) continue;
+        const x = Math.round(r.left + scrollX);
+        const y = Math.round(r.top + scrollY);
+        const w = Math.round(r.width);
+        const h = Math.round(r.height);
+        const f = (files[m[1]] = files[m[1]] || { x, y, w, h, els: [] });
+        const x0 = Math.min(f.x, x);
+        const y0 = Math.min(f.y, y);
+        f.w = Math.max(f.x + f.w, x + w) - x0;
+        f.h = Math.max(f.y + f.h, y + h) - y0;
+        f.x = x0;
+        f.y = y0;
+        if (count++ < 800) f.els.push([Number(m[2]), x, y, w, h]);
+      }
+      // Only a real change goes out, so an animated page does not redraw the board four times a second.
+      const sig = JSON.stringify(files) + scrollY;
+      if (sig === lastLayout) return;
+      lastLayout = sig;
+      post({ type: "layout", files, scrollY, vh: innerHeight });
+    }, 250);
+  };
+  // A frame shows the whole page at once, so its height follows the page. Viewport units would then grow with the frame
+  // and the page with them, so they are fixed at the screen height the frame stands for, as a design file's frame is.
+  let screenH = 0;
+  const UNITS = /(-?\d*\.?\d+)(?:d|s|l)?vh\b/g;
+  const freeze = (rules) => {
+    for (const r of rules) {
+      if (r.cssRules) freeze(r.cssRules);
+      const st = r.style;
+      if (!st) continue;
+      for (let i = 0; i < st.length; i++) {
+        const k = st[i];
+        const v = st.getPropertyValue(k);
+        if (v.includes("vh")) st.setProperty(k, v.replace(UNITS, (_, n) => `${(Number(n) * screenH) / 100}px`), st.getPropertyPriority(k));
+      }
+    }
+  };
+  const fixUnits = () => {
+    if (!screenH) return;
+    for (const sheet of document.styleSheets) {
+      try {
+        freeze(sheet.cssRules);
+      } catch {}
+    }
+  };
+  let sizeTimer = 0;
+  let lastH = 0;
+  // Throttled, not debounced: a page that animates changes its layout all the time and would never settle.
+  const size = () => {
+    if (sizeTimer) return;
+    sizeTimer = setTimeout(() => {
+      sizeTimer = 0;
+      fixUnits();
+      // The content's own height: scrollHeight never drops below the frame itself, so a page that got shorter would keep
+      // its old height as empty space. Fixed bars are left out, since they sit on the screen rather than in the page.
+      const kids = [...(document.body?.children ?? [])].filter((el) => !el.hasAttribute("data-satgas-ui") && getComputedStyle(el).position !== "fixed");
+      const bottom = Math.max(0, ...kids.map((el) => el.getBoundingClientRect().bottom + scrollY));
+      const pad = document.body ? Number.parseFloat(getComputedStyle(document.body).marginBottom) || 0 : 0;
+      const h = Math.ceil(bottom ? bottom + pad : document.documentElement.scrollHeight);
+      if (Math.abs(h - lastH) < 2) return;
+      lastH = h;
+      post({ type: "size", h });
+    }, 150);
+  };
+  new ResizeObserver(size).observe(document.documentElement);
+  new MutationObserver(size).observe(document.head, { childList: true, subtree: true, characterData: true });
+  addEventListener("load", size);
+
+  addEventListener("load", layout);
+  addEventListener("resize", layout);
+  addEventListener("scroll", layout, { passive: true });
+  new MutationObserver(layout).observe(document.documentElement, { childList: true, subtree: true });
+  layout();
+
+  const selector = (el) => {
+    const parts = [];
+    for (let n = el; n && n.nodeType === 1 && n !== document.body && parts.length < 6; n = n.parentElement) {
+      if (n.id) {
+        parts.unshift(`#${CSS.escape(n.id)}`);
+        break;
+      }
+      let i = 1;
+      for (let s = n.previousElementSibling; s; s = s.previousElementSibling) if (s.tagName === n.tagName) i++;
+      parts.unshift(`${n.tagName.toLowerCase()}:nth-of-type(${i})`);
+    }
+    return parts.join(" > ");
+  };
+  const STYLE_KEYS = [
+    "display", "flexDirection", "justifyContent", "alignItems", "gap", "width", "height",
+    "paddingTop", "paddingRight", "paddingBottom", "paddingLeft", "marginTop", "marginRight", "marginBottom", "marginLeft",
+    "fontFamily", "fontSize", "fontWeight", "lineHeight", "letterSpacing", "textAlign", "color",
+    "backgroundColor", "backgroundImage", "borderTopLeftRadius", "borderTopWidth", "borderTopColor", "borderTopStyle",
+    "opacity", "boxShadow",
+  ];
+  const describe = (el) => {
+    const cs = getComputedStyle(el);
+    const styles = {};
+    for (const k of STYLE_KEYS) styles[k] = cs[k];
+    const loc = el.closest("[data-satgas-loc],[data-inspector-relative-path]");
+    const own = [...el.childNodes].some((c) => c.nodeType === 3 && c.textContent.trim());
+    return {
+      tag: el.tagName.toLowerCase(),
+      id: el.id || undefined,
+      classes: typeof el.className === "string" ? el.className.slice(0, 400) : undefined,
+      text: (el.innerText || "").trim().slice(0, 160),
+      ownText: own && el.children.length === 0,
+      html: el.outerHTML.slice(0, 900),
+      selector: selector(el),
+      loc: loc ? loc.getAttribute("data-satgas-loc") || loc.getAttribute("data-inspector-relative-path") : undefined,
+      path: location.pathname,
+      styles,
+    };
+  };
+  const target = (e) => {
+    const el = e.target;
+    if (!el || el.nodeType !== 1 || el.closest("[data-satgas-ui]")) return null;
+    return el === document.documentElement ? document.body : el;
+  };
+  const select = (el) => {
+    if (picked && picked !== el) clear();
+    picked = el;
+    box = box || outline(false);
+    redraw();
+    post({ type: "pick", el: describe(el) });
+  };
+  const clear = () => {
+    if (picked) for (const k of Object.keys(edits)) picked.style[k] = "";
+    edits = {};
+  };
+  const FONTS = new Set();
+  const loadFont = (family) => {
+    const name = String(family).split(",")[0].replace(/["']/g, "").trim();
+    if (!name || FONTS.has(name) || /^(system-ui|sans-serif|serif|monospace|ui-)/.test(name)) return;
+    FONTS.add(name);
+    const l = document.createElement("link");
+    l.rel = "stylesheet";
+    l.setAttribute("data-satgas-ui", "");
+    l.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(name).replace(/%20/g, "+")}:wght@300;400;500;600;700;800&display=swap`;
+    document.head.appendChild(l);
+  };
+
+  addEventListener(
+    "pointermove",
+    (e) => {
+      if (!picking) return;
+      hovered = target(e);
+      hoverBox = hoverBox || outline(true);
+      redraw();
+    },
+    true,
+  );
+  for (const type of ["click", "pointerdown", "mousedown", "pointerup", "mouseup", "dblclick", "submit"]) {
+    addEventListener(
+      type,
+      (e) => {
+        if (!picking) return;
+        e.preventDefault();
+        e.stopPropagation();
+        if (type === "click") {
+          const el = target(e);
+          if (el) select(el);
+        }
+      },
+      true,
+    );
+  }
+  addEventListener(
+    "keydown",
+    (e) => {
+      if (e.key === "Escape" && (picking || picked)) post({ type: "escape" });
+    },
+    true,
+  );
+
+  addEventListener("message", (e) => {
+    const m = e.data;
+    if (e.source !== window.parent || !m || m.satgas !== true) return;
+    if (m.type === "screen") {
+      screenH = Number(m.h) || 0;
+      document.documentElement.style.overflowY = screenH ? "hidden" : "";
+      lastH = 0;
+      size();
+    } else if (m.type === "mode") {
+      picking = !!m.pick;
+      document.documentElement.style.cursor = picking ? "crosshair" : "";
+      if (!picking) hovered = null;
+      redraw();
+    } else if (m.type === "style" && picked) {
+      for (const [k, v] of Object.entries(m.css || {})) {
+        if (k === "fontFamily") loadFont(v);
+        picked.style[k] = v;
+        edits[k] = v;
+      }
+      redraw();
+      post({ type: "pick", el: describe(picked), keep: true });
+    } else if (m.type === "text" && picked) {
+      picked.textContent = String(m.value);
+      redraw();
+    } else if (m.type === "reset") {
+      clear();
+      redraw();
+      if (picked) post({ type: "pick", el: describe(picked), keep: true });
+    } else if (m.type === "deselect") {
+      picked = null;
+      edits = {};
+      redraw();
+    } else if (m.type === "go") {
+      location.assign(String(m.path));
+    } else if (m.type === "back") {
+      history.back();
+    } else if (m.type === "forward") {
+      history.forward();
+    }
+  });
+})();
