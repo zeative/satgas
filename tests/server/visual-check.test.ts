@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { checkMessage, cleanReview, type VisualCheck } from "../../src/server/visual-check";
+import { checkMessage, cleanReview, pagesToCheck, type VisualCheck } from "../../src/server/visual-check";
 
 const check: VisualCheck = {
   lint: "",
@@ -39,4 +39,18 @@ test("the builder's next turn carries the reviewer's findings instead of grading
 test("a repeated display face is named in the next turn, and only when there is one", () => {
   expect(checkMessage({ ...check, repeat: "Archivo" }, "/w")).toContain("Your display face, Archivo");
   expect(checkMessage(check, "/w")).not.toContain("Your display face");
+});
+
+test("past the page cap, one page of each kind is checked before more siblings", () => {
+  const page = (route: string, target?: string) => ({ route, name: route, ...(target ? { target } : {}) });
+  const screens = [
+    page("/", "design/refs/a.png"),
+    ...["a", "b", "c", "d", "e", "f"].map((f) => page(`/fitur/${f}`, "design/hubs/fitur.png")),
+    page("/docs", "design/refs/d.png"),
+    page("/harga", "design/refs/h.png"),
+    page("/pelanggan"),
+  ];
+  const routes = pagesToCheck(screens).map((s) => s.route);
+  expect(routes).toHaveLength(8);
+  expect(routes.slice(0, 5)).toEqual(["/", "/fitur/a", "/docs", "/harga", "/pelanggan"]);
 });

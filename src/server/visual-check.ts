@@ -31,6 +31,20 @@ export interface VisualCheck {
 }
 
 const MAX_PAGES = 8;
+
+// Past the cap, one page of each kind goes first: siblings built on one hub share a target, so a long run of feature
+// pages cannot push pricing or a case study out of the check.
+export function pagesToCheck(screens: Screen[]): Screen[] {
+  const seen = new Set<string>();
+  const first: Screen[] = [];
+  const rest: Screen[] = [];
+  for (const s of screens) {
+    const kind = s.target ?? s.route;
+    (seen.has(kind) ? rest : first).push(s);
+    seen.add(kind);
+  }
+  return [...first, ...rest].slice(0, MAX_PAGES);
+}
 const WIDTHS = [
   [1440, 900],
   [390, 844],
@@ -71,7 +85,7 @@ export async function visualCheck(runId: string, label: string): Promise<VisualC
   const port = portOf(runId, app.name);
   if (port) {
     const listed = await screensOf(runId, app.name);
-    const screens: Screen[] = (listed.length ? listed : [{ route: "/", name: "Home" }]).slice(0, MAX_PAGES);
+    const screens = pagesToCheck(listed.length ? listed : [{ route: "/", name: "Home" }]);
     for (const s of screens) {
       const target =
         s.target && (await stat(join(dir, s.target)).catch(() => null)) ? join(app.dir, s.target).replace(/^\.\//, "") : undefined;
