@@ -69,6 +69,18 @@ function evalJson(out: string): unknown {
 }
 const slug = (route: string) => route.replace(/^\/+|\/+$/g, "").replace(/[^a-z0-9]+/gi, "-") || "home";
 
+// A full-page picture never scrolls, so whatever waits to be seen (lazy pictures, charts and sections that reveal on
+// scroll) would show blank. The page is walked down a screen at a time first, then back to the top.
+async function scrollThrough(ab: (...args: string[]) => Promise<{ code: number; out: string }>, screen: number) {
+  const height = Number((await ab("eval", "document.documentElement.scrollHeight")).out.match(/\d+/)?.[0] ?? 0);
+  for (let y = screen; y < Math.min(height, screen * 14); y += screen) {
+    await ab("eval", `scrollTo(0, ${y})`);
+    await ab("wait", "200");
+  }
+  await ab("eval", "scrollTo(0, 0)");
+  await ab("wait", "600");
+}
+
 export async function visualCheck(runId: string, label: string): Promise<VisualCheck | null> {
   const run = getRun(runId);
   const app = Object.values(run?.apps ?? {}).find((a) => a.status === "running");
@@ -114,6 +126,7 @@ export async function visualCheck(runId: string, label: string): Promise<VisualC
           const facts = evalJson((await ab("eval", COLLECT)).out) as PageFacts | null;
           const findings = facts?.texts ? auditFindings(facts, w) : [];
           if (findings.length) audit.push({ route: s.route, width: w, findings });
+          if (!phone) await scrollThrough(ab, h);
           const file = join(out, `${slug(s.route)}-${w}.png`);
           if ((await ab("screenshot", ...(phone ? [] : ["--full"]), file)).code === 0) keep(i, file);
           if (!phone) continue;
