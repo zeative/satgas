@@ -4,6 +4,7 @@ import { runClaude } from "./agents/claude";
 import { runCodex } from "./agents/codex";
 import { portOf, type Screen, screensOf } from "./apps";
 import { config } from "./config";
+import { repeatedDisplay } from "./fonts-used";
 import { auditFindings, COLLECT, type PageFacts } from "./page-audit";
 import { getRun } from "./store";
 
@@ -25,6 +26,8 @@ export interface VisualCheck {
   hubs: string[];
   // What the rendered pages gave away, per page and width; only pages with findings.
   audit: { route: string; width: number; findings: string[] }[];
+  // A display face another recent build already headlines with.
+  repeat?: string;
 }
 
 const MAX_PAGES = 8;
@@ -120,7 +123,8 @@ export async function visualCheck(runId: string, label: string): Promise<VisualC
   const hubs = (await readdir(hubDir).catch(() => [] as string[]))
     .filter((f) => /\.(png|jpe?g|webp)$/i.test(f))
     .map((f) => join("design", "hubs", f));
-  return { lint: lint.out.slice(-4000), clean: lint.code === 0, shots, pages, hubs, audit };
+  const repeat = repeatedDisplay(run);
+  return { lint: lint.out.slice(-4000), clean: lint.code === 0, shots, pages, hubs, audit, ...(repeat ? { repeat } : {}) };
 }
 
 // A builder grading its own screens is lenient: it remembers what it meant, not what it made. The review comes from a
@@ -226,6 +230,10 @@ export function checkMessage(check: VisualCheck, cwd: string, review?: Review | 
   if (check.audit.length)
     steps.push(
       `Satgas read the rendered pages and found these; fix every one:\n${check.audit.map((a) => `${a.route} at ${a.width}px:\n${a.findings.map((f) => `  - ${f}`).join("\n")}`).join("\n")}`,
+    );
+  if (check.repeat)
+    steps.push(
+      `Your display face, ${check.repeat}, is the one another recent Satgas build already headlines with, so this product would look like that one. Choose a display face of a different character from satgas-design's fonts.md (see them set with its fonts script), set it as --font-display and in index.html, and check that headlines and big figures still hold.`,
     );
   if (review?.pages.length) {
     const pages = review.pages

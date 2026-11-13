@@ -34,3 +34,9 @@ test("the builder's next turn carries the reviewer's findings instead of grading
   // Without a review, the builder looks at its own pictures.
   expect(checkMessage(check, "/w")).toContain("design/shots/check-a/home-390.png");
 });
+
+// A display face another recent build headlines with is sent back, so two products do not read as one.
+test("a repeated display face is named in the next turn, and only when there is one", () => {
+  expect(checkMessage({ ...check, repeat: "Archivo" }, "/w")).toContain("Your display face, Archivo");
+  expect(checkMessage(check, "/w")).not.toContain("Your display face");
+});

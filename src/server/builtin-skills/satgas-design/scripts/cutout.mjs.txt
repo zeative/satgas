@@ -16,6 +16,14 @@ if (!photos.length) {
   console.error("Usage: node cutout.mjs <photo> [more photos…] [--out public/images/cutout]");
   process.exit(1);
 }
+// Without uv there is no cut-out here; installing Python tooling mid-task costs more time than the picture is worth.
+const SKIP = "Choose photos already shot on a plain or studio background instead, and do not install anything for this.";
+try {
+  execFileSync("uv", ["--version"], { stdio: "ignore" });
+} catch {
+  console.error(`Cut-outs need uv (https://docs.astral.sh/uv/), which this machine does not have. ${SKIP}`);
+  process.exit(2);
+}
 mkdirSync(out, { recursive: true });
 
 const py = `import sys
@@ -42,7 +50,7 @@ try {
   const result = execFileSync(
     "uv",
     ["run", "--quiet", "--python", "3.12", "--with", "rembg[cpu]", "--with", "pillow", "python", script, out, ...photos.map((p) => resolve(p))],
-    { encoding: "utf8", timeout: 900_000, stdio: ["ignore", "pipe", "pipe"] },
+    { encoding: "utf8", timeout: 360_000, stdio: ["ignore", "pipe", "pipe"] },
   );
   process.stdout.write(result);
   console.log(
@@ -50,7 +58,7 @@ try {
   );
 } catch (e) {
   const why = String(e?.stderr || e?.message || e).slice(-600);
-  console.error(`Could not cut out ${photos.map((p) => basename(p, extname(p))).join(", ")}: ${why}\nThis needs uv (https://docs.astral.sh/uv/) and a network for the first model download.`);
+  console.error(`Could not cut out ${photos.map((p) => basename(p, extname(p))).join(", ")}: ${why}\nThe first run downloads a 170 MB model; if that is what timed out, run it once more, else: ${SKIP}`);
   process.exit(1);
 } finally {
   rmSync(dir, { recursive: true, force: true });
