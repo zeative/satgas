@@ -41,16 +41,38 @@ test("a repeated display face is named in the next turn, and only when there is 
   expect(checkMessage(check, "/w")).not.toContain("Your display face");
 });
 
-test("past the page cap, one page of each kind is checked before more siblings", () => {
-  const page = (route: string, target?: string) => ({ route, name: route, ...(target ? { target } : {}) });
-  const screens = [
-    page("/", "design/refs/a.png"),
-    ...["a", "b", "c", "d", "e", "f"].map((f) => page(`/fitur/${f}`, "design/hubs/fitur.png")),
-    page("/docs", "design/refs/d.png"),
-    page("/harga", "design/refs/h.png"),
-    page("/pelanggan"),
+test("past the page cap, one page of each section is checked before siblings and other languages", () => {
+  const page = (route: string) => ({ route, name: route });
+  const saas = [
+    "/",
+    "/fitur/a",
+    "/fitur",
+    "/fitur/b",
+    "/fitur/c",
+    "/fitur/d",
+    "/docs",
+    "/docs/auth",
+    "/docs/req",
+    "/harga",
+    "/pelanggan",
+    "/pelanggan/x",
   ];
-  const routes = pagesToCheck(screens).map((s) => s.route);
-  expect(routes).toHaveLength(8);
-  expect(routes.slice(0, 5)).toEqual(["/", "/fitur/a", "/docs", "/harga", "/pelanggan"]);
+  const routes = pagesToCheck(saas.map(page)).map((s) => s.route);
+  expect(routes).toHaveLength(10);
+  expect(routes.slice(0, 8)).toEqual(["/", "/fitur/a", "/fitur", "/docs", "/docs/auth", "/harga", "/pelanggan", "/pelanggan/x"]);
+  const law = [
+    "/id",
+    "/en",
+    "/id/praktik",
+    "/en/practices",
+    "/id/praktik/ma",
+    "/id/praktik/pm",
+    "/id/tim",
+    "/id/tim/ratna",
+    "/id/insight",
+    "/id/insight/a",
+    "/id/kontak",
+  ];
+  const checked = pagesToCheck(law.map(page)).map((s) => s.route);
+  expect(checked.indexOf("/id/kontak")).toBeLessThan(checked.indexOf("/en"));
 });

@@ -30,17 +30,23 @@ export interface VisualCheck {
   repeat?: string;
 }
 
-const MAX_PAGES = 8;
+const MAX_PAGES = 10;
+const LOCALE = /^[a-z]{2}(-[a-z]{2})?$/i;
 
-// Past the cap, one page of each kind goes first: siblings built on one hub share a target, so a long run of feature
-// pages cannot push pricing or a case study out of the check.
+// Past the cap, one page of each kind goes first: a section's index and one of its detail pages, in the site's first
+// language. Twin pages in another language and more siblings come after, so they cannot push pricing or a contact page
+// out of the check.
 export function pagesToCheck(screens: Screen[]): Screen[] {
   const seen = new Set<string>();
   const first: Screen[] = [];
   const rest: Screen[] = [];
+  let primary: string | undefined;
   for (const s of screens) {
-    const kind = s.target ?? s.route;
-    (seen.has(kind) ? rest : first).push(s);
+    const parts = s.route.split(/[/?#]/).filter(Boolean);
+    const locale = parts[0] && LOCALE.test(parts[0]) ? parts.shift() : undefined;
+    primary ??= locale;
+    const kind = `${parts[0] ?? ""}:${Math.min(parts.length, 2)}`;
+    (seen.has(kind) || locale !== primary ? rest : first).push(s);
     seen.add(kind);
   }
   return [...first, ...rest].slice(0, MAX_PAGES);
