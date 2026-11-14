@@ -5,7 +5,7 @@
 
 cues.json:
     music:  {file, start, lufs, fade_in, fade_out, duck_db}   start = where in the track the film begins
-    events: [{t, file, db, align, duck, pan, note}]             t = film time in seconds
+    events: [{t, file, db, align, duck, pan, trim, fade, fade_in, note}]   t = film time in seconds
             align "peak" puts the sound's loudest moment on t, "end" its last moment, "start" its first sample.
             db is the level of the sound's own peak, in dBFS, before the master gain.
             duck true dips the music under the sound, so a hit lands in a hole.
@@ -92,10 +92,13 @@ for e in events:
     s = cache[e["file"]]
     if "trim" in e:
         s = s[int(e["trim"][0] * SR) : int(e["trim"][1] * SR)]
+    s = s.copy()
     if e.get("fade"):
         n = min(len(s), int(e["fade"] * SR))
-        s = s.copy()
         s[-n:] *= np.linspace(1, 0, n)[:, None]
+    if e.get("fade_in"):
+        n = min(len(s), int(e["fade_in"] * SR))
+        s[:n] *= np.linspace(0, 1, n)[:, None]
     env = np.abs(s).max(axis=1)
     peak_at = int(np.argmax(env))
     s = s / max(env.max(), 1e-9) * gain(e["db"])

@@ -108,12 +108,13 @@ if (args.includes("--serve")) {
         const part = join(out, `.part-${job}.mp4`);
         parts[job] = part;
         const { browser, page } = job === 0 ? first : await openFilm();
-        const input = ["-f", "image2pipe", "-framerate", String(fps), "-c:v", "png", "-i", "-"];
+        // JPEG at near-lossless quality: Chromium encodes it more than ten times faster than PNG for these grainy frames.
+        const input = ["-f", "image2pipe", "-framerate", String(fps), "-c:v", "mjpeg", "-i", "-"];
         const { child, done } = ffmpeg([...input, ...encode, part], "pipe");
         for (let frame = from; frame < to; frame++) {
           await seek(page, frame / fps);
-          const png = await page.screenshot({ type: "png" });
-          if (!child.stdin.write(png)) await new Promise((drain) => child.stdin.once("drain", drain));
+          const shot = await page.screenshot({ type: "jpeg", quality: 98 });
+          if (!child.stdin.write(shot)) await new Promise((drain) => child.stdin.once("drain", drain));
           if (++drawn % 120 === 0) console.log(`${drawn} of ${end - start} frames, ${((Date.now() - began) / 1000).toFixed(0)}s`);
         }
         child.stdin.end();

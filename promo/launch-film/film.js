@@ -279,13 +279,13 @@ gsap.set(hook2, { opacity: 0 });
 tl.to(".blink", { opacity: 0, duration: 0.4, repeat: 10, yoyo: true, ease: "steps(1)" }, 0);
 tl.fromTo("#hook1", { scale: 1.1 }, { scale: 1, duration: 1.3, ease: "expo.out" }, 0);
 tl.fromTo(B, { glow: 0.35 }, { glow: 0.7, duration: 1.2, ease: "power2.out" }, 0);
-typeOut(hook1, 1.72);
-typeIn(hook2, 1.98);
+typeOut(hook1, 1.5);
+typeIn(hook2, 1.75);
 // The stuck one comes forward; the rest fall back.
-tl.to("#t2", { z: 250, filter: "blur(0px)", duration: 0.7, ease: "back.out(1.5)" }, 2.1);
-tl.to("#t0, #t1, #t3", { opacity: 0.32, duration: 0.5, ease: "power1.out" }, 2.1);
-tl.to(".term .halt, .term .tbar b", { opacity: 1, duration: 0.12, repeat: 3, yoyo: true, ease: "steps(1)" }, 2.2);
-tl.to(B, { lx: 0.34, ly: 0.3, glow: 0.3, duration: 0.6, ease: "power2.out" }, 2.1);
+tl.to("#t2", { z: 250, filter: "blur(0px)", duration: 0.7, ease: "back.out(1.5)" }, 1.85);
+tl.to("#t0, #t1, #t3", { opacity: 0.32, duration: 0.5, ease: "power1.out" }, 1.85);
+tl.to(".term .halt, .term .tbar b", { opacity: 1, duration: 0.12, repeat: 3, yoyo: true, ease: "steps(1)" }, 1.95);
+tl.to(B, { lx: 0.34, ly: 0.3, glow: 0.3, duration: 0.6, ease: "power2.out" }, 1.85);
 typeOut(hook2, 3.3);
 tl.to(".hook .scrim", { opacity: 0, duration: 0.3 }, 3.35);
 // Everything is pulled into one point. That point becomes the first node of the mark.
@@ -321,23 +321,23 @@ tl.fromTo(M, { size: 620 }, { size: 300, duration: 0.75, ease: "expo.out", immed
 tl.to(M, { slab: 1, duration: 0.55, ease: "back.out(1.6)" }, 4.15);
 tl.to(M, { a: 1, duration: 0.45, ease: "back.out(2.4)" }, 4.17);
 tl.to(M, { ry: -0.22, rx: 0.12, duration: 1.5, ease: "power3.out" }, 4.15);
-tl.to(M, { draw: 1, duration: 0.5, ease: "power2.inOut" }, 4.5);
+tl.to(M, { draw: 1, duration: 0.56, ease: "power2.inOut" }, 4.75);
 // The amber node lights up: a second, smaller hit.
-tl.to(M, { b: 1, duration: 0.45, ease: "back.out(3)" }, 5.0);
-tl.to(M, { c: 1, duration: 0.45, ease: "back.out(3)" }, 5.08);
-tl.to(M, { glow: 1.5, duration: 0.14, ease: "power2.out" }, 5.0);
-tl.to(M, { glow: 0.5, duration: 0.8, ease: "power2.out" }, 5.14);
-hit(5.02, 0.3, 0.28);
-tl.to(M, { sweepOn: 1, duration: 0.3 }, 5.2);
-tl.fromTo(M, { sweep: -1 }, { sweep: 1, duration: 1.0, ease: "power1.inOut", immediateRender: false }, 5.2);
-tl.to(M, { sweepOn: 0, duration: 0.3 }, 5.95);
-tl.to(M, { y: -268, size: 156, ry: 0, rx: 0, duration: 0.8, ease: "power3.inOut" }, 5.45);
-tl.to(B, { ly: 0.74, glow: 0.6, duration: 0.8, ease: "power3.inOut" }, 5.45);
-typeIn(tg1, 5.8, { stagger: 0.026 });
-typeIn(tg2, 6.02, { stagger: 0.026 });
-land("#tg-micro", 6.6, { y: 0 });
-sheen("#tg2", 6.55, 0.95);
-sheen("#tg1", 6.45, 0.95);
+tl.to(M, { b: 1, duration: 0.45, ease: "back.out(3)" }, 5.35);
+tl.to(M, { c: 1, duration: 0.45, ease: "back.out(3)" }, 5.43);
+tl.to(M, { glow: 1.5, duration: 0.14, ease: "power2.out" }, 5.35);
+tl.to(M, { glow: 0.5, duration: 0.8, ease: "power2.out" }, 5.49);
+hit(5.37, 0.3, 0.28);
+tl.to(M, { sweepOn: 1, duration: 0.3 }, 5.5);
+tl.fromTo(M, { sweep: -1 }, { sweep: 1, duration: 1.0, ease: "power1.inOut", immediateRender: false }, 5.5);
+tl.to(M, { sweepOn: 0, duration: 0.3 }, 6.25);
+tl.to(M, { y: -268, size: 156, ry: 0, rx: 0, duration: 0.8, ease: "power3.inOut" }, 5.7);
+tl.to(B, { ly: 0.74, glow: 0.6, duration: 0.8, ease: "power3.inOut" }, 5.7);
+typeIn(tg1, 5.98, { stagger: 0.026 });
+typeIn(tg2, 6.22, { stagger: 0.026 });
+land("#tg-micro", 6.8, { y: 0 });
+sheen("#tg2", 6.75, 0.85);
+sheen("#tg1", 6.65, 0.85);
 // The promise flies through the camera; the composer is already waiting behind it.
 tl.to("#tagline", { scale: 7, transformOrigin: "50% 42%", filter: "blur(22px)", duration: 0.5, ease: "power3.in" }, 7.38);
 tl.to("#tagline", { opacity: 0, duration: 0.18, ease: "power1.in" }, 7.7);
@@ -384,29 +384,29 @@ tl.to("#composer .sheen", { xPercent: 520, duration: 1.0, ease: "power2.inOut" }
 tl.to("#ch1", { autoAlpha: 1, x: 0, duration: 0.6 }, 8.0);
 show("#rail", 8.0, 0.5);
 tl.to("#r1", { opacity: 1, duration: 0.3 }, 8.0);
-tl.to(typing, { n: FULL, duration: 2.0, ease: "none" }, 8.5);
-tl.to("#caret", { opacity: 0, duration: 0.3, repeat: 1, yoyo: true, ease: "steps(1)" }, 10.55);
+tl.to(typing, { n: FULL, duration: 1.8, ease: "none" }, 8.95);
+tl.to("#caret", { opacity: 0, duration: 0.3, repeat: 1, yoyo: true, ease: "steps(1)" }, 10.8);
 gsap.set("#cursor", { x: 1230, y: 1000 });
-show("#cursor", 10.4, 0.2);
-tl.to("#cursor", { x: 1529, y: 631, duration: 0.75, ease: "power3.inOut" }, 10.42);
-tl.to(B, { lx: 0.8, ly: 0.412, duration: 0.7, ease: "power3.inOut" }, 10.5);
-tl.to("#send", { scale: 0.84, duration: 0.09, ease: "power2.in" }, 11.2);
-tl.to("#send", { scale: 1, duration: 0.35, ease: "back.out(2.8)" }, 11.29);
+show("#cursor", 10.55, 0.2);
+tl.to("#cursor", { x: 1529, y: 631, duration: 0.72, ease: "power3.inOut" }, 10.58);
+tl.to(B, { lx: 0.8, ly: 0.412, duration: 0.7, ease: "power3.inOut" }, 10.62);
+tl.to("#send", { scale: 0.84, duration: 0.09, ease: "power2.in" }, 11.33);
+tl.to("#send", { scale: 1, duration: 0.35, ease: "back.out(2.8)" }, 11.42);
 // The ring grows by its size, not by scaling, so its line stays thin.
 tl.fromTo(
   "#send-shock",
   { width: 60, height: 60, opacity: 1 },
   { width: 2400, height: 2400, opacity: 0, duration: 0.85, ease: "power2.out" },
-  11.24,
+  11.37,
 );
-tl.set(B, { pr: 0, ps: 0.55 }, 11.24);
-tl.to(B, { pr: 1.9, ps: 0, duration: 0.9, ease: "power2.out" }, 11.25);
-hide("#cursor", 11.4, 0.15);
+tl.set(B, { pr: 0, ps: 0.55 }, 11.37);
+tl.to(B, { pr: 1.9, ps: 0, duration: 0.9, ease: "power2.out" }, 11.38);
+hide("#cursor", 11.53, 0.15);
 // The request shrinks into the lead's speech bubble, at the bubble's own rectangle.
-tl.to("#composer", { x: 744, y: -50, scale: 400 / 1320, duration: 0.6, ease: "power3.inOut" }, 11.42);
-tl.to("#composer", { opacity: 0, duration: 0.14, ease: "power1.in" }, 11.92);
-tl.to("#ch1", { autoAlpha: 0, x: 24, duration: 0.3, ease: "power2.in" }, 11.45);
-hide("#s3", 12.1, 0.02);
+tl.to("#composer", { x: 744, y: -50, scale: 400 / 1320, duration: 0.6, ease: "power3.inOut" }, 11.58);
+tl.to("#composer", { opacity: 0, duration: 0.14, ease: "power1.in" }, 12.08);
+tl.to("#ch1", { autoAlpha: 0, x: 24, duration: 0.3, ease: "power2.in" }, 11.6);
+hide("#s3", 12.26, 0.02);
 
 // ── 4. Plan ────────────────────────────────────────────────────────────────
 const MEMBERS = [
@@ -486,7 +486,7 @@ gsap.set(".wm", {
 });
 const blurS4 = motionBlur("#s4");
 
-tl.set("#s4", { autoAlpha: 1 }, 11.45);
+tl.set("#s4", { autoAlpha: 1 }, 11.6);
 gsap.set("#cam", { y: 70 });
 gsap.set(".dots", { opacity: 0 });
 gsap.set("#lead", { opacity: 0, scale: 0.5, y: 24 });
@@ -498,18 +498,18 @@ gsap.set(".badge", { scale: 0 });
 gsap.set(".spin", { transformOrigin: "50% 50%" });
 gsap.set(".wires .spark", { opacity: 0 });
 gsap.set(".face .halo", { opacity: 0, scale: 0.7 });
-tl.to(".dots", { opacity: 1, duration: 0.8 }, 11.5);
-tl.to(B, { floor: 0, lx: 0.5, ly: 0.7, glow: 0.8, duration: 0.8, ease: "power3.inOut" }, 11.45);
-tl.to("#lead", { opacity: 1, scale: 1, y: 0, duration: 0.6, ease: "back.out(1.9)" }, 11.96);
-tl.to(".face .halo", { opacity: 1, scale: 1, duration: 0.6, ease: "back.out(2)" }, 12.08);
-tl.to("#bubble", { autoAlpha: 1, duration: 0.14 }, 11.9);
-tl.to("#ch2", { autoAlpha: 1, x: 0, duration: 0.6 }, 12.0);
-tl.to("#rl1", { scaleX: 1, duration: 0.5, ease: "power2.inOut" }, 11.5);
-tl.to("#r2", { opacity: 1, duration: 0.3 }, 11.95);
-tl.to("#r1", { opacity: 0.6, duration: 0.3 }, 11.95);
-tl.to(".wm-a", { strokeDashoffset: 0, duration: 0.2, ease: "none" }, 12.35);
-tl.to(".wm-b", { strokeDashoffset: 0, duration: 0.42, ease: "power2.out" }, 12.5);
-tl.to(".wm-c", { strokeDashoffset: 0, duration: 0.18, ease: "none", stagger: 0.03 }, 12.82);
+tl.to(".dots", { opacity: 1, duration: 0.8 }, 11.65);
+tl.to(B, { floor: 0, lx: 0.5, ly: 0.7, glow: 0.8, duration: 0.8, ease: "power3.inOut" }, 11.6);
+tl.to("#lead", { opacity: 1, scale: 1, y: 0, duration: 0.6, ease: "back.out(1.9)" }, 12.12);
+tl.to(".face .halo", { opacity: 1, scale: 1, duration: 0.6, ease: "back.out(2)" }, 12.24);
+tl.to("#bubble", { autoAlpha: 1, duration: 0.14 }, 12.06);
+tl.to("#ch2", { autoAlpha: 1, x: 0, duration: 0.6 }, 12.2);
+tl.to("#rl1", { scaleX: 1, duration: 0.5, ease: "power2.inOut" }, 11.65);
+tl.to("#r2", { opacity: 1, duration: 0.3 }, 12.1);
+tl.to("#r1", { opacity: 0.6, duration: 0.3 }, 12.1);
+tl.to(".wm-a", { strokeDashoffset: 0, duration: 0.2, ease: "none" }, 12.5);
+tl.to(".wm-b", { strokeDashoffset: 0, duration: 0.42, ease: "power2.out" }, 12.65);
+tl.to(".wm-c", { strokeDashoffset: 0, duration: 0.18, ease: "none", stagger: 0.03 }, 12.97);
 // A pulse of light runs down each wire to the member it hires.
 // GSAP rounds a dash offset in px to whole numbers, so the offset is kept as plain state and written each frame.
 for (const [i, path] of $$(".wires .spark").entries()) {
@@ -517,14 +517,14 @@ for (const [i, path] of $$(".wires .spark").entries()) {
   appliers.push(() => {
     path.style.strokeDashoffset = dash.at.toFixed(4);
   });
-  tl.to(dash, { at: -1.02, duration: 0.66, ease: "power1.in" }, 12.35 + i * 0.03);
+  tl.to(dash, { at: -1.02, duration: 0.66, ease: "power1.in" }, 12.5 + i * 0.03);
 }
-tl.set(".wires .spark", { opacity: 1 }, 12.35);
-tl.set(".wires .spark", { opacity: 0 }, 13.14);
-tl.to(".member .mhead", { opacity: 1, scale: 1, y: 0, duration: 0.55, ease: "back.out(2)", stagger: 0.09 }, 12.95);
-tl.to(".member .task", { opacity: 1, y: 0, duration: 0.5, stagger: 0.07 }, 13.35);
+tl.set(".wires .spark", { opacity: 1 }, 12.5);
+tl.set(".wires .spark", { opacity: 0 }, 13.29);
+tl.to(".member .mhead", { opacity: 1, scale: 1, y: 0, duration: 0.55, ease: "back.out(2)", stagger: 0.09 }, 13.1);
+tl.to(".member .task", { opacity: 1, y: 0, duration: 0.5, stagger: 0.07 }, 13.42);
 tl.to(".spin", { rotation: 360 * 11, duration: 9, ease: "none" }, 13.5);
-tl.to("#cam", { scale: 1.035, duration: 3.6, ease: "sine.inOut" }, 12.4);
+tl.to("#cam", { scale: 1.035, duration: 3.5, ease: "sine.inOut" }, 12.5);
 
 const swap = (id, from, to, at) => {
   tl.to(`#m-${id} .st.${from}`, { autoAlpha: 0, duration: 0.15 }, at);
@@ -539,9 +539,9 @@ const finish = (id, at) => {
   tl.to(`#m-${id} .badge`, { scale: 1, duration: 0.45, ease: "back.out(2.8)" }, at + 0.05);
   tl.to(`#m-${id} .bar u`, { backgroundImage: "linear-gradient(90deg, #2f8a55, #7fe0a8)", duration: 0.2 }, at);
 };
-run("dewi", 13.9, 17.75);
-run("raka", 13.98, 18.9);
-run("sinta", 14.06, 20.5);
+run("dewi", 13.75, 17.75);
+run("raka", 13.83, 18.9);
+run("sinta", 13.91, 20.5);
 
 // The counter is four stacked labels; each fades in as the number changes.
 const counter = $("#counter");
@@ -551,7 +551,7 @@ const count = (i, at) => {
   tl.to(`#cnt${i - 1}`, { autoAlpha: 0, duration: 0.12 }, at);
   tl.to(`#cnt${i}`, { autoAlpha: 1, duration: 0.18 }, at + 0.08);
 };
-show("#counter", 14.0, 0.4);
+show("#counter", 13.8, 0.4);
 tl.to("#ch2", { autoAlpha: 0, x: 24, duration: 0.3, ease: "power2.in" }, 16.0);
 
 // ── 5. Work: the camera whips down past the lead to the board ──────────────
@@ -596,16 +596,16 @@ tl.to("#counter .dot", { backgroundColor: "#5cc486", color: "#5cc486", duration:
 tl.to("#counter", { scale: 1.08, duration: 0.12, ease: "power2.out" }, 21.5);
 tl.to("#counter", { scale: 1, duration: 0.4, ease: "back.out(2.5)" }, 21.62);
 // Into the page Sinta built: the camera dives at the card until its paper fills the frame.
-tl.to("#cam", { scale: 3.7, x: -296, y: -3700, rotationY: 0, duration: 0.55, ease: "power3.in" }, 21.95);
-blurS4(22.05, 0.5, 10, 26);
-tl.to("#ch3, #counter, #rail", { autoAlpha: 0, duration: 0.25, ease: "power1.in" }, 21.9);
-hide("#s4", 22.5, 0.02);
+tl.to("#cam", { scale: 3.7, x: -296, y: -3700, rotationY: 0, duration: 0.55, ease: "power3.in" }, 22.2);
+blurS4(22.3, 0.5, 10, 26);
+tl.to("#ch3, #counter, #rail", { autoAlpha: 0, duration: 0.25, ease: "power1.in" }, 22.15);
+hide("#s4", 22.75, 0.02);
 
 // ── 6. Proof beats, cut together with whip pans ────────────────────────────
 const blurS6 = motionBlur("#s6");
-tl.set("#s6", { autoAlpha: 1 }, 22.45);
-hit(22.48, 1, 0.3);
-tl.set(B, { floor: 1, horizon: -0.17, camx: 0, lx: 0.5, ly: 0.56, glow: 0.85 }, 22.46);
+tl.set("#s6", { autoAlpha: 1 }, 22.7);
+hit(22.75, 1, 0.3);
+tl.set(B, { floor: 1, horizon: -0.17, camx: 0, lx: 0.5, ly: 0.56, glow: 0.85 }, 22.72);
 const beat = (id, at, length, first) => {
   const lines = $$(`${id} .ln`);
   for (const line of lines) split(line);
@@ -627,10 +627,10 @@ const whip = (from, at) => {
   tl.to(B, { streak: 1, duration: 0.2, ease: "power2.in" }, at - 0.24);
   tl.to(B, { streak: 0, duration: 0.35, ease: "power2.out" }, at);
 };
-const b2at = beat("#b1", 22.5, 1.95, true);
+const b2at = beat("#b1", 22.75, 1.8, true);
 whip("#b1", b2at);
 tl.to(B, { lx: 0.66, ly: 0.6, duration: 0.5, ease: "power3.inOut" }, b2at - 0.25);
-const b3at = beat("#b2", b2at, 1.95);
+const b3at = beat("#b2", b2at, 1.8);
 tl.to("#revert", { scale: 0.92, duration: 0.1, ease: "power2.in" }, b2at + 1.05);
 tl.to("#revert", { scale: 1, duration: 0.35, ease: "back.out(2.6)" }, b2at + 1.15);
 tl.to(".diff .add", { opacity: 0.3, duration: 0.3 }, b2at + 1.15);
@@ -641,7 +641,7 @@ tl.to(
 );
 whip("#b2", b3at);
 tl.to(B, { lx: 0.4, ly: 0.58, duration: 0.5, ease: "power3.inOut" }, b3at - 0.25);
-const endAt = beat("#b3", b3at, 1.95);
+const endAt = beat("#b3", b3at, 1.8);
 // The last beat collapses into the point the mark lands on.
 tl.to(
   "#b3",

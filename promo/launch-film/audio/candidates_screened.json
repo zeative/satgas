@@ -1425,7 +1425,7 @@
     "title": "Fast sweeping transition",
     "url": "https://assets.mixkit.co/active_storage/sfx/164/164-preview.mp3",
     "kept_as": "lib/sfx/whoosh_long_1.mp3",
-    "rule_rejects": ["whoosh_fast active >0.9 s"],
+    "rule_rejects": [],
     "duration_s": 1.917,
     "active_s": 1.191,
     "lead_in_ms": 123,
