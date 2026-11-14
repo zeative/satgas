@@ -341,7 +341,7 @@ sheen("#tg2", 6.75, 0.85);
 sheen("#tg1", 6.65, 0.85);
 // The promise flies through the camera; the composer is already waiting behind it.
 tl.to("#tagline", { scale: 7, transformOrigin: "50% 42%", filter: "blur(22px)", duration: 0.5, ease: "power3.in" }, 7.38);
-tl.to("#tagline", { opacity: 0, duration: 0.18, ease: "power1.in" }, 7.7);
+tl.to("#tagline", { opacity: 0, duration: 0.12, ease: "power1.in" }, 7.62);
 tl.to(M, { size: 1500, y: -1300, duration: 0.5, ease: "power3.in" }, 7.38);
 tl.to(M, { vis: 0, duration: 0.16 }, 7.5);
 tl.to(B, { streak: 0.8, duration: 0.3, ease: "power2.in" }, 7.4);
@@ -378,11 +378,11 @@ tl.set("#s3", { autoAlpha: 1 }, 7.5);
 gsap.set("#composer", { opacity: 0, z: -1100, y: 90, rotationX: 16, filter: "blur(14px)", transformOrigin: "0 0" });
 gsap.set(".chapter", { x: -24 });
 gsap.set("#composer .sheen", { xPercent: -140 });
-tl.to("#composer", { opacity: 1, z: 0, y: 0, rotationX: 3, filter: "blur(0px)", duration: 0.9, ease: "expo.out" }, 7.55);
+tl.to("#composer", { opacity: 1, z: 0, y: 0, rotationX: 3, filter: "blur(0px)", duration: 0.9, ease: "expo.out" }, 7.72);
 tl.to("#composer", { rotationX: 0, duration: 3, ease: "sine.inOut" }, 8.4);
 tl.to(B, { lx: 0.5, ly: 0.52, glow: 0.75, horizon: -0.2, duration: 0.9, ease: "power3.out" }, 7.55);
-tl.to("#composer .sheen", { xPercent: 520, duration: 1.0, ease: "power2.inOut" }, 8.15);
-tl.set("#composer .sheen", { opacity: 0 }, 9.2);
+tl.to("#composer .sheen", { xPercent: 520, duration: 0.9, ease: "power2.inOut" }, 8.4);
+tl.set("#composer .sheen", { opacity: 0 }, 9.32);
 tl.to("#ch1", { autoAlpha: 1, x: 0, duration: 0.6 }, 8.0);
 show("#rail", 8.0, 0.5);
 tl.to("#r1", { opacity: 1, duration: 0.3 }, 8.0);
@@ -406,7 +406,7 @@ tl.to(B, { pr: 1.9, ps: 0, duration: 0.9, ease: "power2.out" }, 11.38);
 hide("#cursor", 11.53, 0.15);
 // The request shrinks into the lead's speech bubble, at the bubble's own rectangle.
 tl.to("#composer", { x: 852.5, y: -114.3, scale: 488 / 1500, duration: 0.6, ease: "power3.inOut" }, 11.58);
-tl.to("#composer", { opacity: 0, duration: 0.14, ease: "power1.in" }, 12.08);
+tl.set("#composer", { opacity: 0 }, 12.16);
 tl.to("#ch1", { autoAlpha: 0, x: 24, duration: 0.3, ease: "power2.in" }, 11.6);
 hide("#s3", 12.26, 0.02);
 
@@ -504,7 +504,7 @@ tl.to(".dots", { opacity: 1, duration: 0.8 }, 11.65);
 tl.to(B, { floor: 0, lx: 0.5, ly: 0.74, glow: 0.8, duration: 0.8, ease: "power3.inOut" }, 11.6);
 tl.to("#lead", { opacity: 1, scale: 1, y: 0, duration: 0.6, ease: "back.out(1.9)" }, 12.12);
 tl.to(".face .halo", { opacity: 1, scale: 1, duration: 0.6, ease: "back.out(2)" }, 12.24);
-tl.to("#bubble", { autoAlpha: 1, duration: 0.14 }, 12.06);
+tl.set("#bubble", { autoAlpha: 1 }, 12.16);
 tl.to("#ch2", { autoAlpha: 1, x: 0, duration: 0.6 }, 12.2);
 tl.to("#rl1", { scaleX: 1, duration: 0.5, ease: "power2.inOut" }, 11.65);
 tl.to("#r2", { opacity: 1, duration: 0.3 }, 12.1);
@@ -669,9 +669,14 @@ hit(endAt, 1, 0.4);
 tl.set(B, { streak: 0, horizon: -0.2 }, endAt);
 tl.to(B, { glow: 1, duration: 0.5 }, endAt);
 tl.set("#s7", { autoAlpha: 1 }, endAt);
-tl.set(M, { vis: 1, x: -229, y: -262, size: 980, ry: -1.3, rx: 0.5, slab: 1, a: 1, b: 1, c: 1, draw: 1, sweep: -1, rz: 0 }, endAt);
+tl.set(M, { vis: 1, x: -229, y: -40, size: 760, ry: -1.3, rx: 0.5, slab: 1, a: 1, b: 1, c: 1, draw: 1, sweep: -1, rz: 0 }, endAt);
 // These start values must not be applied before their time: the same state is animated earlier in the film.
-tl.fromTo(M, { size: 980, ry: -1.3, rx: 0.5 }, { size: 172, ry: 0, rx: 0, duration: 0.8, ease: "expo.out", immediateRender: false }, endAt);
+tl.fromTo(
+  M,
+  { size: 760, y: -40, ry: -1.3, rx: 0.5 },
+  { size: 172, y: -262, ry: 0, rx: 0, duration: 0.8, ease: "expo.out", immediateRender: false },
+  endAt,
+);
 tl.fromTo(M, { glow: 1.6 }, { glow: 0.55, duration: 0.9, ease: "power2.out", immediateRender: false }, endAt);
 typeIn(wordmark, endAt + 0.18, { stagger: 0.035 });
 typeIn(endLine, endAt + 0.42, { stagger: 0.022 });
@@ -691,7 +696,7 @@ show("#cursor", endAt + 2.0, 0.2);
 tl.to("#cursor", { x: 1246, y: 752, duration: 0.8, ease: "power3.inOut" }, endAt + 2.05);
 tl.to("#cta", { scale: 0.95, duration: 0.09, ease: "power2.in" }, endAt + 2.9);
 tl.to("#cta", { scale: 1, duration: 0.4, ease: "back.out(2.6)" }, endAt + 2.99);
-tl.fromTo("#cta-ripple", { scale: 0, opacity: 0.55, x: 292 }, { scale: 24, opacity: 0, duration: 0.8, ease: "power2.out" }, endAt + 2.94);
+tl.fromTo("#cta-ripple", { opacity: 0.6 }, { opacity: 0, duration: 0.7, ease: "power2.out", immediateRender: false }, endAt + 2.94);
 tl.set(B, { pr: 0, ps: 0.3 }, endAt + 2.94);
 tl.to(B, { pr: 1.6, ps: 0, duration: 1.0, ease: "power2.out" }, endAt + 2.95);
 tl.to("#cursor", { x: 1420, y: 900, autoAlpha: 0, duration: 0.6, ease: "power2.in" }, endAt + 3.25);

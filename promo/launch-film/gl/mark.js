@@ -91,7 +91,7 @@ export function createMark(canvas) {
   slabGeometry.translate(0, 0, -1.8);
   const slabFace = new THREE.Mesh(
     slabGeometry,
-    new THREE.MeshPhysicalMaterial({ map: faceMap, metalness: 0.55, roughness: 0.34, clearcoat: 1, clearcoatRoughness: 0.22 }),
+    new THREE.MeshPhysicalMaterial({ map: faceMap, metalness: 0.55, roughness: 0.36, clearcoat: 1, clearcoatRoughness: 0.46 }),
   );
   const frameGeometry = new THREE.ExtrudeGeometry(rounded(half + 1.5, 8.4), {
     depth: 2.2,

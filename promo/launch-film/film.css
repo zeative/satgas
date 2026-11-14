@@ -159,7 +159,7 @@ canvas {
   justify-content: center;
   gap: 18px;
   color: #a3a3ab;
-  font: 500 20px / 1 var(--mono);
+  font: 500 23px / 1 var(--mono);
   letter-spacing: 0.24em;
 }
 .micro i {
@@ -957,7 +957,7 @@ canvas {
   position: absolute;
   left: 0;
   right: 0;
-  top: 132px;
+  top: 150px;
   visibility: hidden;
   opacity: 0;
 }
@@ -974,7 +974,7 @@ canvas {
 }
 .panel {
   width: 1240px;
-  margin: 62px auto 0;
+  margin: 72px auto 0;
   overflow: hidden;
   border-radius: 26px;
   text-align: left;
@@ -1179,13 +1179,8 @@ canvas {
 }
 .ripple {
   position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 40px;
-  height: 40px;
-  margin: -20px;
-  border-radius: 50%;
-  background: #fff;
+  inset: 0;
+  background: radial-gradient(ellipse 60% 140% at 92% 50%, rgb(255 255 255 / 0.95), rgb(255 255 255 / 0.35) 55%, transparent 100%);
   opacity: 0;
 }
 .cta .sheen {
