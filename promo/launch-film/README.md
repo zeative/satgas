@@ -17,6 +17,8 @@ from Null Motion's templates (MIT).
 | 0:22 | Three proof beats cut with whip pans: real files, diffs and undo, your own agents   |
 | 0:28 | End card                                                                            |
 
+The cuts sit on the music's grid: 100 BPM, with the logo hit, the send click, the whip and the end card on its bars.
+
 ## How it is built
 
 - `index.html`, `film.css`, `film.js`: the scenes, the look and the timeline. Type, panels and UI are plain HTML.
@@ -35,7 +37,7 @@ Needs Playwright with Chromium, FFmpeg on `PATH`, and Python 3 with numpy for th
 ```sh
 cd promo/launch-film
 npm install                                    # three.js, used only to draw the film
-node render.mjs --out out/picture.mp4          # the silent picture
+node render.mjs --out out/picture.mp4          # the silent picture; about 18 minutes on four cores
 sh audio/fetch.sh                              # downloads the sounds listed in audio/sources.json
 python3 audio/mix.py out/picture.mp4 out/satgas-launch.mp4
 ```

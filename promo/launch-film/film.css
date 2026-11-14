@@ -1098,39 +1098,6 @@ canvas {
   width: 1000px;
   margin-top: 30px;
 }
-.path {
-  margin-right: 8px;
-  color: var(--t3);
-  font: 400 28px / 1 var(--mono);
-}
-.chip {
-  padding: 20px 26px;
-  border-radius: 16px;
-  font: 500 26px / 1 var(--mono);
-  -webkit-box-reflect: below 10px linear-gradient(transparent 55%, rgb(0 0 0 / 0.18));
-}
-.diff {
-  width: 920px;
-  overflow: hidden;
-  border-radius: 16px;
-  font: 400 23px / 1 var(--mono);
-}
-.diff p {
-  display: flex;
-  height: 56px;
-  align-items: center;
-  gap: 16px;
-  padding: 0 24px;
-  white-space: nowrap;
-}
-.diff .del {
-  background: linear-gradient(90deg, rgb(240 117 92 / 0.2), rgb(240 117 92 / 0.06));
-  color: #f5b0a1;
-}
-.diff .add {
-  background: linear-gradient(90deg, rgb(92 196 134 / 0.2), rgb(92 196 134 / 0.06));
-  color: #aeeac8;
-}
 .revert {
   margin-left: auto;
   padding: 12px 24px;

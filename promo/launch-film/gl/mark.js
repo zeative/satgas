@@ -205,7 +205,8 @@ export function createMark(canvas) {
       ember.intensity = s.glow * 520 * s.b * reach;
       halo.material.opacity = Math.min(1, s.glow * 0.55) * s.b;
       halo.scale.setScalar(18 + s.glow * 14);
-      sweep.intensity = s.sweepOn * 5200;
+      // The sweep was tuned on the mark at its reveal size; at other sizes it keeps the same strength on the surface.
+      sweep.intensity = s.sweepOn * 5200 * (reach / 0.26);
       sweep.position.set(s.sweep * 60 + s.x / UNIT, 14 - s.y / UNIT, 34);
       renderer.render(scene, camera);
     },
