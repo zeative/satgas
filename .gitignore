@@ -5,3 +5,4 @@ dist/
 .DS_Store
 src/server/assets.gen.ts
 .env
+promo/*/out/

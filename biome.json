@@ -53,7 +53,7 @@
   },
   "overrides": [
     {
-      "includes": ["site/**/*.css"],
+      "includes": ["site/**/*.css", "promo/**/*.css"],
       "linter": {
         "rules": {
           "style": {
