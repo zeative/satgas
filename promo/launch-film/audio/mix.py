@@ -117,7 +117,7 @@ target = float(opt("--lufs", "-14"))
 before = loudness(mix)
 mix *= gain(target - before[0])
 # A soft ceiling for the few peaks the level change pushes over; anything under it is left alone.
-ceiling = gain(-1.2)
+ceiling = gain(-2.2)
 over = np.abs(mix) > ceiling * 0.8
 mix[over] = np.sign(mix[over]) * ceiling * (0.8 + 0.2 * np.tanh((np.abs(mix[over]) / ceiling - 0.8) / 0.2))
 after = loudness(mix)

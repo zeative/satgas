@@ -403,7 +403,7 @@ tl.set(B, { pr: 0, ps: 0.55 }, 11.37);
 tl.to(B, { pr: 1.9, ps: 0, duration: 0.9, ease: "power2.out" }, 11.38);
 hide("#cursor", 11.53, 0.15);
 // The request shrinks into the lead's speech bubble, at the bubble's own rectangle.
-tl.to("#composer", { x: 744, y: -50, scale: 400 / 1320, duration: 0.6, ease: "power3.inOut" }, 11.58);
+tl.to("#composer", { x: 762.5, y: -128.3, scale: 488 / 1320, duration: 0.6, ease: "power3.inOut" }, 11.58);
 tl.to("#composer", { opacity: 0, duration: 0.14, ease: "power1.in" }, 12.08);
 tl.to("#ch1", { autoAlpha: 0, x: 24, duration: 0.3, ease: "power2.in" }, 11.6);
 hide("#s3", 12.26, 0.02);
@@ -487,7 +487,7 @@ gsap.set(".wm", {
 const blurS4 = motionBlur("#s4");
 
 tl.set("#s4", { autoAlpha: 1 }, 11.6);
-gsap.set("#cam", { y: 70 });
+gsap.set("#cam", { y: -58, scale: 1.22 });
 gsap.set(".dots", { opacity: 0 });
 gsap.set("#lead", { opacity: 0, scale: 0.5, y: 24 });
 gsap.set("#bubble", { autoAlpha: 0 });
@@ -499,7 +499,7 @@ gsap.set(".spin", { transformOrigin: "50% 50%" });
 gsap.set(".wires .spark", { opacity: 0 });
 gsap.set(".face .halo", { opacity: 0, scale: 0.7 });
 tl.to(".dots", { opacity: 1, duration: 0.8 }, 11.65);
-tl.to(B, { floor: 0, lx: 0.5, ly: 0.7, glow: 0.8, duration: 0.8, ease: "power3.inOut" }, 11.6);
+tl.to(B, { floor: 0, lx: 0.5, ly: 0.74, glow: 0.8, duration: 0.8, ease: "power3.inOut" }, 11.6);
 tl.to("#lead", { opacity: 1, scale: 1, y: 0, duration: 0.6, ease: "back.out(1.9)" }, 12.12);
 tl.to(".face .halo", { opacity: 1, scale: 1, duration: 0.6, ease: "back.out(2)" }, 12.24);
 tl.to("#bubble", { autoAlpha: 1, duration: 0.14 }, 12.06);
@@ -524,7 +524,7 @@ tl.set(".wires .spark", { opacity: 0 }, 13.29);
 tl.to(".member .mhead", { opacity: 1, scale: 1, y: 0, duration: 0.55, ease: "back.out(2)", stagger: 0.09 }, 13.1);
 tl.to(".member .task", { opacity: 1, y: 0, duration: 0.5, stagger: 0.07 }, 13.42);
 tl.to(".spin", { rotation: 360 * 11, duration: 9, ease: "none" }, 13.5);
-tl.to("#cam", { scale: 1.035, duration: 3.5, ease: "sine.inOut" }, 12.5);
+tl.to("#cam", { scale: 1.26, y: -66, duration: 3.5, ease: "sine.inOut" }, 12.5);
 
 const swap = (id, from, to, at) => {
   tl.to(`#m-${id} .st.${from}`, { autoAlpha: 0, duration: 0.15 }, at);
@@ -684,10 +684,10 @@ tl.set(B, { pr: 0, ps: 0.3 }, endAt + 2.94);
 tl.to(B, { pr: 1.6, ps: 0, duration: 1.0, ease: "power2.out" }, endAt + 2.95);
 hide("#cursor", endAt + 3.6, 0.3);
 // The hold stays alive: the mark turns a little, the light breathes and drifts.
-tl.to(M, { ry: 0.2, duration: 1.6, ease: "sine.inOut" }, endAt + 0.9);
-tl.to(M, { ry: -0.16, duration: 2.2, ease: "sine.inOut" }, endAt + 2.5);
+tl.to(M, { ry: 0.1, duration: 1.6, ease: "sine.inOut" }, endAt + 0.9);
+tl.to(M, { ry: -0.07, duration: 2.2, ease: "sine.inOut" }, endAt + 2.5);
 tl.to(M, { glow: 0.85, duration: 1.2, ease: "sine.inOut", repeat: 2, yoyo: true }, endAt + 1.0);
-tl.to(B, { lx: 0.56, ly: 0.66, camx: 0.3, duration: DURATION - endAt, ease: "sine.inOut" }, endAt + 0.4);
+tl.to(B, { lx: 0.56, ly: 0.66, camx: 0.3, duration: DURATION - endAt - 0.4, ease: "sine.inOut" }, endAt + 0.4);
 tl.to("#s7", { scale: 1.02, transformOrigin: "50% 50%", duration: DURATION - endAt - 0.5, ease: "sine.inOut" }, endAt + 0.5);
 tl.set({}, {}, DURATION);
 

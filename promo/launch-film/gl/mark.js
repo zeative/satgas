@@ -21,7 +21,7 @@ export function createMark(canvas) {
   const scene = new THREE.Scene();
   const pmrem = new THREE.PMREMGenerator(renderer);
   scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.03).texture;
-  scene.environmentIntensity = 0.55;
+  scene.environmentIntensity = 0.42;
   const camera = new THREE.PerspectiveCamera(FOV, canvas.width / canvas.height, 1, 600);
   camera.position.set(0, 0, DIST);
 

@@ -71,9 +71,10 @@ if (args.includes("--serve")) {
     });
     return { child, done };
   };
-  // The finishing pass: highlights bloom into their surroundings, then fine grain that changes every frame.
+  // The finishing pass: highlights bloom into their surroundings (blurred at quarter size, which is far cheaper and
+  // looks the same), then fine grain that changes every frame.
   const FINISH =
-    "format=gbrp,split[a][b];[b]curves=all='0/0 0.5/0 1/1',gblur=sigma=26[glow];[a][glow]blend=all_mode=screen:all_opacity=0.38,noise=alls=5:allf=t,format=yuv420p";
+    "format=gbrp,split[a][b];[b]scale=480:270,curves=all='0/0 0.5/0 1/1',gblur=sigma=6.5,scale=1920:1080:flags=bicubic[glow];[a][glow]blend=all_mode=screen:all_opacity=0.38,noise=alls=5:allf=t,format=yuv420p";
   const finish = args.includes("--raw") ? ["-pix_fmt", "yuv420p"] : ["-filter_complex", FINISH];
 
   if (stills) {
@@ -94,7 +95,7 @@ if (args.includes("--serve")) {
     const duration = await first.page.evaluate(() => window.__timelines.root.duration());
     const start = Math.round(Number(flag("--from") ?? 0) * fps);
     const end = Math.round(Number(flag("--to") ?? duration) * fps);
-    const encode = [...finish, "-c:v", "libx264", "-preset", "medium", "-crf", "15", "-r", String(fps)];
+    const encode = [...finish, "-c:v", "libx264", "-preset", "fast", "-crf", "15", "-r", String(fps)];
     // Each job renders its own run of frames to a part; the parts start on a keyframe, so joining them is a plain copy.
     const perJob = Math.ceil((end - start) / jobs);
     const parts = [];
