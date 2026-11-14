@@ -129,7 +129,7 @@
             <article class="card glass mail" id="c-mail">
               <span class="by"><img src="../../site/assets/faces/raka.svg" alt="" style="--h: 240" />Raka · launch-email.md</span>
               <p><b>Subject:</b> Your coffee was roasted on Tuesday</p>
-              <i></i><i></i><i style="width: 62%"></i>
+              <p class="body">It left the roaster this morning and reaches your door by Friday. Skip any month, free.</p>
             </article>
           </div>
         </div>
@@ -139,19 +139,25 @@
       <section class="scene" id="s6">
         <div class="beat" id="b1">
           <h2 class="display metal"><span class="ln">Real files.</span><span class="ln">In a <em class="gold">real folder.</em></span></h2>
-          <div class="row files">
-            <span class="path">~/kopi-senja/</span>
-            <span class="chip glass">index.html</span><span class="chip glass">launch-email.md</span><span class="chip glass">pricing.csv</span><span class="chip glass">brief.md</span>
+          <div class="panel glass filesp">
+            <div class="phead"><i></i><i></i><i></i><span>~/kopi-senja</span><em>4 files, written by the team</em></div>
+            <div class="prow"><b class="ext">html</b><span>index.html</span><u><img src="../../site/assets/faces/sinta.svg" alt="" style="--h: 330" />Sinta</u><em>4.2 KB</em></div>
+            <div class="prow"><b class="ext">md</b><span>launch-email.md</span><u><img src="../../site/assets/faces/raka.svg" alt="" style="--h: 240" />Raka</u><em>1.1 KB</em></div>
+            <div class="prow"><b class="ext">csv</b><span>pricing.csv</span><u><img src="../../site/assets/faces/dewi.svg" alt="" style="--h: 150" />Dewi</u><em>312 B</em></div>
+            <div class="prow"><b class="ext">md</b><span>brief.md</span><u><img src="../../site/assets/faces/raka.svg" alt="" style="--h: 240" />Raka</u><em>890 B</em></div>
           </div>
         </div>
         <div class="beat" id="b2">
           <h2 class="display metal"><span class="ln">Every task shows its diff.</span><span class="ln"><em class="gold">Undo</em> any of them.</span></h2>
-          <div class="row">
-            <div class="diff glass">
-              <p class="del"><span>−</span>&lt;h1&gt;Fresh coffee, delivered&lt;/h1&gt;</p>
-              <p class="add"><span>+</span>&lt;h1&gt;Roasted on Tuesday, at your door by Friday&lt;/h1&gt;</p>
+          <div class="panel glass diffp">
+            <div class="phead">
+              <img src="../../site/assets/faces/sinta.svg" alt="" style="--h: 330" /><span>Build the landing page</span><em>index.html</em><b class="plus">+1</b><b class="minus">−1</b>
+              <span class="revert" id="revert">Revert</span>
             </div>
-            <span class="revert glass" id="revert">Revert</span>
+            <div class="prow code"><i>11</i>&lt;section class="hero"&gt;</div>
+            <div class="prow code del"><i>12</i>&lt;h1&gt;Fresh coffee, delivered&lt;/h1&gt;</div>
+            <div class="prow code add"><i>12</i>&lt;h1&gt;Roasted on Tuesday, at your door by Friday&lt;/h1&gt;</div>
+            <div class="prow code"><i>13</i>&lt;p class="batch"&gt;Batch 044, roasted Tue 3 Nov&lt;/p&gt;</div>
           </div>
         </div>
         <div class="beat" id="b3">
@@ -166,6 +172,11 @@
             <span class="lt glass"><img src="../../site/assets/brands/vercel.png" alt="" /></span>
             <span class="lt glass"><img src="../../site/assets/brands/supabase.png" alt="" /></span>
             <span class="lt glass"><img src="../../site/assets/brands/sentry.png" alt="" /></span>
+          </div>
+          <div class="panel glass termp">
+            <div class="phead"><i></i><i></i><i></i><span>your server</span><em>self-hosted</em></div>
+            <div class="prow code"><i>$</i>bun run build &amp;&amp; ./dist/satgas</div>
+            <div class="prow code ok"><i>→</i>http://localhost:4317</div>
           </div>
         </div>
       </section>

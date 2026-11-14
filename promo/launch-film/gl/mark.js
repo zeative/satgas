@@ -1,4 +1,5 @@
-// The Satgas mark as a physical object: a glossy slab, one node, two arms that grow out of it, and two more nodes.
+// The Satgas mark as a physical object: a graphite slab in a gold frame, one node, two arms that grow out of it,
+// and two more nodes.
 // render(state) sets every transform from the state it is given; nothing here keeps time.
 import * as THREE from "three";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
@@ -25,32 +26,61 @@ export function createMark(canvas) {
   const camera = new THREE.PerspectiveCamera(FOV, canvas.width / canvas.height, 1, 600);
   camera.position.set(0, 0, DIST);
 
-  const key = new THREE.DirectionalLight(0xffffff, 2.2);
+  const key = new THREE.DirectionalLight(0xffffff, 2.0);
   key.position.set(-40, 60, 90);
-  const rim = new THREE.DirectionalLight(0xffc56a, 1.6);
+  const rim = new THREE.DirectionalLight(0xffc56a, 2.2);
   rim.position.set(70, -20, -30);
+  // A soft lamp close to the face, up and to the left: it draws a falloff across the slab instead of a flat tone.
+  const lamp = new THREE.PointLight(0xfff6e6, 2600, 0, 1.7);
+  lamp.position.set(-22, 26, 30);
   const sweep = new THREE.PointLight(0xfff2d6, 0, 0, 1.6);
   const ember = new THREE.PointLight(0xffa41c, 0, 0, 1.8);
-  scene.add(key, rim, sweep, ember);
+  scene.add(key, rim, sweep);
 
   const group = new THREE.Group();
   scene.add(group);
   const at = (x, y, z) => new THREE.Vector3(x - 12, 12 - y, z);
 
-  // The slab is a rounded square extruded with a small bevel, so its edge catches the light all the way round.
+  const rounded = (half, corner) => {
+    const shape = new THREE.Shape();
+    shape.moveTo(-half + corner, -half);
+    shape.lineTo(half - corner, -half);
+    shape.quadraticCurveTo(half, -half, half, -half + corner);
+    shape.lineTo(half, half - corner);
+    shape.quadraticCurveTo(half, half, half - corner, half);
+    shape.lineTo(-half + corner, half);
+    shape.quadraticCurveTo(-half, half, -half, half - corner);
+    shape.lineTo(-half, -half + corner);
+    shape.quadraticCurveTo(-half, -half, -half + corner, -half);
+    return shape;
+  };
+  // The face is graphite with a slow gradient and a fine grain, so it reads as a material and not as a flat fill.
+  const faceCanvas = document.createElement("canvas");
+  faceCanvas.width = faceCanvas.height = 512;
+  const face = faceCanvas.getContext("2d");
+  const tone = face.createLinearGradient(0, 0, 512, 512);
+  tone.addColorStop(0, "#3a3a41");
+  tone.addColorStop(0.5, "#1c1c20");
+  tone.addColorStop(1, "#0b0b0d");
+  face.fillStyle = tone;
+  face.fillRect(0, 0, 512, 512);
+  const grain = face.getImageData(0, 0, 512, 512);
+  let seed = 7;
+  for (let i = 0; i < grain.data.length; i += 4) {
+    seed = (seed * 1664525 + 1013904223) >>> 0;
+    const n = ((seed >>> 16) & 255) / 255 - 0.5;
+    for (let c = 0; c < 3; c++) grain.data[i + c] = Math.max(0, Math.min(255, grain.data[i + c] + n * 14));
+  }
+  face.putImageData(grain, 0, 0);
+  const faceMap = new THREE.CanvasTexture(faceCanvas);
+  faceMap.colorSpace = THREE.SRGBColorSpace;
+  // Extruded shapes take their texture coordinates from the outline itself, in world units.
+  faceMap.repeat.set(1 / TILE, 1 / TILE);
+  faceMap.offset.set(0.5, 0.5);
+
+  // The slab is a rounded square extruded with a bevel, sitting in a thin gold frame that catches the rim light.
   const half = TILE / 2;
-  const corner = 7;
-  const outline = new THREE.Shape();
-  outline.moveTo(-half + corner, -half);
-  outline.lineTo(half - corner, -half);
-  outline.quadraticCurveTo(half, -half, half, -half + corner);
-  outline.lineTo(half, half - corner);
-  outline.quadraticCurveTo(half, half, half - corner, half);
-  outline.lineTo(-half + corner, half);
-  outline.quadraticCurveTo(-half, half, -half, half - corner);
-  outline.lineTo(-half, -half + corner);
-  outline.quadraticCurveTo(-half, -half, -half + corner, -half);
-  const slabGeometry = new THREE.ExtrudeGeometry(outline, {
+  const slabGeometry = new THREE.ExtrudeGeometry(rounded(half, 7), {
     depth: 3.6,
     bevelEnabled: true,
     bevelThickness: 0.7,
@@ -59,10 +89,25 @@ export function createMark(canvas) {
     curveSegments: 24,
   });
   slabGeometry.translate(0, 0, -1.8);
-  const slab = new THREE.Mesh(
+  const slabFace = new THREE.Mesh(
     slabGeometry,
-    new THREE.MeshPhysicalMaterial({ color: 0x0f0f11, metalness: 0.75, roughness: 0.4, clearcoat: 1, clearcoatRoughness: 0.32 }),
+    new THREE.MeshPhysicalMaterial({ map: faceMap, metalness: 0.55, roughness: 0.34, clearcoat: 1, clearcoatRoughness: 0.22 }),
   );
+  const frameGeometry = new THREE.ExtrudeGeometry(rounded(half + 1.5, 8.4), {
+    depth: 2.2,
+    bevelEnabled: true,
+    bevelThickness: 0.45,
+    bevelSize: 0.45,
+    bevelSegments: 5,
+    curveSegments: 24,
+  });
+  frameGeometry.translate(0, 0, -2.6);
+  const frame = new THREE.Mesh(
+    frameGeometry,
+    new THREE.MeshPhysicalMaterial({ color: 0xd9a032, metalness: 1, roughness: 0.26, clearcoat: 0.6, clearcoatRoughness: 0.2 }),
+  );
+  const slab = new THREE.Group();
+  slab.add(frame, slabFace);
   slab.position.z = -2.5;
   group.add(slab);
 
@@ -92,7 +137,7 @@ export function createMark(canvas) {
   const b = ball(18, 6, gold);
   const c = ball(18, 18, ceramic);
   ember.position.copy(at(18, 6, 9));
-  group.add(ember);
+  group.add(ember, lamp);
 
   const SEG = 56;
   const RAD = 12;
@@ -139,7 +184,11 @@ export function createMark(canvas) {
       }
       blank = false;
       group.position.set(s.x / UNIT, -s.y / UNIT, 0);
-      group.scale.setScalar(s.size / (TILE * UNIT));
+      const scale = s.size / (TILE * UNIT);
+      group.scale.setScalar(scale);
+      // The lamp and the ember ride with the mark, so their reach shrinks with it; their power has to shrink too.
+      const reach = scale ** 1.75;
+      lamp.intensity = 2600 * reach;
       group.rotation.set(s.rx, s.ry, s.rz);
       slab.scale.setScalar(Math.max(0.0001, s.slab));
       a.scale.setScalar(Math.max(0.0001, s.a));
@@ -152,9 +201,9 @@ export function createMark(canvas) {
         tip.visible = steps > 0 && steps < SEG;
         tip.position.copy(curve.getPoint(steps / SEG));
       }
-      gold.emissiveIntensity = s.glow * 1.6;
-      ember.intensity = s.glow * 900 * s.b;
-      halo.material.opacity = Math.min(1, s.glow * 0.9) * s.b;
+      gold.emissiveIntensity = s.glow * 0.5;
+      ember.intensity = s.glow * 520 * s.b * reach;
+      halo.material.opacity = Math.min(1, s.glow * 0.55) * s.b;
       halo.scale.setScalar(18 + s.glow * 14);
       sweep.intensity = s.sweepOn * 5200;
       sweep.position.set(s.sweep * 60 + s.x / UNIT, 14 - s.y / UNIT, 34);

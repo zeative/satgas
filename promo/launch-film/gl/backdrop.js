@@ -47,8 +47,9 @@ void main(){
     float fade = exp(-z * .16) * smoothstep(0., .05, below);
     col += mix(tint, vec3(1.), .5) * lines * fade * .11 * uFloor;
     col += tint * uFloor * uGlow * .16 * exp(-pow((p.x - L.x) * 1.5, 2.)) * exp(-below * 3.2) * smoothstep(0., .02, below);
-    col += mix(tint, vec3(1.), .4) * uFloor * .05 * exp(-pow(below * 70., 2.));
   }
+  // The horizon itself is a soft line of light on both sides, so the floor never starts with a hard edge.
+  col += mix(tint, vec3(1.), .4) * uFloor * .045 * exp(-pow(below * 46., 2.));
 
   // Dust in the light: a few soft discs at different depths.
   for (int i = 0; i < 26; i++) {
