@@ -116,17 +116,14 @@ mix = music + fx
 target = float(opt("--lufs", "-14"))
 before = loudness(mix)
 mix *= gain(target - before[0])
-# A soft ceiling for the few peaks the level change pushes over; anything under it is left alone.
-ceiling = gain(-2.2)
-over = np.abs(mix) > ceiling * 0.8
-mix[over] = np.sign(mix[over]) * ceiling * (0.8 + 0.2 * np.tanh((np.abs(mix[over]) / ceiling - 0.8) / 0.2))
-after = loudness(mix)
-report.insert(0, f"mix: {after[0]:.1f} LUFS, range {after[1]:.1f} LU, true peak {after[2]:.1f} dBFS ({len(events)} effects, master gain {target - before[0]:+.1f} dB)")
-
+# The level change pushes a few peaks over; a look-ahead limiter holds them, and the encoded file is measured
+# afterwards, because the encoder itself can add a decibel or two on the hardest hits.
 wav = out.with_suffix(".mix.wav")
-subprocess.run(["ffmpeg", "-v", "error", "-y", "-f", "f32le", "-ar", str(SR), "-ac", "2", "-i", "-", str(wav)], input=mix.astype(np.float32).tobytes(), check=True)
-cmd = ["ffmpeg", "-v", "error", "-y", "-i", str(picture), "-i", str(wav), "-map", "0:v:0", "-map", "1:a:0", "-c:v", "copy", "-c:a", "aac", "-b:a", "256k", "-movflags", "+faststart", str(out)]
+subprocess.run(["ffmpeg", "-v", "error", "-y", "-f", "f32le", "-ar", str(SR), "-ac", "2", "-i", "-", "-c:a", "pcm_f32le", str(wav)], input=mix.astype(np.float32).tobytes(), check=True)
+cmd = ["ffmpeg", "-v", "error", "-y", "-i", str(picture), "-i", str(wav), "-map", "0:v:0", "-map", "1:a:0", "-c:v", "copy", "-af", "alimiter=limit=0.8:attack=4:release=80:level=false", "-c:a", "aac", "-b:a", "320k", "-movflags", "+faststart", str(out)]
 subprocess.run(cmd, check=True)
+after = loudness(load(out))
+report.insert(0, f"mix: {after[0]:.1f} LUFS, range {after[1]:.1f} LU, true peak {after[2]:.1f} dBFS ({len(events)} effects, master gain {target - before[0]:+.1f} dB)")
 wav.unlink()
 out.with_suffix(".mix.txt").write_text("\n".join(report) + "\n")
 print(report[0])
