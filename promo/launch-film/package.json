@@ -1,0 +1,9 @@
+{
+  "name": "satgas-launch-film",
+  "private": true,
+  "type": "module",
+  "description": "Build-time tools for the launch film. Not part of the Satgas app.",
+  "devDependencies": {
+    "three": "0.170.0"
+  }
+}

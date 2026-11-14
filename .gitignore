@@ -6,3 +6,4 @@ dist/
 src/server/assets.gen.ts
 .env
 promo/*/out/
+promo/*/audio/lib/

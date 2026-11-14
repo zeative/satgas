@@ -3,201 +3,196 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="hyperframes" content="duration:36.5,fps:30,width:1920,height:1080" />
-    <meta name="duration" content="36500" />
-    <meta name="fps" content="30" />
+    <meta name="hyperframes" content="duration:33,fps:60,width:1920,height:1080" />
+    <meta name="duration" content="33000" />
+    <meta name="fps" content="60" />
     <meta name="width" content="1920" />
     <meta name="height" content="1080" />
     <title>Satgas launch film</title>
-    <script src="../../site/assets/js/gsap.min.js"></script>
     <link rel="stylesheet" href="film.css" />
+    <script type="importmap">
+      { "imports": { "three": "./node_modules/three/build/three.module.min.js", "three/addons/": "./node_modules/three/examples/jsm/" } }
+    </script>
+    <script src="../../site/assets/js/gsap.min.js"></script>
   </head>
   <body>
-    <div id="root" data-composition-id="root" data-start="0" data-duration="36.5" data-width="1920" data-height="1080">
-      <div class="gridbg" id="gridbg"></div>
-      <div class="glow" id="glow"></div>
+    <div id="root" data-composition-id="root" data-start="0" data-duration="33" data-width="1920" data-height="1080">
+      <canvas id="backdrop" width="1920" height="1080"></canvas>
 
-      <!-- 1. Hook: four terminals, no idea which one is stuck -->
+      <!-- 1. Hook: a wall of terminals, and one of them is stuck -->
       <section class="scene" id="s1">
-        <div id="terms"></div>
+        <div class="persp">
+          <div class="wall" id="wall"></div>
+        </div>
         <div class="hook">
           <div class="scrim"></div>
-          <h2 class="big" id="hook1"><span class="mask"><span>Four agent terminals.</span></span></h2>
-          <h2 class="big" id="hook2"><span class="mask"><span>Which one is <em>stuck?</em></span></span></h2>
+          <h2 class="display metal" id="hook1">Four agent terminals.</h2>
+          <h2 class="display metal" id="hook2">Which one is <em class="danger">stuck?</em></h2>
         </div>
       </section>
 
-      <!-- 2. Logo and tagline -->
+      <!-- 2. The mark, then the promise -->
+      <canvas id="mark" width="1920" height="1080"></canvas>
       <section class="scene" id="s2">
-        <div class="spark" id="spark"></div>
-        <div class="logo-wrap" id="logo">
-          <svg class="tile" viewBox="0 0 64 64">
-            <rect id="lg-tile" x="0.5" y="0.5" width="63" height="63" rx="14" fill="#141414" stroke="rgb(237 237 240 / 0.14)" />
-            <g transform="translate(8 8) scale(2)">
-              <path class="lg-path" pathLength="1" d="M8.5 12c3.5 0 3.5-6 7-6" fill="none" stroke="#f5f5f5" stroke-width="1.75" stroke-linecap="round" />
-              <path class="lg-path" pathLength="1" d="M8.5 12c3.5 0 3.5 6 7 6" fill="none" stroke="#f5f5f5" stroke-width="1.75" stroke-linecap="round" />
-              <circle id="lg-a" cx="6" cy="12" r="2.5" fill="#f5f5f5" />
-              <circle id="lg-b" cx="18" cy="6" r="2.5" fill="#ffb90e" />
-              <circle id="lg-c" cx="18" cy="18" r="2.5" fill="#f5f5f5" />
-            </g>
-          </svg>
-          <div class="ring" id="lg-ring"></div>
-        </div>
-        <div class="tagline">
-          <h1 class="huge"><span class="mask"><span class="tg">One request in.</span></span></h1>
-          <h1 class="huge"><span class="mask"><span class="tg">A task force out.</span></span></h1>
+        <div class="tagline" id="tagline">
+          <h1 class="display huge metal" id="tg1">One request in.</h1>
+          <h1 class="display huge metal" id="tg2">A <em class="gold">task force</em> out.</h1>
           <p class="micro" id="tg-micro">SATGAS <i></i> SATUAN TUGAS <i></i> A TASK FORCE</p>
         </div>
       </section>
 
       <!-- 3. Ask -->
       <section class="scene" id="s3">
-        <div class="composer" id="composer">
-          <div class="ctext"><span id="typed"></span><span class="caret" id="caret"></span></div>
-          <div class="crow">
-            <span class="cbtn">+</span>
-            <span class="cchip"><img src="../../site/assets/brands/claude.svg" alt="" />Claude default</span>
-            <span class="grow"></span>
-            <span class="send" id="send">
-              <svg viewBox="0 0 24 24" fill="none"><path d="M12 19V5M12 5l-6 6M12 5l6 6" stroke="#141414" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" /></svg>
-              <i class="ripple" id="send-ripple"></i>
-            </span>
+        <div class="persp">
+          <div class="composer glass" id="composer">
+            <div class="ctext"><span id="typed"></span><span class="caret" id="caret"></span></div>
+            <div class="crow">
+              <span class="cbtn">+</span>
+              <span class="cchip"><img src="../../site/assets/brands/claude.svg" alt="" />Claude default</span>
+              <span class="grow"></span>
+              <span class="hint">Enter to send</span>
+              <span class="send" id="send">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M12 19V5M12 5l-6 6M12 5l6 6" stroke="#1a1204" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" /></svg>
+              </span>
+            </div>
+            <i class="sheen"></i>
           </div>
         </div>
+        <i class="shock" id="send-shock"></i>
       </section>
 
-      <!-- 4 and 5. Plan, then Work: one board, the camera pulls back -->
+      <!-- 4 and 5. Plan, then Work: one board, one camera -->
       <section class="scene" id="s4">
-        <div class="cam" id="cam">
-          <div class="lead" id="lead">
-            <div class="face lg" style="--h: 95"><img src="../../site/assets/faces/lead.svg" alt="" /></div>
-            <b>Lead</b>
-            <span>Leading the team</span>
-          </div>
-          <div class="bubble" id="bubble">Landing page, launch email and a waitlist for a coffee subscription.</div>
-          <svg class="wires" id="wires" viewBox="0 0 1920 1600">
-            <path id="wire-trunk" d="M960 392V436" />
-            <path d="M480 440H1440M480 440V482M800 440V482M1120 440V482M1440 440V482" />
-          </svg>
-          <div id="members"></div>
-
-          <article class="card table" id="c-table">
-            <span class="by"><img src="../../site/assets/faces/dewi.svg" alt="" style="--h: 150" />Dewi · Competitor pricing</span>
-            <div class="tr th"><span>Brand</span><span>250 g</span><span>500 g</span><span>Skip</span></div>
-            <div class="tr"><span>Kopi Pagi</span><span>Rp 95k</span><span>Rp 165k</span><span>No</span></div>
-            <div class="tr"><span>Roast Club</span><span>Rp 110k</span><span>Rp 189k</span><span class="yes">Yes</span></div>
-            <div class="tr"><span>Biji Kita</span><span>Rp 85k</span><span>Rp 149k</span><span>No</span></div>
-            <div class="tr"><span>Sana Coffee</span><span>Rp 99k</span><span>Rp 159k</span><span>No</span></div>
-          </article>
-
-          <article class="card doc" id="c-doc">
-            <span class="by"><img src="../../site/assets/faces/raka.svg" alt="" style="--h: 240" />Raka · Launch brief</span>
-            <p class="dl"><b>Promise.</b> Roasted on Tuesday, at your door by Friday.</p>
-            <p class="dl dh">Plans</p>
-            <p class="dl li"><b>Pagi:</b> 200 g, Rp 89.000</p>
-            <p class="dl li"><b>Senja:</b> 500 g, Rp 149.000</p>
-            <p class="dl li"><b>Malam:</b> 1 kg, Rp 269.000</p>
-          </article>
-
-          <article class="card page" id="c-page">
-            <span class="by"><img src="../../site/assets/faces/sinta.svg" alt="" style="--h: 330" />Sinta · index.html</span>
-            <div class="pbar"><span>index.html</span><i></i><i></i><i></i></div>
-            <div class="pbody">
-              <div class="pnav pg"><b>Kopi Senja</b><span>Plans</span><span>This week's roast</span></div>
-              <div class="phero">
-                <div>
-                  <p class="pbatch pg">Batch 044, roasted Tue 3 Nov</p>
-                  <h3 class="pg">Roasted on Tuesday, at your door by Friday</h3>
-                  <p class="pcta pg"><span>Start with Senja</span><u>Skip any month, free</u></p>
-                </div>
-                <div class="cup pg"><i></i></div>
-              </div>
-              <div class="pplans">
-                <div class="pg"><b>Pagi</b><span>200 g a month, for one</span><em>Rp 89.000</em></div>
-                <div class="pg"><b>Senja</b><span>500 g a month, for two</span><em>Rp 149.000</em></div>
-                <div class="pg"><b>Malam</b><span>1 kg a month, for the office</span><em>Rp 269.000</em></div>
-              </div>
+        <div class="persp">
+          <div class="cam" id="cam">
+            <div class="dots"></div>
+            <div class="lead" id="lead">
+              <div class="face lg" style="--h: 95"><img src="../../site/assets/faces/lead.svg" alt="" /><i class="halo"></i></div>
+              <b>Lead</b>
+              <span>Leading the team</span>
             </div>
-          </article>
+            <div class="bubble glass" id="bubble">Landing page, launch email and a waitlist for a coffee subscription.</div>
+            <svg class="wires" id="wires" viewBox="0 0 1920 1600">
+              <path class="wire" id="wire-trunk" d="M960 392V436" />
+              <path class="wire" d="M480 440H1440M480 440V482M800 440V482M1120 440V482M1440 440V482" />
+              <path class="spark" pathLength="1" d="M960 392V440H480V482" />
+              <path class="spark" pathLength="1" d="M960 392V440H800V482" />
+              <path class="spark" pathLength="1" d="M960 392V440H1120V482" />
+              <path class="spark" pathLength="1" d="M960 392V440H1440V482" />
+            </svg>
+            <div id="members"></div>
 
-          <article class="card note" id="c-note">
-            <span class="by"><img src="../../site/assets/faces/dewi.svg" alt="" style="--h: 150" />Dewi</span>
-            Only one rival lets people skip a month. Lead with it.
-          </article>
+            <article class="card glass table" id="c-table">
+              <span class="by"><img src="../../site/assets/faces/dewi.svg" alt="" style="--h: 150" />Dewi · Competitor pricing</span>
+              <div class="tr th"><span>Brand</span><span>250 g</span><span>500 g</span><span>Skip</span></div>
+              <div class="tr"><span>Kopi Pagi</span><span>Rp 95k</span><span>Rp 165k</span><span>No</span></div>
+              <div class="tr"><span>Roast Club</span><span>Rp 110k</span><span>Rp 189k</span><span class="yes">Yes</span></div>
+              <div class="tr"><span>Biji Kita</span><span>Rp 85k</span><span>Rp 149k</span><span>No</span></div>
+              <div class="tr"><span>Sana Coffee</span><span>Rp 99k</span><span>Rp 159k</span><span>No</span></div>
+            </article>
 
-          <article class="card mail" id="c-mail">
-            <span class="by"><img src="../../site/assets/faces/raka.svg" alt="" style="--h: 240" />Raka · launch-email.md</span>
-            <p><b>Subject:</b> Your coffee was roasted on Tuesday</p>
-            <i></i><i></i><i style="width: 62%"></i>
-          </article>
+            <article class="card glass doc" id="c-doc">
+              <span class="by"><img src="../../site/assets/faces/raka.svg" alt="" style="--h: 240" />Raka · Launch brief</span>
+              <p class="dl"><b>Promise.</b> Roasted on Tuesday, at your door by Friday.</p>
+              <p class="dl dh">Plans</p>
+              <p class="dl li"><b>Pagi:</b> 200 g, Rp 89.000</p>
+              <p class="dl li"><b>Senja:</b> 500 g, Rp 149.000</p>
+              <p class="dl li"><b>Malam:</b> 1 kg, Rp 269.000</p>
+            </article>
+
+            <article class="card page" id="c-page">
+              <span class="by"><img src="../../site/assets/faces/sinta.svg" alt="" style="--h: 330" />Sinta · index.html</span>
+              <div class="pbar"><span>index.html</span><i></i><i></i><i></i></div>
+              <div class="pbody">
+                <div class="pnav pg"><b>Kopi Senja</b><span>Plans</span><span>This week's roast</span></div>
+                <div class="phero">
+                  <div>
+                    <p class="pbatch pg">Batch 044, roasted Tue 3 Nov</p>
+                    <h3 class="pg">Roasted on Tuesday, at your door by Friday</h3>
+                    <p class="pcta pg"><span>Start with Senja</span><u>Skip any month, free</u></p>
+                  </div>
+                  <div class="cup pg"><i></i></div>
+                </div>
+                <div class="pplans">
+                  <div class="pg"><b>Pagi</b><span>200 g a month, for one</span><em>Rp 89.000</em></div>
+                  <div class="pg"><b>Senja</b><span>500 g a month, for two</span><em>Rp 149.000</em></div>
+                  <div class="pg"><b>Malam</b><span>1 kg a month, for the office</span><em>Rp 269.000</em></div>
+                </div>
+              </div>
+            </article>
+
+            <article class="card note" id="c-note">
+              <span class="by"><img src="../../site/assets/faces/dewi.svg" alt="" style="--h: 150" />Dewi</span>
+              Only one rival lets people skip a month. Lead with it.
+            </article>
+
+            <article class="card glass mail" id="c-mail">
+              <span class="by"><img src="../../site/assets/faces/raka.svg" alt="" style="--h: 240" />Raka · launch-email.md</span>
+              <p><b>Subject:</b> Your coffee was roasted on Tuesday</p>
+              <i></i><i></i><i style="width: 62%"></i>
+            </article>
+          </div>
         </div>
       </section>
 
       <!-- 6. Three proof beats -->
       <section class="scene" id="s6">
         <div class="beat" id="b1">
-          <h2 class="big"><span class="mask"><span>Real files.</span></span><span class="mask"><span>In a real folder.</span></span></h2>
+          <h2 class="display metal"><span class="ln">Real files.</span><span class="ln">In a <em class="gold">real folder.</em></span></h2>
           <div class="row files">
             <span class="path">~/kopi-senja/</span>
-            <span class="chip">index.html</span><span class="chip">launch-email.md</span><span class="chip">pricing.csv</span><span class="chip">brief.md</span>
+            <span class="chip glass">index.html</span><span class="chip glass">launch-email.md</span><span class="chip glass">pricing.csv</span><span class="chip glass">brief.md</span>
           </div>
         </div>
         <div class="beat" id="b2">
-          <h2 class="big"><span class="mask"><span>Every task shows its diff.</span></span><span class="mask"><span>Undo any of them.</span></span></h2>
+          <h2 class="display metal"><span class="ln">Every task shows its diff.</span><span class="ln"><em class="gold">Undo</em> any of them.</span></h2>
           <div class="row">
-            <div class="diff">
+            <div class="diff glass">
               <p class="del"><span>−</span>&lt;h1&gt;Fresh coffee, delivered&lt;/h1&gt;</p>
               <p class="add"><span>+</span>&lt;h1&gt;Roasted on Tuesday, at your door by Friday&lt;/h1&gt;</p>
             </div>
-            <span class="revert" id="revert">Revert</span>
+            <span class="revert glass" id="revert">Revert</span>
           </div>
         </div>
         <div class="beat" id="b3">
-          <h2 class="big"><span class="mask"><span>Claude Code and Codex.</span></span><span class="mask"><span>On your own machine.</span></span></h2>
+          <h2 class="display metal"><span class="ln">Claude Code and Codex.</span><span class="ln">On <em class="gold">your own</em> machine.</span></h2>
           <div class="row logos">
-            <span class="lt wide"><img src="../../site/assets/brands/claude.svg" alt="" />Claude Code</span>
-            <span class="lt wide"><img src="../../site/assets/brands/codex.svg" alt="" />Codex</span>
+            <span class="lt glass wide"><img src="../../site/assets/brands/claude.svg" alt="" />Claude Code</span>
+            <span class="lt glass wide"><img src="../../site/assets/brands/codex.svg" alt="" />Codex</span>
             <span class="sep"></span>
-            <span class="lt"><img src="../../site/assets/brands/github.png" alt="" /></span>
-            <span class="lt"><img src="../../site/assets/brands/linear.png" alt="" /></span>
-            <span class="lt"><img src="../../site/assets/brands/notion.png" alt="" /></span>
-            <span class="lt"><img src="../../site/assets/brands/vercel.png" alt="" /></span>
-            <span class="lt"><img src="../../site/assets/brands/supabase.png" alt="" /></span>
-            <span class="lt"><img src="../../site/assets/brands/sentry.png" alt="" /></span>
+            <span class="lt glass"><img src="../../site/assets/brands/github.png" alt="" /></span>
+            <span class="lt glass"><img src="../../site/assets/brands/linear.png" alt="" /></span>
+            <span class="lt glass"><img src="../../site/assets/brands/notion.png" alt="" /></span>
+            <span class="lt glass"><img src="../../site/assets/brands/vercel.png" alt="" /></span>
+            <span class="lt glass"><img src="../../site/assets/brands/supabase.png" alt="" /></span>
+            <span class="lt glass"><img src="../../site/assets/brands/sentry.png" alt="" /></span>
           </div>
         </div>
       </section>
 
       <!-- 7. End card -->
       <section class="scene" id="s7">
-        <div class="lockup" id="lockup">
-          <svg viewBox="0 0 64 64">
-            <rect x="0.5" y="0.5" width="63" height="63" rx="14" fill="#141414" stroke="rgb(237 237 240 / 0.14)" />
-            <g transform="translate(8 8) scale(2)">
-              <path d="M8.5 12c3.5 0 3.5-6 7-6M8.5 12c3.5 0 3.5 6 7 6" fill="none" stroke="#f5f5f5" stroke-width="1.75" stroke-linecap="round" />
-              <circle cx="6" cy="12" r="2.5" fill="#f5f5f5" />
-              <circle cx="18" cy="6" r="2.5" fill="#ffb90e" />
-              <circle cx="18" cy="18" r="2.5" fill="#f5f5f5" />
-            </g>
-          </svg>
-          <b>Satgas</b>
-        </div>
-        <h1 class="huge end"><span class="mask"><span id="end-line">Put a task force on it.</span></span></h1>
-        <div class="cta" id="cta">github.com/zeative/satgas<i class="ripple" id="cta-ripple"></i></div>
+        <b class="wordmark metal" id="wordmark">Satgas</b>
+        <h1 class="display huge metal end" id="end-line">Put a <em class="gold">task force</em> on it.</h1>
+        <div class="cta" id="cta"><span>github.com/zeative/satgas</span><i class="ripple" id="cta-ripple"></i><i class="sheen" id="cta-sheen"></i></div>
         <p class="micro" id="end-micro">OPEN SOURCE <i></i> SELF-HOSTED <i></i> RUNS ON BUN</p>
       </section>
 
       <div class="chapter" id="ch1"><span>01 / ASK</span><b>Write one request.</b></div>
       <div class="chapter" id="ch2"><span>02 / PLAN</span><b>A lead hires only the team it needs.</b></div>
       <div class="chapter" id="ch3"><span>03 / WORK</span><b>Every result lands on the board.</b></div>
-      <div class="counter" id="counter"><i class="dot"></i><span id="cnt-run">3 running</span><span id="cnt-done">4 of 4 done</span></div>
+      <div class="counter glass" id="counter"></div>
+      <div class="rail" id="rail">
+        <span id="r1"><b>01</b>Ask</span><i><u id="rl1"></u></i><span id="r2"><b>02</b>Plan</span><i><u id="rl2"></u></i><span id="r3"><b>03</b>Work</span>
+      </div>
 
       <div id="cursor">
         <svg viewBox="0 0 24 24"><path d="M4 2 4 20 9 15 12.5 22 15 21 11.5 14 18 14Z" fill="#fff" stroke="#0a0a0a" stroke-width="0.9" stroke-linejoin="round" /></svg>
       </div>
-      <div class="dither"></div>
-      <div class="grain"></div>
+      <div id="flash"></div>
+      <div id="vignette"></div>
     </div>
-    <script src="film.js"></script>
+    <svg class="defs" width="0" height="0" aria-hidden="true"><defs id="filters"></defs></svg>
+    <script type="module" src="film.js"></script>
   </body>
 </html>
