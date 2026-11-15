@@ -1058,6 +1058,16 @@ export const en = {
     open: "Open in a new tab",
     reload: "Reload",
     play: "Play",
+    pins: {
+      open: (n: number) => `Comment ${n}`,
+      add: "Pin comment",
+      added: "Pinned to the element",
+      send: "Send to team",
+      sent: "Sent to the team",
+      sentToast: "Sent to the team",
+      resolve: "Resolve",
+      remove: "Delete comment",
+    },
     remove: "Delete",
     app: {
       status: { starting: "Starting", running: "Running", stopped: "Stopped", failed: "Failed" } as Record<string, string>,
@@ -2887,6 +2897,16 @@ export const id: typeof en = {
     open: "Buka di tab baru",
     reload: "Muat ulang",
     play: "Putar",
+    pins: {
+      open: (n) => `Komentar ${n}`,
+      add: "Sematkan komentar",
+      added: "Disematkan ke elemen",
+      send: "Kirim ke tim",
+      sent: "Sudah dikirim ke tim",
+      sentToast: "Dikirim ke tim",
+      resolve: "Selesai",
+      remove: "Hapus komentar",
+    },
     remove: "Hapus",
     app: {
       status: { starting: "Menyala", running: "Berjalan", stopped: "Berhenti", failed: "Gagal" },

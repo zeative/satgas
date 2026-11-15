@@ -213,3 +213,12 @@ test("a card a person sized keeps that mark, and only as a yes or no", () => {
   ]);
   expect(sanitizeOps([{ op: "patch", id: "a", patch: { sized: "yes" } }])).toBeNull();
 });
+
+test("pins on a page frame are kept as written, and refused when malformed", () => {
+  const pin = { id: "p1", route: "/", selector: "main > h1", label: "h1 Know who", text: "Bigger please", at: 1 };
+  expect(sanitizeOps([{ op: "patch", id: "a", patch: { pins: [pin, { ...pin, id: "p2", done: true }] } }])).toEqual([
+    { op: "patch", id: "a", patch: { pins: [pin, { ...pin, id: "p2", done: true }] } },
+  ]);
+  expect(sanitizeOps([{ op: "patch", id: "a", patch: { pins: [{ ...pin, text: 5 }] } }])).toBeNull();
+  expect(sanitizeOps([{ op: "patch", id: "a", patch: { pins: null } }])).toEqual([{ op: "patch", id: "a", patch: { pins: undefined } }]);
+});

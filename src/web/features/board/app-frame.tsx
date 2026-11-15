@@ -48,6 +48,7 @@ import { useRuns } from "@/stores/runs";
 import { type Card, DEVICES, type Device } from "../../../shared/board";
 import { LabelControls, newId, useBoard } from "./context";
 import { BarButton, PageFrame } from "./page-frame";
+import { PinLayer, type PinRects } from "./pins";
 
 const tb = t.board.browser;
 // The screen each frame stands for, so the page's viewport units keep their real size while the frame shows all of it.
@@ -75,7 +76,8 @@ const urlOf = (base: string, route: string | undefined) => base + (route ?? "").
 
 interface BridgeMsg {
   satgas: true;
-  type: "nav" | "pick" | "escape" | "layout" | "size" | "tokens" | "text-edit" | "undo";
+  type: "nav" | "pick" | "escape" | "layout" | "size" | "tokens" | "text-edit" | "undo" | "located";
+  rects?: PinRects;
   value?: string;
   redo?: boolean;
   tokens?: Token[];
@@ -103,6 +105,7 @@ export function AppBody({ card, interactive, large }: { card: Card; interactive:
   const [busy, setBusy] = useState(false);
   const [path, setPath] = useState<string | null>(null);
   const [pageH, setPageH] = useState(0);
+  const [pinRects, setPinRects] = useState<PinRects>({});
   const [draft, setDraft] = useState<string | null>(null);
   // The page the frame opened at; later moves happen inside the page, so the frame is not reloaded for them.
   const [start, setStart] = useState(card.route);
@@ -110,6 +113,11 @@ export function AppBody({ card, interactive, large }: { card: Card; interactive:
   const device = card.device ?? "desktop";
   const base = app?.path ?? "";
   const route = path !== null && base ? routeOf(path, base) : (card.route ?? "/");
+  // Where this page's open pins sit, asked again whenever the pins, the page or the frame's app change.
+  const pinKey = (card.pins ?? [])
+    .filter((p) => p.route === route && !p.done)
+    .map((p) => `${p.id}:${p.selector}`)
+    .join("|");
 
   const geometry = useCallback((g: { scale: number; left: number }) => setFrameLayout(card.id, g), [card.id]);
   const largeRef = useRef(large);
@@ -130,6 +138,7 @@ export function AppBody({ card, interactive, large }: { card: Card; interactive:
       else if (m.type === "tokens" && m.tokens) setTokens(card.id, m.tokens);
       else if (m.type === "text-edit" && typeof m.value === "string") textFromPage(m.value);
       else if (m.type === "undo") void (m.redo ? redoStyle() : undoStyle());
+      else if (m.type === "located" && m.rects) setPinRects(m.rects);
       else if (m.type === "escape") {
         if (useInspect.getState().picking === card.id) setPicking(null);
         else closeInspect();
@@ -140,6 +149,12 @@ export function AppBody({ card, interactive, large }: { card: Card; interactive:
   }, [runId, card.id, name, send]);
 
   useEffect(() => send({ type: "mode", pick: picking }), [picking, send]);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: pinKey stands for the open pins of this page.
+  useEffect(() => {
+    const items = (card.pins ?? []).filter((p) => p.route === route && !p.done).map((p) => ({ id: p.id, selector: p.selector }));
+    send({ type: "locate", items });
+    if (!items.length) setPinRects({});
+  }, [pinKey, send, status, nonce]);
   // How much the page may run: fully while the person looks at it, paused once quiet otherwise, frozen while the canvas
   // moves. A board of many live pages is otherwise many apps animating against the canvas on every frame.
   const moving = useCanvasMoving((s) => s.moving);
@@ -406,24 +421,27 @@ export function AppBody({ card, interactive, large }: { card: Card; interactive:
         <LabelControls>{controls}</LabelControls>
       )}
       {running ? (
-        <PageFrame
-          key={nonce}
-          frameRef={frame}
-          src={urlOf(app.path, start)}
-          title={name}
-          page
-          device={device}
-          interactive={interactive || picking}
-          w={card.w}
-          h={card.h}
-          onLoad={() => {
-            send({ type: "run", mode: runRef.current });
-            send({ type: "screen", h: SCREEN_H[device] });
-            send({ type: "mode", pick: useInspect.getState().picking === card.id });
-          }}
-          onGeometry={large ? undefined : geometry}
-          inset={large ? BAR_H : 0}
-        />
+        <div className="relative flex min-h-0 flex-1 flex-col">
+          <PageFrame
+            key={nonce}
+            frameRef={frame}
+            src={urlOf(app.path, start)}
+            title={name}
+            page
+            device={device}
+            interactive={interactive || picking}
+            w={card.w}
+            h={card.h}
+            onLoad={() => {
+              send({ type: "run", mode: runRef.current });
+              send({ type: "screen", h: SCREEN_H[device] });
+              send({ type: "mode", pick: useInspect.getState().picking === card.id });
+            }}
+            onGeometry={large ? undefined : geometry}
+            inset={large ? BAR_H : 0}
+          />
+          {!large && scale ? <PinLayer runId={runId} card={card} app={name} route={route} rects={pinRects} scale={scale} /> : null}
+        </div>
       ) : (
         <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
           {status === "starting" ? (

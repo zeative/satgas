@@ -520,3 +520,12 @@
   border-width: 1.5px;
   box-shadow: 0 1px 2px rgb(0 0 0 / 0.18);
 }
+/* A comment pin keeps one size on screen at any zoom, growing from the corner of the element it is about. */
+.satgas-pin {
+  transform: scale(calc(1 / var(--sg-zoom, 1)));
+  transform-origin: 0 100%;
+  transition: scale 120ms ease-out;
+}
+.satgas-pin:hover {
+  scale: 1.1;
+}

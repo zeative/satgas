@@ -23,6 +23,7 @@ import {
   Keyboard,
   Link2,
   List,
+  MessageSquarePlus,
   Minus,
   PanelBottom,
   PanelLeft,
@@ -69,7 +70,8 @@ import {
   undoStyle,
   useInspect,
 } from "@/stores/inspect";
-import { sendPrompt } from "@/stores/runs";
+import { sendPrompt, useRuns } from "@/stores/runs";
+import { addPin } from "./pins";
 
 const ti = t.board.inspect;
 
@@ -201,6 +203,8 @@ export default function DesignPanel({ className }: { className?: string }) {
   const attrs = useInspect((s) => s.attrs);
   const tokenEdits = useInspect((s) => s.tokenEdits);
   const [ask, setAsk] = useState("");
+  const frameCard = useRuns((s) => s.run?.board?.cards.find((c) => c.id === target?.cardId));
+  const appBase = useRuns((s) => (target ? s.run?.apps?.[target.app]?.path : undefined));
   const [sending, setSending] = useState(false);
   if (!target) return null;
   const el = target.el;
@@ -270,6 +274,20 @@ export default function DesignPanel({ className }: { className?: string }) {
     } finally {
       setSending(false);
     }
+  };
+  // A comment pinned to the picked element, kept on its frame instead of sent: the words in the request field.
+  const pin = () => {
+    if (!el || !frameCard || !ask.trim()) return;
+    const base = appBase ?? "";
+    const route = base && el.path.startsWith(base) ? `/${el.path.slice(base.length)}` : el.path;
+    addPin(target.runId, frameCard, {
+      route,
+      selector: el.selector,
+      label: `${el.tag}${el.text ? ` ${el.text.slice(0, 60)}` : ""}`,
+      text: ask.trim(),
+    });
+    setAsk("");
+    toast.success(t.board.pins.added);
   };
   const close = () => {
     setPicking(null);
@@ -351,6 +369,19 @@ export default function DesignPanel({ className }: { className?: string }) {
           {count > 0 && (
             <Button variant="ghost" size="sm" className="h-7 px-2.5 text-xs text-muted-foreground" onClick={resetEdits}>
               {ti.reset}
+            </Button>
+          )}
+          {el && (
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label={t.board.pins.add}
+              title={t.board.pins.add}
+              disabled={!ask.trim() || !frameCard}
+              className="size-7 text-muted-foreground hover:text-foreground [&_svg]:size-3.5"
+              onClick={pin}
+            >
+              <MessageSquarePlus />
             </Button>
           )}
           <Button size="sm" className="h-7 px-3 text-xs" disabled={sending || (!count && !ask.trim())} onClick={() => void apply()}>

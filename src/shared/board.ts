@@ -89,10 +89,27 @@ export interface Card {
   ref?: string;
   // checklist
   items?: CheckItem[];
+  // A page frame: comments pinned to elements of its pages, found again by their selector.
+  pins?: Pin[];
   // comment: when it went to the lead
   sentAt?: number;
   createdAt: number;
 }
+
+// A comment on one element of a live page: where it is (its page and selector), what it says, and whether it is done.
+export interface Pin {
+  id: string;
+  route: string;
+  selector: string;
+  // The element as it read when pinned, so a pin whose element is gone still says what it was about.
+  label: string;
+  text: string;
+  at: number;
+  done?: boolean;
+  // When it went to the team.
+  sentAt?: number;
+}
+export const MAX_PINS = 100;
 
 export interface Connector {
   id: string;
@@ -259,6 +276,7 @@ const REMOVABLE = [
   "group",
   "ref",
   "items",
+  "pins",
   "sentAt",
 ] as const;
 
@@ -348,6 +366,33 @@ function cleanCardFields(input: Record<string, unknown>): Partial<Card> | null {
     };
     if (!Array.isArray(items) || items.length > MAX_CHECK_ITEMS || !items.every(ok)) return null;
     out.items = (items as CheckItem[]).map((i) => ({ text: i.text, ...(i.done ? { done: true } : {}), ...(i.by ? { by: i.by } : {}) }));
+  }
+  if (raw.pins !== undefined) {
+    const ok = (x: unknown) => {
+      const v = x as Pin;
+      return (
+        !!v &&
+        str(v.id, LIMITS.id) &&
+        str(v.route, 500) &&
+        str(v.selector, 1000) &&
+        str(v.label, 200) &&
+        str(v.text, 4000) &&
+        num(v.at) &&
+        (v.done === undefined || typeof v.done === "boolean") &&
+        (v.sentAt === undefined || num(v.sentAt))
+      );
+    };
+    if (!Array.isArray(raw.pins) || raw.pins.length > MAX_PINS || !raw.pins.every(ok)) return null;
+    out.pins = (raw.pins as Pin[]).map((p) => ({
+      id: p.id,
+      route: p.route,
+      selector: p.selector,
+      label: p.label,
+      text: p.text,
+      at: p.at,
+      ...(p.done ? { done: true } : {}),
+      ...(p.sentAt ? { sentAt: p.sentAt } : {}),
+    }));
   }
   if (raw.z !== undefined) {
     if (!num(raw.z) || Math.abs(raw.z as number) > 1_000_000) return null;

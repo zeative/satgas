@@ -220,12 +220,34 @@
         f.y = y0;
         if (count++ < 800) f.els.push([Number(m[2]), x, y, w, h]);
       }
+      locate();
       // Only a real change goes out, so an animated page does not redraw the board four times a second.
       const sig = JSON.stringify(files) + scrollY;
       if (sig === lastLayout) return;
       lastLayout = sig;
       post({ type: "layout", files, scrollY, vh: innerHeight });
     }, 250);
+  };
+  // Comments pinned to elements: found again by selector whenever the page changes, and sent back as page positions.
+  let pinned = [];
+  let lastPins = "";
+  const locate = () => {
+    if (!pinned.length) return;
+    const rects = {};
+    for (const it of pinned) {
+      let el = null;
+      try {
+        el = document.querySelector(String(it.selector));
+      } catch {}
+      if (!el || el.closest("[data-satgas-ui]")) continue;
+      const r = el.getBoundingClientRect();
+      if (!r.width && !r.height) continue;
+      rects[it.id] = [Math.round(r.left + scrollX), Math.round(r.top + scrollY), Math.round(r.width), Math.round(r.height)];
+    }
+    const sig = JSON.stringify(rects) + location.pathname;
+    if (sig === lastPins) return;
+    lastPins = sig;
+    post({ type: "located", rects, path: location.pathname });
   };
   // A frame shows the whole page at once, so its height follows the page. Viewport units would then grow with the frame
   // and the page with them, so they are fixed at the screen height the frame stands for, as a design file's frame is.
@@ -622,6 +644,9 @@
     } else if (m.type === "select") {
       const el = refs[Number(m.ref)];
       if (el?.isConnected) select(el);
+    } else if (m.type === "locate") {
+      pinned = Array.isArray(m.items) ? m.items.slice(0, 100) : [];
+      locate();
     } else if (m.type === "hover") {
       const el = m.ref === null || m.ref === undefined ? null : refs[Number(m.ref)];
       hovered = el?.isConnected ? el : null;
