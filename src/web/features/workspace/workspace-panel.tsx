@@ -36,27 +36,31 @@ export function WorkspacePanel({ run }: { run: Run }) {
   const [tab, setTab] = useState<WorkspaceTab>(() => firstTab(run));
   const changed = useMemo(() => changesOf(run.nodes).size, [run.nodes]);
   return (
+    // A card floating in its own column, like the chat on the other side, so the board's two side panels read as a pair.
     <aside
       aria-label={tw.label}
-      className="relative flex h-full shrink-0 flex-col border-e bg-card max-md:absolute max-md:inset-0 max-md:z-30 max-md:w-full!"
+      className="relative flex h-full shrink-0 flex-col py-3 ps-3 max-md:absolute max-md:inset-0 max-md:z-30 max-md:w-full! max-md:p-0"
       style={{ width }}
     >
-      <Tabs value={tab} onValueChange={(v) => setTab(v as WorkspaceTab)} className="flex min-h-0 flex-1 flex-col gap-0">
-        <header className="flex h-9 shrink-0 items-center border-b ps-1 pe-1">
-          {/* Plain words with a line under the chosen one, like VS Code's panel tabs. */}
+      <Tabs
+        value={tab}
+        onValueChange={(v) => setTab(v as WorkspaceTab)}
+        className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-2xl border bg-card shadow-lg max-md:rounded-none max-md:border-0"
+      >
+        <header className="flex h-12 shrink-0 items-center gap-1 border-b ps-2 pe-1.5">
           <TabsList
-            className="h-full min-w-0 flex-1 gap-0 overflow-x-auto no-scrollbar"
-            markClassName="rounded-none bg-transparent after:absolute after:inset-x-2 after:bottom-0 after:h-px after:bg-foreground"
+            className="h-7 min-w-0 flex-1 gap-0.5 overflow-x-auto no-scrollbar"
+            markClassName="rounded-md border bg-background shadow-xs"
           >
             {TABS.map((k) => (
               <TabsTrigger
                 key={k}
                 value={k}
-                className="h-full gap-1.5 rounded-none px-2 text-xs focus-visible:ring-1 focus-visible:ring-inset"
+                className="h-7 gap-1.5 rounded-md border border-transparent px-2.5 text-[13px] text-muted-foreground hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring data-[state=active]:text-foreground"
               >
                 {tw.tabs[k]}
                 {k === "changes" && changed > 0 && (
-                  <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-muted px-1 text-[10px] leading-none tabular-nums">
+                  <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-muted px-1 text-[10px] leading-none text-muted-foreground tabular-nums">
                     {changed}
                   </span>
                 )}
@@ -68,14 +72,14 @@ export function WorkspacePanel({ run }: { run: Run }) {
             size="icon"
             aria-label={tw.close}
             title={`${tw.close} (${isMac ? "⌘B" : "Ctrl B"})`}
-            className="size-6 shrink-0 rounded text-muted-foreground hover:text-foreground [&_svg]:size-3.5"
+            className="size-7 shrink-0 text-muted-foreground hover:text-foreground [&_svg]:size-3.5"
             onClick={() => toggleWorkspace(false)}
           >
             <PanelLeftClose />
           </Button>
         </header>
         {TABS.map((k) => (
-          <TabsContent key={k} value={k} className="min-h-0 overflow-y-auto">
+          <TabsContent key={k} value={k} className="min-h-0 overflow-y-auto overscroll-contain p-1.5">
             {k === "changes" ? (
               <ChangesTab run={run} />
             ) : k === "files" ? (
@@ -146,7 +150,7 @@ function WorkspaceResizer({ width }: { width: number }) {
         e.preventDefault();
         setWorkspaceWidth(next);
       }}
-      className="group absolute inset-y-0 -right-1.5 z-30 flex w-3 cursor-col-resize touch-none justify-center focus-visible:outline-none"
+      className="group absolute inset-y-3 -right-1.5 z-30 flex w-3 cursor-col-resize touch-none justify-center focus-visible:outline-none"
     >
       <span
         aria-hidden="true"

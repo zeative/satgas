@@ -32,36 +32,50 @@ const nameOf = (c: Card) =>
   (c.kind === "shape" ? t.board.shapeName[c.shape ?? "rect"] : undefined) ||
   tw.untitled;
 
-// What is on the canvas as a list: frames with how much they hold, then the loose cards; a click flies there.
+// Loose cards by what they are, so a board of screens reads as its pages, then its documents, then the rest.
+const KIND_GROUP: Partial<Record<CardKind, keyof typeof tw.kinds>> = {
+  preview: "pages",
+  doc: "docs",
+  table: "docs",
+  code: "docs",
+  files: "docs",
+  note: "notes",
+  text: "notes",
+  image: "images",
+};
+const GROUPS = ["pages", "docs", "notes", "images", "other"] as const;
+
+// What is on the canvas as a list: frames with how much they hold, then the loose cards by kind; a click flies there.
 export function OutlineTab({ run }: { run: Run }) {
-  const { frames, loose } = useMemo(() => {
+  const { frames, groups } = useMemo(() => {
     const cards = (run.board?.cards ?? []).filter((c) => c.kind !== "drawing");
     const frames = cards
       .filter((c) => c.kind === "frame")
       .map((f) => ({ card: f, holds: cards.filter((c) => c.kind !== "frame" && inside(c, f)).length }));
     const framed = new Set(cards.filter((c) => c.kind !== "frame" && frames.some((f) => inside(c, f.card))).map((c) => c.id));
     const byPlace = (a: Card, b: Card) => a.y - b.y || a.x - b.x;
+    const loose = cards.filter((c) => c.kind !== "frame" && !framed.has(c.id)).sort(byPlace);
     return {
       frames: frames.sort((a, b) => byPlace(a.card, b.card)),
-      loose: cards.filter((c) => c.kind !== "frame" && !framed.has(c.id)).sort(byPlace),
+      groups: GROUPS.map((g) => [g, loose.filter((c) => (KIND_GROUP[c.kind] ?? "other") === g)] as const).filter(([, l]) => l.length),
     };
   }, [run.board?.cards]);
 
   const keys = useTreeKeys();
-  if (!frames.length && !loose.length) return <TreeNote>{tw.outlineEmpty}</TreeNote>;
+  if (!frames.length && !groups.length) return <TreeNote>{tw.outlineEmpty}</TreeNote>;
   return (
     // biome-ignore lint/a11y/noStaticElementInteractions: the keys belong to the rows inside; this only catches them as they bubble.
-    <div ref={keys.ref} onKeyDown={keys.onKeyDown} className="flex flex-col py-1">
+    <div ref={keys.ref} onKeyDown={keys.onKeyDown} className="flex flex-col gap-1.5">
       {frames.length > 0 && (
         <Group title={tw.frames} items={frames}>
           {({ card, holds }) => <Row key={card.id} card={card} meta={tw.inFrame(holds)} />}
         </Group>
       )}
-      {loose.length > 0 && (
-        <Group title={tw.cards} items={loose}>
+      {groups.map(([g, list]) => (
+        <Group key={g} title={tw.kinds[g]} items={list}>
           {(c) => <Row key={c.id} card={c} />}
         </Group>
-      )}
+      ))}
     </div>
   );
 }

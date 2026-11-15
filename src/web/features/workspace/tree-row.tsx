@@ -3,26 +3,28 @@ import { type KeyboardEvent, memo, type ReactNode, useRef, useState } from "reac
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
-// One row grammar for the whole sidebar: 22px rows edge to edge, 12px a level, a 16px chevron column and a 16px icon, so
-// names at one depth start on one line whether they are folders or files. Actions show on hover.
-const INDENT = 12;
-const EDGE = 4;
+// One row grammar for the whole sidebar: 28px rows with a rounded hover inside the card's edge, 16px a level, a 16px
+// chevron column and a 16px icon, so names at one depth start on one line whether they are folders or files. Actions
+// show on hover.
+const INDENT = 16;
+const EDGE = 6;
 export const indentOf = (depth: number) => EDGE + depth * INDENT;
 
 export const ROW =
-  "relative flex h-[22px] w-full min-w-0 scroll-my-9 items-center pe-2 text-start text-[13px] leading-[22px] hover:bg-muted focus-visible:bg-muted focus-visible:outline focus-visible:outline-1 focus-visible:-outline-offset-1 focus-visible:outline-ring";
+  "relative flex h-7 w-full min-w-0 scroll-my-9 items-center rounded-md pe-2 text-start text-[13px] transition-colors hover:bg-muted focus-visible:bg-muted focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-inset";
 
 // One thin line per level, under each ancestor's chevron, so how deep a row sits reads without counting pixels.
 export const Guides = memo(function Guides({ depth }: { depth: number }) {
   return (
     <>
-      {Array.from({ length: depth }, (_, i) => (
+      {/* The top level needs no line: its rows sit right under their heading. */}
+      {Array.from({ length: Math.max(0, depth - 1) }, (_, i) => (
         <span
           // biome-ignore lint/suspicious/noArrayIndexKey: levels have no identity beyond their position.
           key={i}
           aria-hidden="true"
-          className="pointer-events-none absolute inset-y-0 w-px bg-foreground/10"
-          style={{ insetInlineStart: indentOf(i) + 7 }}
+          className="pointer-events-none absolute inset-y-0 w-px bg-foreground/8"
+          style={{ insetInlineStart: indentOf(i + 1) + 7 }}
         />
       ))}
     </>
@@ -72,7 +74,7 @@ export function useTreeKeys() {
 
 // A row's actions, on top of its end on hover or keyboard focus, over the hover colour so they cover what sits there.
 export const RowActions = ({ children }: { children: ReactNode }) => (
-  <span className="absolute inset-y-0 end-0 flex items-center bg-muted pe-1 opacity-0 group-focus-within/row:opacity-100 group-hover/row:opacity-100 [@media(hover:none)]:opacity-100">
+  <span className="absolute inset-y-0.5 end-0.5 flex items-center rounded-md bg-muted pe-0.5 opacity-0 group-focus-within/row:opacity-100 group-hover/row:opacity-100 [@media(hover:none)]:opacity-100">
     {children}
   </span>
 );
@@ -95,7 +97,7 @@ interface SectionProps {
 export function TreeSection({ title, hint, icon, count, actions, depth = 0, heading, defaultOpen = true, children }: SectionProps) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <section className={cn(heading && "mt-1 border-t")}>
+    <section className={cn(heading && "mt-1.5 border-t pt-1.5 first:mt-0 first:border-t-0 first:pt-0")}>
       <div className="group/row relative">
         <button
           type="button"
@@ -113,7 +115,8 @@ export function TreeSection({ title, hint, icon, count, actions, depth = 0, head
           <span
             className={cn(
               "shrink-0 truncate",
-              heading ? "text-xs text-muted-foreground" : "font-medium",
+              // A group with no face or icon of its own is a quiet label over its rows; a task or folder reads as a name.
+              heading || (!icon && depth === 0) ? "text-xs font-medium text-muted-foreground" : "font-medium",
               icon && "ms-1.5",
               hint && "max-w-[70%]",
             )}
@@ -196,7 +199,7 @@ export const RowIcon = ({ children }: { children: ReactNode }) => (
 );
 
 export const TreeNote = ({ children, tone }: { children: ReactNode; tone?: string }) => (
-  <p className={cn("px-3 py-6 text-center text-xs text-muted-foreground", tone)}>{children}</p>
+  <p className={cn("px-4 py-10 text-center text-xs text-pretty text-muted-foreground", tone)}>{children}</p>
 );
 
 export const TreeLoading = () => (
