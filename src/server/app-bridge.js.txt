@@ -452,14 +452,46 @@
     },
     true,
   );
+  // Double-clicking a picked element that holds only its own words edits them in place, as in a design tool; the panel
+  // follows along, and a click elsewhere, Enter or Escape ends it.
+  let editing = null;
+  const ownWords = (el) => !el.children.length && [...el.childNodes].some((c) => c.nodeType === 3 && c.textContent.trim());
+  const stopEditing = () => {
+    if (!editing) return;
+    editing.removeAttribute("contenteditable");
+    editing.removeEventListener("input", onEdit);
+    editing = null;
+    getSelection()?.removeAllRanges();
+  };
+  const onEdit = () => {
+    if (!editing) return;
+    redraw();
+    post({ type: "text-edit", value: editing.textContent });
+  };
+  const startEditing = (el) => {
+    editing = el;
+    el.setAttribute("contenteditable", "plaintext-only");
+    el.addEventListener("input", onEdit);
+    el.focus();
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    getSelection()?.removeAllRanges();
+    getSelection()?.addRange(range);
+  };
   for (const type of ["click", "pointerdown", "mousedown", "pointerup", "mouseup", "dblclick", "submit"]) {
     addEventListener(
       type,
       (e) => {
         if (!picking) return;
+        // Inside the words being edited the pointer places the caret and selects, as in any text field.
+        if (editing && e.target instanceof Node && editing.contains(e.target)) return;
         e.preventDefault();
         e.stopPropagation();
-        if (type === "click") {
+        if (type === "dblclick") {
+          const el = target(e);
+          if (el && el === picked && ownWords(el)) startEditing(el);
+        } else if (type === "click") {
+          stopEditing();
           const el = target(e);
           if (el) select(el);
           // The cancelled mousedown kept focus out of the page; take it, so the layer keys reach this page.
@@ -486,8 +518,11 @@
   addEventListener(
     "keydown",
     (e) => {
-      if (e.key === "Escape" && (picking || picked)) post({ type: "escape" });
-      else if (picking && picked && !e.target.closest?.("input,textarea,select,[contenteditable='true']")) walkLayers(e);
+      if (editing && (e.key === "Escape" || (e.key === "Enter" && !e.shiftKey))) {
+        e.preventDefault();
+        stopEditing();
+      } else if (e.key === "Escape" && (picking || picked)) post({ type: "escape" });
+      else if (picking && picked && !e.target.closest?.("input,textarea,select,[contenteditable]")) walkLayers(e);
     },
     true,
   );
@@ -509,6 +544,7 @@
       size();
     } else if (m.type === "mode") {
       picking = !!m.pick;
+      if (!picking) stopEditing();
       document.documentElement.style.cursor = picking ? "crosshair" : "";
       if (!picking) hovered = null;
       redraw();
@@ -546,6 +582,7 @@
       tweaked.clear();
       redraw();
     } else if (m.type === "text" && picked) {
+      if (picked === editing && picked.textContent === String(m.value)) return;
       picked.textContent = String(m.value);
       redraw();
     } else if (m.type === "reset") {
@@ -553,6 +590,7 @@
       redraw();
       if (picked) post({ type: "pick", el: describe(picked), keep: true });
     } else if (m.type === "deselect") {
+      stopEditing();
       picked = null;
       edits = {};
       redraw();

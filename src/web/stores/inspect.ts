@@ -134,6 +134,11 @@ export function editText(value: string) {
   target.send({ type: "text", value });
 }
 
+// The words typed straight into the page: kept as the change, without sending them back to the page that has them.
+export function textFromPage(value: string) {
+  if (useInspect.getState().target?.el) useInspect.setState({ text: value });
+}
+
 export function editAttr(name: string, value: string) {
   const { target, attrs } = useInspect.getState();
   if (!target?.el) return;

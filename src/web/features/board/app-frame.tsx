@@ -31,7 +31,17 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { t } from "@/i18n";
 import { cn } from "@/lib/utils";
 import { dropFrame, type FileBox, setFrameLayout, useCanvasMoving, useFrames } from "@/stores/frames";
-import { closeInspect, openTweaks, type PickedEl, pickElement, setPicking, setTokens, type Token, useInspect } from "@/stores/inspect";
+import {
+  closeInspect,
+  openTweaks,
+  type PickedEl,
+  pickElement,
+  setPicking,
+  setTokens,
+  type Token,
+  textFromPage,
+  useInspect,
+} from "@/stores/inspect";
 import { useRuns } from "@/stores/runs";
 import { type Card, DEVICES, type Device } from "../../../shared/board";
 import { LabelControls, newId, useBoard } from "./context";
@@ -63,7 +73,8 @@ const urlOf = (base: string, route: string | undefined) => base + (route ?? "").
 
 interface BridgeMsg {
   satgas: true;
-  type: "nav" | "pick" | "escape" | "layout" | "size" | "tokens";
+  type: "nav" | "pick" | "escape" | "layout" | "size" | "tokens" | "text-edit";
+  value?: string;
   tokens?: Token[];
   h?: number;
   path?: string;
@@ -114,6 +125,7 @@ export function AppBody({ card, interactive, large }: { card: Card; interactive:
         setFrameLayout(card.id, { files: m.files, scrollY: m.scrollY ?? 0, vh: m.vh ?? 0 });
       else if (m.type === "pick" && m.el) pickElement({ runId, cardId: card.id, app: name, el: m.el, send }, !!m.keep);
       else if (m.type === "tokens" && m.tokens) setTokens(card.id, m.tokens);
+      else if (m.type === "text-edit" && typeof m.value === "string") textFromPage(m.value);
       else if (m.type === "escape") {
         if (useInspect.getState().picking === card.id) setPicking(null);
         else closeInspect();
