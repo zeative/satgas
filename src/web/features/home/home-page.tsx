@@ -11,16 +11,14 @@ import {
   Pin,
   PinOff,
   Search,
-  Star,
   Trash2,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { ClaudeMark, CodexMark, GitHubMark } from "@/components/brand-marks";
+import { ClaudeMark, CodexMark } from "@/components/brand-marks";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { PageHeader } from "@/components/layout/page-header";
 import { LogoMark } from "@/components/logo";
-import { OutboundLink } from "@/components/outbound-link";
 import { RichText } from "@/components/rich-text";
 import { StatusIcon, statusLabel } from "@/components/status";
 import { Button } from "@/components/ui/button";
@@ -39,8 +37,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { Composer, type ComposerSeed } from "@/features/missions/composer";
 import { useNeedsProvider } from "@/features/missions/provider-gate";
 import { useNow } from "@/hooks/use-now";
-import { useRepo } from "@/hooks/use-repo";
-import { fmtAgo, fmtCompact, t } from "@/i18n";
+import { fmtAgo, t } from "@/i18n";
 import { deleteMission } from "@/lib/actions";
 import { cn } from "@/lib/utils";
 import { loadRuns, type Organize, organizeBoard, searchBoards, useRuns } from "@/stores/runs";
@@ -60,14 +57,14 @@ export function HomePage() {
       <div aria-hidden="true" className="satgas-hero-grid pointer-events-none absolute inset-x-0 top-0 h-[36rem]" />
       <PageHeader actions={<HomeActions />} />
 
-      <div className="relative mx-auto flex w-full max-w-5xl flex-col gap-12 px-4 pt-[16vh] pb-20 sm:px-6 md:gap-20 md:pt-[22vh]">
-        <section aria-labelledby="start-new" className="mx-auto flex w-full max-w-[44rem] flex-col items-center gap-10 text-center">
+      <div className="relative mx-auto flex w-full max-w-5xl flex-col gap-12 px-4 pt-[14vh] pb-20 sm:px-6 md:gap-16 md:pt-[18vh]">
+        <section aria-labelledby="start-new" className="mx-auto flex w-full max-w-[44rem] flex-col items-center gap-8 text-center">
           <div className="flex flex-col gap-3">
             <h1
               id="start-new"
-              className="flex items-center justify-center gap-2 brand-title text-[clamp(1.25rem,6vw,1.75rem)] leading-tight whitespace-nowrap md:gap-3 md:text-[2rem]"
+              className="flex items-center justify-center gap-2 brand-title text-[clamp(1.25rem,6vw,1.625rem)] leading-tight whitespace-nowrap md:gap-2.5 md:text-[1.75rem]"
             >
-              <LogoMark className="size-6 md:size-8" />
+              <LogoMark className="size-6 md:size-7" />
               {t.composeTitle}
             </h1>
           </div>
@@ -91,8 +88,6 @@ const AGENT_MARKS: { kind: AgentKind; Mark: (p: { className?: string }) => React
 // Whether this machine can run missions at all: which agent CLIs the server found, and where the source lives.
 function HomeActions() {
   const agents = useRuns((s) => s.config.agents);
-  const repo = useRepo();
-
   const ready = agents ? AGENT_MARKS.filter(({ kind }) => agents[kind]) : [];
   const summary = !agents
     ? null
@@ -135,25 +130,6 @@ function HomeActions() {
           <span className="max-sm:sr-only">{summary}</span>
         </div>
       )}
-      {repo &&
-        (repo.stars === null ? (
-          <Button asChild variant="ghost" size="icon" className="size-8 rounded-full text-muted-foreground hover:text-foreground">
-            <OutboundLink href={repo.url} aria-label={t.sourceOnGitHub} title={t.sourceOnGitHub}>
-              <GitHubMark />
-            </OutboundLink>
-          </Button>
-        ) : (
-          <OutboundLink
-            href={repo.url}
-            title={t.sourceOnGitHub}
-            aria-label={`${t.sourceOnGitHub}, ${t.stars(repo.stars)}`}
-            className="flex h-8 items-center gap-1.5 rounded-full border bg-card px-3 text-xs text-muted-foreground shadow-xs transition-colors hover:border-foreground/20 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-          >
-            <GitHubMark className="size-3.5" />
-            <Star className="size-3" aria-hidden="true" />
-            <span className="tabular-nums">{fmtCompact(repo.stars)}</span>
-          </OutboundLink>
-        ))}
     </>
   );
 }

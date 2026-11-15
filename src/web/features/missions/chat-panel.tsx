@@ -930,7 +930,9 @@ function beatsOf(round: Round, logs: Record<string, LogLine[]>, people: Map<stri
     if (start === undefined) continue;
     const who = whoOf(task, people);
     const report = round.finals.has(task.id) ? task.output?.trim() : undefined;
-    out.push({ kind: "start", t: start, task, who });
+    const startBeat: Beat = { kind: "start", t: start, task, who };
+    out.push(startBeat);
+    const before = out.length;
     let group: LogLine[] = [];
     const flush = (live: boolean) => {
       const first = group[0];
@@ -946,8 +948,11 @@ function beatsOf(round: Round, logs: Record<string, LogLine[]>, people: Map<stri
       } else if (l.kind !== "think") group.push(l);
     }
     flush(task.status === "running");
-    if (task.status === "done" || task.status === "failed")
+    if (task.status === "done" || task.status === "failed") {
+      // A task that said and did nothing in between reads as one line, its outcome, not "Started" then "Finished".
+      if (out.length === before) out.splice(out.indexOf(startBeat), 1);
       out.push({ kind: "end", t: Math.max(task.endedAt ?? 0, lines.at(-1)?.t ?? start), task, who });
+    }
   }
   out.sort((a, b) => a.t - b.t);
   // One speaker saying several things in a row reads as one turn.

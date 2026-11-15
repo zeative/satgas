@@ -107,6 +107,8 @@ const CULL_FROM = 60;
 const MAX_ZOOM = 4;
 // React Flow's own panOnScroll speed, so the drawing layers scroll like the board under them.
 const PAN_SPEED = 0.5;
+// React Flow is MIT; its credit lives in THIRD_PARTY_NOTICES rather than in a corner of the board.
+const PRO_OPTIONS = { hideAttribution: true };
 // Constant arrays: a fresh one per render makes React Flow re-bind its key listeners and zoom filter on every drag frame.
 const DELETE_KEYS = ["Backspace", "Delete"];
 const PAN_BUTTONS = [1, 2];
@@ -1536,6 +1538,7 @@ function Canvas({ run, selectedTaskId, onSelectTask, panelOpen }: Props) {
             onMoveStart={handleMoveStart}
             onMoveEnd={handleMoveEnd}
             elevateNodesOnSelect={false}
+            proOptions={PRO_OPTIONS}
             minZoom={MIN_ZOOM}
             maxZoom={MAX_ZOOM}
             // Only what is on screen is in the DOM on a big board; an export briefly mounts everything. A small board, like

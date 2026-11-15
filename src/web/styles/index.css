@@ -236,27 +236,6 @@
 }
 
 /* Sidebar star card: a corner of board canvas, its grid fading in from the top right, on paper that shades by one tone. */
-.satgas-star-card {
-  position: relative;
-  isolation: isolate;
-  background: linear-gradient(180deg, var(--card), color-mix(in oklab, var(--foreground) 3%, var(--card)));
-}
-.dark .satgas-star-card {
-  background: linear-gradient(180deg, color-mix(in oklab, var(--foreground) 5%, var(--card)), var(--card));
-  box-shadow: inset 0 1px 0 color-mix(in oklab, white 6%, transparent);
-}
-.satgas-star-card::before {
-  --grid: color-mix(in oklab, var(--foreground) 8%, transparent);
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  border-radius: inherit;
-  background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
-  background-size: 16px 16px;
-  background-position: top right;
-  mask-image: radial-gradient(ellipse 90% 80% at 100% 0%, black 10%, transparent 75%);
-}
 
 /* A card's connector dots appear on hover or selection, so resting cards stay clean. */
 .react-flow__node .satgas-handle {

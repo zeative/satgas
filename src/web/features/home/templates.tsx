@@ -5,24 +5,10 @@ import { t } from "@/i18n";
 import { cn } from "@/lib/utils";
 import { TemplateArt } from "./template-art";
 
-const TONE = {
-  lilac: "bg-violet-200/80 hover:bg-violet-200 dark:bg-violet-400/16 dark:hover:bg-violet-400/22",
-  pink: "bg-fuchsia-200/70 hover:bg-fuchsia-200 dark:bg-fuchsia-400/14 dark:hover:bg-fuchsia-400/20",
-  sky: "bg-cyan-200/70 hover:bg-cyan-200 dark:bg-cyan-400/14 dark:hover:bg-cyan-400/20",
-  lime: "bg-lime-200/80 hover:bg-lime-200 dark:bg-lime-400/12 dark:hover:bg-lime-400/18",
-  amber: "bg-amber-200/70 hover:bg-amber-200 dark:bg-amber-400/13 dark:hover:bg-amber-400/19",
-};
+// One quiet surface for every template; the art carries the colour, as on the board.
+const TILE = "border border-transparent bg-muted/50 hover:border-border hover:bg-muted/80 dark:bg-muted/60 dark:hover:bg-muted";
 
-const KINDS: { kind: keyof typeof t.templates.items; tone: keyof typeof TONE }[] = [
-  { kind: "website", tone: "lilac" },
-  { kind: "store", tone: "pink" },
-  { kind: "booking", tone: "amber" },
-  { kind: "dashboard", tone: "sky" },
-  { kind: "saas", tone: "sky" },
-  { kind: "portfolio", tone: "lime" },
-  { kind: "mobile", tone: "lilac" },
-  { kind: "game", tone: "pink" },
-];
+const KINDS: (keyof typeof t.templates.items)[] = ["website", "store", "booking", "dashboard", "saas", "portfolio", "mobile", "game"];
 
 // A finished brief for the composer: nothing runs until the person sends it, changed or as it is.
 export function Templates({ onPick }: { onPick: (prompt: string) => void }) {
@@ -69,7 +55,7 @@ export function Templates({ onPick }: { onPick: (prompt: string) => void }) {
           ref={rail}
           className="no-scrollbar -m-1 grid snap-x snap-mandatory scroll-px-1 auto-cols-[75%] grid-flow-col grid-rows-2 gap-3 overflow-x-auto scroll-smooth p-1 @[26rem]:auto-cols-[calc((100%-0.75rem)/2)] @[40rem]:auto-cols-[calc((100%-1.5rem)/3)] @[55rem]:auto-cols-[calc((100%-2.25rem)/4)] motion-reduce:scroll-auto"
         >
-          {KINDS.map(({ kind, tone }) => {
+          {KINDS.map((kind) => {
             const item = t.templates.items[kind];
             return (
               <li key={kind} className="snap-start">
@@ -77,14 +63,14 @@ export function Templates({ onPick }: { onPick: (prompt: string) => void }) {
                   type="button"
                   onClick={() => onPick(item.prompt)}
                   className={cn(
-                    "group relative flex h-20 w-full items-center overflow-hidden rounded-xl ps-3.5 pe-28 text-start transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
-                    TONE[tone],
+                    "group relative flex h-[4.5rem] w-full items-center overflow-hidden rounded-xl ps-3.5 pe-28 text-start transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+                    TILE,
                   )}
                 >
-                  <span className="line-clamp-2 text-sm font-medium">{item.name}</span>
+                  <span className="line-clamp-2 text-[13px] font-medium">{item.name}</span>
                   <TemplateArt
                     kind={kind}
-                    className="absolute right-0 bottom-0 h-20 w-28 drop-shadow-[0_2px_4px_rgb(0_0_0/0.14)] transition-transform duration-200 ease-out group-hover:-translate-y-1 motion-reduce:transition-none"
+                    className="absolute -right-1 -bottom-1 h-20 w-28 opacity-90 drop-shadow-[0_2px_4px_rgb(0_0_0/0.14)] transition-transform duration-200 ease-out group-hover:-translate-y-1 group-hover:opacity-100 motion-reduce:transition-none"
                   />
                 </button>
               </li>

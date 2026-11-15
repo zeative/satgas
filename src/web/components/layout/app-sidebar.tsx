@@ -126,7 +126,7 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="gap-3">
+      <SidebarFooter className="gap-1">
         <UpdateButton />
         <Promo />
         <div className="flex items-center gap-1 group-data-[collapsible=icon]:flex-col">
