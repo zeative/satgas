@@ -243,15 +243,164 @@
     "paddingTop", "paddingRight", "paddingBottom", "paddingLeft", "marginTop", "marginRight", "marginBottom", "marginLeft",
     "fontFamily", "fontSize", "fontWeight", "lineHeight", "letterSpacing", "textAlign", "color",
     "backgroundColor", "backgroundImage", "borderTopLeftRadius", "borderTopWidth", "borderTopColor", "borderTopStyle",
-    "opacity", "boxShadow",
+    "opacity", "boxShadow", "maxWidth", "position", "flexGrow", "flexWrap", "alignSelf", "overflow", "zIndex", "cursor",
+    "filter", "backdropFilter", "borderTopRightRadius", "borderBottomRightRadius", "borderBottomLeftRadius",
   ];
+  const kebab = (k) => k.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
+  // The values the page's own stylesheets write for these, so the panel can show clamp(), % or em instead of the
+  // computed px. Source order stands in for the cascade, which is close enough for one element.
+  const DECLARED = ["width", "height", "maxWidth", "fontSize", "lineHeight", "letterSpacing", "gap"];
+  const ownSheets = () => [...document.styleSheets].filter((s) => !s.ownerNode?.hasAttribute?.("data-satgas-ui"));
+  const walk = (rules, fn) => {
+    for (const r of rules) {
+      if (r.media && r.cssRules) {
+        if (matchMedia(r.media.mediaText).matches) walk(r.cssRules, fn);
+      } else if (!r.selectorText && r.cssRules) walk(r.cssRules, fn);
+      else if (r.selectorText && r.style) fn(r);
+    }
+  };
+  const declared = (el) => {
+    const out = {};
+    for (const sheet of ownSheets()) {
+      try {
+        walk(sheet.cssRules, (r) => {
+          let hit = false;
+          try {
+            hit = el.matches(r.selectorText);
+          } catch {}
+          if (!hit) return;
+          for (const k of DECLARED) {
+            const v = r.style.getPropertyValue(kebab(k)).trim();
+            if (v) out[k] = v;
+          }
+        });
+      } catch {}
+    }
+    for (const k of DECLARED) {
+      const v = el.style.getPropertyValue(kebab(k)).trim();
+      if (v) out[k] = v;
+    }
+    for (const k of Object.keys(out)) if (out[k].startsWith("var(")) delete out[k];
+    return out;
+  };
+  // The layer tree around the picked element: a few ancestors, its siblings, and its own children.
+  let refs = [];
+  const refOf = (el) => {
+    let i = refs.indexOf(el);
+    if (i < 0) i = refs.push(el) - 1;
+    return i;
+  };
+  const SKIP = new Set(["SCRIPT", "STYLE", "LINK", "META", "NOSCRIPT", "TEMPLATE", "BR"]);
+  const kids = (el) => [...el.children].filter((c) => !SKIP.has(c.tagName) && !c.hasAttribute("data-satgas-ui"));
+  const kindOf = (el) => {
+    const tag = el.tagName.toLowerCase();
+    if (/^h[1-6]$/.test(tag)) return "heading";
+    const named = { p: "paragraph", img: "image", picture: "image", svg: "svg", video: "video", button: "button", a: "link",
+      input: "input", textarea: "input", select: "input", ul: "list", ol: "list", li: "item", form: "form", header: "header",
+      footer: "footer", nav: "nav", section: "section", main: "section", article: "section", aside: "section", body: "page" };
+    if (named[tag]) return named[tag];
+    const cs = getComputedStyle(el);
+    if (cs.display.includes("grid")) return "grid";
+    if (cs.display.includes("flex")) return cs.flexDirection.startsWith("column") ? "column" : "row";
+    if (!el.children.length && el.textContent.trim()) return "text";
+    return "group";
+  };
+  const snippet = (el) => (el.tagName === "BODY" ? "" : (el.textContent || "").replace(/\s+/g, " ").trim().slice(0, 48));
+  const layerOf = (el, depth) => ({ ref: refOf(el), kind: kindOf(el), tag: el.tagName.toLowerCase(), text: snippet(el), depth, kids: kids(el).length });
+  const layers = (el) => {
+    refs = [];
+    const chain = [];
+    for (let n = el.parentElement; n && n !== document.documentElement && chain.length < 4; n = n.parentElement) chain.unshift(n);
+    const out = chain.map((n, i) => layerOf(n, i));
+    const sibs = el.parentElement ? kids(el.parentElement) : [el];
+    const at = sibs.indexOf(el);
+    const from = Math.max(0, Math.min(at - 5, sibs.length - 12));
+    for (const s of sibs.slice(from, from + 12)) {
+      out.push(layerOf(s, chain.length));
+      if (s === el) for (const c of kids(el).slice(0, 16)) out.push(layerOf(c, chain.length + 1));
+    }
+    return out;
+  };
+  // How the element sizes itself on each axis, the way a design tool names it: a fixed size, hugging its content, or
+  // filling its parent.
+  const sizing = (el, cs, d) => {
+    const p = el.parentElement;
+    const pcs = p ? getComputedStyle(p) : null;
+    const flex = !!pcs && pcs.display.includes("flex");
+    const row = flex && pcs.flexDirection.startsWith("row");
+    const stretch = cs.alignSelf === "stretch" || (cs.alignSelf === "auto" && /normal|stretch/.test(pcs?.alignItems ?? ""));
+    const axis = (k, main) => {
+      const v = d[k];
+      if (v) return /content|auto/.test(v) ? "hug" : /^100%$|stretch/.test(v) ? "fill" : "fixed";
+      if (main) return Number(cs.flexGrow) > 0 ? "fill" : "hug";
+      if (flex) return stretch ? "fill" : "hug";
+      if (k === "width") return /inline/.test(cs.display) ? "hug" : "fill";
+      return "hug";
+    };
+    return { w: axis("width", row), h: axis("height", flex && !row) };
+  };
+  const textStyles = () => {
+    const names = { h1: "Heading 1", h2: "Heading 2", h3: "Heading 3", h4: "Heading 4", p: "Body", small: "Small" };
+    const out = [];
+    for (const [tag, name] of Object.entries(names)) {
+      const e = document.body?.querySelector(tag);
+      if (!e) continue;
+      const cs = getComputedStyle(e);
+      const d = declared(e);
+      out.push({ name, fontFamily: cs.fontFamily, fontSize: d.fontSize || cs.fontSize, fontWeight: cs.fontWeight,
+        lineHeight: d.lineHeight || cs.lineHeight, letterSpacing: d.letterSpacing || cs.letterSpacing });
+    }
+    return out;
+  };
+  // The page's design tokens: custom properties set on :root. Colours also come back as hex for the colour well.
+  // Made the first time Tweaks asks, so a page nobody tweaks never pays for it.
+  let paint = null;
+  const toHex = (v) => {
+    paint = paint || document.createElement("canvas").getContext?.("2d", { willReadFrequently: true });
+    if (!paint || !/^(#|rgb|hsl|hwb|lab|lch|oklab|oklch|color\()/i.test(v)) return undefined;
+    paint.clearRect(0, 0, 1, 1);
+    paint.fillStyle = "#000";
+    paint.fillStyle = v;
+    paint.fillRect(0, 0, 1, 1);
+    const [r, g, b] = paint.getImageData(0, 0, 1, 1).data;
+    return `#${[r, g, b].map((c) => c.toString(16).padStart(2, "0")).join("")}`;
+  };
+  const tokens = () => {
+    const seen = new Map();
+    for (const sheet of ownSheets()) {
+      try {
+        walk(sheet.cssRules, (r) => {
+          if (!/^(:root|html|:host)(\s*,\s*(:root|html|:host))*$/.test(r.selectorText.trim())) return;
+          for (let i = 0; i < r.style.length; i++) {
+            const k = r.style[i];
+            if (k.startsWith("--") && !k.startsWith("--tw-")) seen.set(k, true);
+          }
+        });
+      } catch {}
+    }
+    const root = getComputedStyle(document.documentElement);
+    return [...seen.keys()].slice(0, 240).map((name) => {
+      const value = root.getPropertyValue(name).trim();
+      return { name, value, hex: toHex(value) };
+    });
+  };
+  const tweaked = new Set();
   const describe = (el) => {
     const cs = getComputedStyle(el);
     const styles = {};
     for (const k of STYLE_KEYS) styles[k] = cs[k];
     const loc = el.closest("[data-satgas-loc],[data-inspector-relative-path]");
     const own = [...el.childNodes].some((c) => c.nodeType === 3 && c.textContent.trim());
+    const d = declared(el);
+    const p = el.parentElement ? getComputedStyle(el.parentElement) : null;
     return {
+      layers: layers(el),
+      ref: refOf(el),
+      declared: d,
+      sizing: sizing(el, cs, d),
+      parent: p ? { display: p.display, flexDirection: p.flexDirection, alignItems: p.alignItems } : undefined,
+      href: el.closest("a")?.getAttribute("href") ?? undefined,
+      textStyles: textStyles(),
       tag: el.tagName.toLowerCase(),
       id: el.id || undefined,
       classes: typeof el.className === "string" ? el.className.slice(0, 400) : undefined,
@@ -353,6 +502,25 @@
       }
       redraw();
       post({ type: "pick", el: describe(picked), keep: true });
+    } else if (m.type === "select") {
+      const el = refs[Number(m.ref)];
+      if (el?.isConnected) select(el);
+    } else if (m.type === "attr" && picked) {
+      const el = m.name === "href" ? picked.closest("a") : picked;
+      if (el && /^[a-z-]+$/.test(String(m.name))) el.setAttribute(String(m.name), String(m.value));
+    } else if (m.type === "tokens") {
+      post({ type: "tokens", tokens: tokens() });
+    } else if (m.type === "tokens-set") {
+      for (const [k, v] of Object.entries(m.vars || {})) {
+        if (!k.startsWith("--")) continue;
+        document.documentElement.style.setProperty(k, String(v));
+        tweaked.add(k);
+      }
+      redraw();
+    } else if (m.type === "tokens-reset") {
+      for (const k of tweaked) document.documentElement.style.removeProperty(k);
+      tweaked.clear();
+      redraw();
     } else if (m.type === "text" && picked) {
       picked.textContent = String(m.value);
       redraw();

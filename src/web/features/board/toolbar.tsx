@@ -89,6 +89,8 @@ interface Props {
   // Q: the tool stays picked after each thing it makes, instead of going back to Select.
   locked: boolean;
   onLock: () => void;
+  // The side panel is open, so the bar centres in the board space left beside it.
+  shifted?: boolean;
 }
 
 // Miro-style tool column; the tool in use opens a second column with its options (colors, shapes, pen kinds).
@@ -106,19 +108,27 @@ export const BoardToolbar = memo(function BoardToolbar({
   onRedo,
   locked,
   onLock,
+  shifted,
 }: Props) {
   const mod = isMac ? "⌘" : "Ctrl+";
   const drawing = DRAW.includes(tool);
   const lining = LINES.includes(tool);
   return (
     // Marks the toolbar as part of the board, so board shortcuts still work with focus on a tool button.
-    <div data-board-chrome className="pointer-events-none absolute top-1/2 left-3 z-10 flex -translate-y-1/2 items-start gap-2">
-      <div className="flex flex-col gap-2">
+    // One bar at the bottom centre of the board, the way a design canvas keeps its tools; a tool's options open above it.
+    <div
+      data-board-chrome
+      className={cn(
+        "pointer-events-none absolute bottom-3 left-1/2 z-10 flex -translate-x-1/2 flex-col-reverse items-center gap-2 transition-[left] duration-200",
+        shifted && "lg:left-[calc(50%-(var(--panel-w)+1.5rem)/2)]",
+      )}
+    >
+      <div className="flex items-center gap-1.5">
         <div
           role="toolbar"
           aria-label={t.board.tools}
-          aria-orientation="vertical"
-          className="pointer-events-auto flex flex-col gap-0.5 rounded-xl border bg-card p-1 shadow-sm"
+          aria-orientation="horizontal"
+          className="pointer-events-auto flex items-center gap-0.5 rounded-xl border bg-card p-1 shadow-sm"
         >
           <ToolButton label={t.board.select} hint="V" active={tool === "select"} onClick={() => onTool("select")}>
             <MousePointer2 />
@@ -163,9 +173,9 @@ export const BoardToolbar = memo(function BoardToolbar({
                   </Button>
                 </DropdownMenuTrigger>
               </TooltipTrigger>
-              <TooltipContent side="right">{t.board.insert}</TooltipContent>
+              <TooltipContent side="top">{t.board.insert}</TooltipContent>
             </Tooltip>
-            <DropdownMenuContent side="right" align="start" className="w-44">
+            <DropdownMenuContent side="top" align="center" sideOffset={8} className="w-44">
               <DropdownMenuItem onSelect={() => onInsert("doc")}>
                 <FileText />
                 {t.board.insertDoc}
@@ -199,8 +209,8 @@ export const BoardToolbar = memo(function BoardToolbar({
         <div
           role="toolbar"
           aria-label={t.board.history}
-          aria-orientation="vertical"
-          className="pointer-events-auto flex flex-col gap-0.5 rounded-xl border bg-card p-1 shadow-sm"
+          aria-orientation="horizontal"
+          className="pointer-events-auto flex items-center gap-0.5 rounded-xl border bg-card p-1 shadow-sm max-sm:hidden"
         >
           <ToolButton label={t.board.undo} hint={`${mod}Z`} disabled={!canUndo} onClick={onUndo}>
             <Undo2 />
@@ -215,8 +225,8 @@ export const BoardToolbar = memo(function BoardToolbar({
         <div
           role="toolbar"
           aria-label={t.board.tools}
-          aria-orientation="vertical"
-          className="pointer-events-auto flex flex-col items-center gap-0.5 rounded-xl border bg-card p-1 shadow-sm"
+          aria-orientation="horizontal"
+          className="pointer-events-auto flex items-center gap-0.5 rounded-xl border bg-card p-1 shadow-sm"
         >
           {drawing && (
             <>
@@ -299,7 +309,7 @@ export const BoardToolbar = memo(function BoardToolbar({
 });
 
 function Divider() {
-  return <span aria-hidden="true" className="mx-auto my-0.5 h-px w-5 bg-border" />;
+  return <span aria-hidden="true" className="mx-0.5 h-5 w-px bg-border" />;
 }
 
 // Round swatches, the chosen one ringed; the name is read out and shown on hover.
@@ -327,7 +337,7 @@ function Swatches({ colors, value, onPick }: { colors: ColorName[]; value: Color
               />
             </button>
           </TooltipTrigger>
-          <TooltipContent side="right">{t.board.color[c] ?? c}</TooltipContent>
+          <TooltipContent side="top">{t.board.color[c] ?? c}</TooltipContent>
         </Tooltip>
       ))}
     </>
@@ -376,7 +386,7 @@ function ToolButton({
           {children}
         </Button>
       </TooltipTrigger>
-      <TooltipContent side="right" className="flex items-center gap-2">
+      <TooltipContent side="top" className="flex items-center gap-2">
         {label}
         {hint && <span className="text-[11px] opacity-60">{hint}</span>}
       </TooltipContent>

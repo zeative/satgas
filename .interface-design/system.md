@@ -90,9 +90,9 @@ solid with a hairline only once the page scrolls.
     and ⋯ (Details, Copy report, Run again on a new board, Delete board)
   - top right: the presence pill (agents with their real marks, ringed in the signal while working), Search and the
     chat toggle
-  - left: the tool column (Select V, Pan H, Sticky N, Text T, Shape S, Pen P, Frame F, Insert +) plus undo/redo; the
-    active tool opens a second column with its options (note colors; shape kinds and colors; pen, highlighter, eraser
-    and ink colors)
+  - bottom centre: one horizontal tool bar (Select V, Pan H, Sticky N, Text T, Shape S, Pen P, Frame F, Insert +) and
+    undo/redo beside it, centred in the space left of an open panel; the active tool opens a row of its options above
+    it (note colors; shape kinds and colors; pen, highlighter, eraser and ink colors)
   - right: the chat panel, open by default, Miro-style: each round shows the prompt (folding after five lines), its
     tasks with status and agent (each opens inline to the agent's own words, with runs of tool calls folded into one
     summary row such as "Changed 3 files and ran 2 commands" that expands to each command, file or lookup; ↗ opens the
@@ -102,7 +102,16 @@ solid with a hairline only once the page scrolls.
     markdown keep a column at least one word wide (headers never wrap) and scroll sideways when they must. A task's details
     open with just its title and status; its code, role and agent already show on its node. Its composer is the one
     door: + menu, model picker, send or Stop. A task's or the mission's details take the chat's place until closed.
-  - bottom right: the zoom pill (fit, −, percent, +)
+  - bottom right: the zoom pill, one "NN% ▾" button that opens zoom in, zoom out, fit (1) and 50/100/200%
+  - right, in the chat's place: the design panel (`features/board/design-panel.tsx`) while an element is picked in a
+    live frame, or Tweaks is opened from the frame bar. Tabs Properties · Code · Tweaks. Properties: the layer tree
+    (ancestors, siblings, the picked element's children; a row selects that element), six align buttons, then Size
+    (W/H with Fixed/Hug/Fill, max width, position, grow), Layout (direction and gap on flex, padding and margin one
+    value or per side), Text (page text styles as presets, font, weight, size, line height and letter spacing as the
+    stylesheet wrote them, color, align, content), Appearance (fill, opacity, radius, border style), Effects (+ shadow,
+    blur, backdrop blur), Link, and folded Export and Advanced. Rows are label left (5.25rem), control right, 28px.
+    Code shows the element's HTML and the pending changes as CSS. Tweaks lists the page's `:root` tokens by group;
+    a change restyles the whole page. Every change previews live; Apply sends them to the team to write into source.
 
 ## The board
 

@@ -10,6 +10,7 @@ import {
   Plus,
   Power,
   RotateCw,
+  SlidersHorizontal,
   Smartphone,
   SquareDashedMousePointer,
   Tablet,
@@ -22,7 +23,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { t } from "@/i18n";
 import { cn } from "@/lib/utils";
 import { dropFrame, type FileBox, setFrameLayout, useCanvasMoving, useFrames } from "@/stores/frames";
-import { closeInspect, type PickedEl, pickElement, setPicking, useInspect } from "@/stores/inspect";
+import { closeInspect, openTweaks, type PickedEl, pickElement, setPicking, setTokens, type Token, useInspect } from "@/stores/inspect";
 import { useRuns } from "@/stores/runs";
 import { type Card, DEVICES, type Device } from "../../../shared/board";
 import { newId, useBoard } from "./context";
@@ -54,7 +55,8 @@ const urlOf = (base: string, route: string | undefined) => base + (route ?? "").
 
 interface BridgeMsg {
   satgas: true;
-  type: "nav" | "pick" | "escape" | "layout" | "size";
+  type: "nav" | "pick" | "escape" | "layout" | "size" | "tokens";
+  tokens?: Token[];
   h?: number;
   path?: string;
   files?: Record<string, FileBox>;
@@ -71,6 +73,7 @@ export function AppBody({ card, interactive }: { card: Card; interactive: boolea
   const name = card.app ?? "";
   const app = useRuns((s) => (s.run?.id === runId ? s.run.apps?.[name] : undefined));
   const picking = useInspect((s) => s.picking === card.id);
+  const tweaking = useInspect((s) => s.target?.cardId === card.id && s.tab === "tweaks");
   const frame = useRef<HTMLIFrameElement>(null);
   const [nonce, setNonce] = useState(0);
   const [busy, setBusy] = useState(false);
@@ -97,6 +100,7 @@ export function AppBody({ card, interactive }: { card: Card; interactive: boolea
       else if (m.type === "size" && m.h) setPageH(Math.min(MAX_PAGE_H, m.h));
       else if (m.type === "layout" && m.files) setFrameLayout(card.id, { files: m.files, scrollY: m.scrollY ?? 0, vh: m.vh ?? 0 });
       else if (m.type === "pick" && m.el) pickElement({ runId, cardId: card.id, app: name, el: m.el, send }, !!m.keep);
+      else if (m.type === "tokens" && m.tokens) setTokens(card.id, m.tokens);
       else if (m.type === "escape") {
         if (useInspect.getState().picking === card.id) setPicking(null);
         else closeInspect();
@@ -242,6 +246,14 @@ export function AppBody({ card, interactive }: { card: Card; interactive: boolea
         </form>
         <BarButton label={tb.inspect} pressed={picking} disabled={!running} onClick={() => setPicking(picking ? null : card.id)}>
           <SquareDashedMousePointer />
+        </BarButton>
+        <BarButton
+          label={tb.tweaks}
+          pressed={tweaking}
+          disabled={!running}
+          onClick={() => (tweaking ? closeInspect(true) : openTweaks({ runId, cardId: card.id, app: name, send }))}
+        >
+          <SlidersHorizontal />
         </BarButton>
         <fieldset aria-label={tb.device} className="m-0 flex items-center border-0 p-0">
           {DEVICES.map((d) => {

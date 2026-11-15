@@ -15,11 +15,19 @@ import {
   useViewport,
   ViewportPortal,
 } from "@xyflow/react";
-import { Maximize, Minus, Plus } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuShortcut,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useTheme } from "@/context/theme-provider";
 import { useEvent } from "@/hooks/use-event";
 import { useCoarsePointer } from "@/hooks/use-mobile";
@@ -66,7 +74,6 @@ import { clearLanding, FOCUS_BOARD, pendingLanding } from "./focus";
 import { type Inset, unionRect, viewportFor, zoomAround } from "./frame";
 import { type Box, boundsOf, dragBox, type Guide, lockAngle, snapBox } from "./geometry";
 import { INBOX_ID, INBOX_W, InboxNode, type InboxNodeType, waiting } from "./inbox-node";
-import { Inspector } from "./inspector";
 import { modHeld } from "./keys";
 import { liveWork } from "./live";
 import { CursorNode, type CursorNodeType, SlotNode, type SlotNodeType } from "./live-nodes";
@@ -1603,8 +1610,7 @@ function Canvas({ run, selectedTaskId, onSelectTask, panelOpen }: Props) {
               onMore={handleMore}
               onStyle={handleStyle}
             />
-            <ZoomPill onFit={handleFit} onZoom={zoomStep} shifted={panelOpen} />
-            <Inspector shifted={panelOpen} />
+            <ZoomPill onFit={handleFit} onZoom={zoomStep} onZoomTo={zoomTo} shifted={panelOpen} />
           </ReactFlow>
         </section>
       </FullDetail>
@@ -1620,6 +1626,7 @@ function Canvas({ run, selectedTaskId, onSelectTask, panelOpen }: Props) {
         canRedo={history.canRedo}
         locked={locked}
         onLock={handleLock}
+        shifted={panelOpen}
         onUndo={history.undo}
         onRedo={history.redo}
       />
@@ -1948,55 +1955,59 @@ const ExpandDialog = memo(function ExpandDialog({ card, onClose }: { card: Card 
   );
 });
 
+const ZOOM_PRESETS = [0.5, 1, 2] as const;
+
+// The zoom level as one quiet pill; it opens to step, fit and jump to a preset, the way a design canvas does.
 const ZoomPill = memo(function ZoomPill({
   onFit,
   onZoom,
+  onZoomTo,
   shifted,
 }: {
   onFit: () => void;
   onZoom: (dir: 1 | -1) => void;
+  onZoomTo: (zoom: number) => void;
   shifted: boolean;
 }) {
   // Subscribes to the rounded percentage, so panning does not re-render the pill.
   const percent = useStore((s) => Math.round(s.transform[2] * 100));
   return (
-    <Panel
-      position="bottom-right"
-      className={cn(
-        "m-4! flex items-center gap-0.5 rounded-xl border bg-card p-1 shadow-sm max-lg:hidden",
-        shifted && "me-[calc(var(--panel-w)+1.5rem)]!",
-      )}
-    >
-      <ZoomButton label={t.fit} onClick={onFit}>
-        <Maximize />
-      </ZoomButton>
-      <ZoomButton label={t.zoomOut} onClick={() => onZoom(-1)}>
-        <Minus />
-      </ZoomButton>
-      <output aria-label={t.board.zoom} className="w-11 text-center text-xs text-muted-foreground tabular-nums">
-        {percent}%
-      </output>
-      <ZoomButton label={t.zoomIn} onClick={() => onZoom(1)}>
-        <Plus />
-      </ZoomButton>
+    <Panel position="bottom-right" className={cn("m-3! max-lg:hidden", shifted && "me-[calc(var(--panel-w)+1.5rem)]!")}>
+      <DropdownMenu modal={false}>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            aria-label={t.board.zoom}
+            className="h-9 gap-1 rounded-xl border bg-card px-2.5 text-xs font-normal text-muted-foreground shadow-sm tabular-nums hover:text-foreground"
+          >
+            {percent}%
+            <ChevronDown className="size-3.5" aria-hidden="true" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent side="top" align="end" sideOffset={6} className="w-44">
+          <DropdownMenuItem onSelect={() => onZoom(1)}>
+            {t.zoomIn}
+            <DropdownMenuShortcut>+</DropdownMenuShortcut>
+          </DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => onZoom(-1)}>
+            {t.zoomOut}
+            <DropdownMenuShortcut>−</DropdownMenuShortcut>
+          </DropdownMenuItem>
+          <DropdownMenuItem onSelect={onFit}>
+            {t.fit}
+            <DropdownMenuShortcut>1</DropdownMenuShortcut>
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          {ZOOM_PRESETS.map((z) => (
+            <DropdownMenuItem key={z} onSelect={() => onZoomTo(z)}>
+              {z * 100}%{z === 1 && <DropdownMenuShortcut>0</DropdownMenuShortcut>}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
     </Panel>
   );
 });
-
-function ZoomButton({ label, onClick, children }: { label: string; onClick: () => void; children: React.ReactNode }) {
-  return (
-    <Button
-      variant="ghost"
-      size="icon"
-      className="size-7 text-muted-foreground hover:text-foreground [&_svg]:size-3.5"
-      onClick={onClick}
-      aria-label={label}
-      title={label}
-    >
-      {children}
-    </Button>
-  );
-}
 
 // Images land at a readable size, never wider than 360 or taller than 300 board units.
 function fitImage(src: string): Promise<{ w: number; h: number }> {

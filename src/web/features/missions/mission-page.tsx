@@ -49,6 +49,7 @@ import { isMac, t } from "@/i18n";
 import { copyReport, deleteMission, finalReport, forkMission, isLiveRun, mergeMission, runAgain } from "@/lib/actions";
 import { cn } from "@/lib/utils";
 import { setBoardView, useBoardView } from "@/stores/board-view";
+import { useInspect } from "@/stores/inspect";
 import { usePanel } from "@/stores/panel";
 import { resetReview, useReview } from "@/stores/review";
 import { loadRuns, organizeBoard, setBoardIcon, setBoardLearning, useRuns, watch } from "@/stores/runs";
@@ -70,6 +71,7 @@ const BoardIconPicker = lazy(() => import("./board-icon-picker"));
 // Chat Only and phones need no canvas until someone opens it; the details panel loads when first asked for.
 const BoardCanvas = lazy(() => import("../board/board-canvas").then((m) => ({ default: m.BoardCanvas })));
 const Inspector = lazy(() => import("./inspector").then((m) => ({ default: m.Inspector })));
+const DesignPanel = lazy(() => import("../board/design-panel"));
 const DiffReview = lazy(() => import("../workspace/diff-review"));
 const FileView = lazy(() => import("../workspace/file-view"));
 
@@ -84,7 +86,9 @@ export function MissionPage({ missionId, focusTask }: { missionId: string; focus
   const [selectedId, setSelectedId] = useState<string | null>(null);
   // The right side holds the chat by default; a task's or the mission's details take its place until closed.
   const [side, setSide] = useState<"chat" | "details" | null>("chat");
-  const panelOpen = side !== null;
+  // Picking an element in a live frame opens the design panel in the same place, over the chat or details.
+  const designing = useInspect((s) => s.target !== null);
+  const panelOpen = side !== null || designing;
   const panelWidth = usePanel((s) => s.width);
   const workspaceOpen = useWorkspace((s) => s.open);
   const reviewing = useReview((s) => s.scope !== null);
@@ -330,13 +334,18 @@ export function MissionPage({ missionId, focusTask }: { missionId: string; focus
             </p>
           )}
 
-          {side !== null && <PanelResizer />}
-          {side === "details" && (
+          {panelOpen && <PanelResizer />}
+          {designing && (
+            <Suspense fallback={null}>
+              <DesignPanel className={PANEL} />
+            </Suspense>
+          )}
+          {!designing && side === "details" && (
             <Suspense fallback={null}>
               <Inspector run={run} codes={codes} selected={selected} onSelect={setSelectedId} onClose={closePanel} className={PANEL} />
             </Suspense>
           )}
-          {side === "chat" && (
+          {!designing && side === "chat" && (
             <ChatPanel run={run} onOpenTask={selectOnCanvas} onOpenReport={openReport} onHide={hideChat} className={PANEL} />
           )}
         </div>
