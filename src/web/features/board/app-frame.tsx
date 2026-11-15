@@ -76,7 +76,7 @@ const urlOf = (base: string, route: string | undefined) => base + (route ?? "").
 
 interface BridgeMsg {
   satgas: true;
-  type: "nav" | "pick" | "escape" | "layout" | "size" | "tokens" | "text-edit" | "undo" | "located";
+  type: "nav" | "pick" | "escape" | "layout" | "size" | "tokens" | "text-edit" | "undo" | "located" | "reload-me";
   rects?: PinRects;
   value?: string;
   redo?: boolean;
@@ -106,6 +106,8 @@ export function AppBody({ card, interactive, large }: { card: Card; interactive:
   const [path, setPath] = useState<string | null>(null);
   const [pageH, setPageH] = useState(0);
   const [pinRects, setPinRects] = useState<PinRects>({});
+  const lastReload = useRef(0);
+  const reloadRef = useRef(() => {});
   const [draft, setDraft] = useState<string | null>(null);
   // The page the frame opened at; later moves happen inside the page, so the frame is not reloaded for them.
   const [start, setStart] = useState(card.route);
@@ -139,7 +141,15 @@ export function AppBody({ card, interactive, large }: { card: Card; interactive:
       else if (m.type === "text-edit" && typeof m.value === "string") textFromPage(m.value);
       else if (m.type === "undo") void (m.redo ? redoStyle() : undoStyle());
       else if (m.type === "located" && m.rects) setPinRects(m.rects);
-      else if (m.type === "escape") {
+      else if (m.type === "reload-me") {
+        // The page reloaded itself and was refused for want of the sign-in; loaded from here it carries it. Once in a
+        // while only, so a page that is refused for another reason does not reload forever.
+        const now = Date.now();
+        if (now - lastReload.current > 5000) {
+          lastReload.current = now;
+          reloadRef.current();
+        }
+      } else if (m.type === "escape") {
         if (useInspect.getState().picking === card.id) setPicking(null);
         else closeInspect();
       }
@@ -216,6 +226,7 @@ export function AppBody({ card, interactive, large }: { card: Card; interactive:
     setPath(null);
     setNonce((n) => n + 1);
   };
+  reloadRef.current = reload;
   const addFrame = () =>
     commit([
       {

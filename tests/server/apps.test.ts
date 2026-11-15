@@ -71,7 +71,13 @@ test("an app starts, answers under its base, and the person's page gets it sandb
 
 test("a page needs the person signed in until they share it, and the key opens only this app", async () => {
   const page = { "sec-fetch-dest": "document" };
-  expect((await serveApp(get(appPath(runId, "game"), page), noUpgrade, false))?.status).toBe(403);
+  const refused = await serveApp(get(appPath(runId, "game"), page), noUpgrade, false);
+  expect(refused?.status).toBe(403);
+  expect(await refused?.text()).not.toContain("reload-me");
+  // A board's frame reloading itself cannot send the sign-in either: it is still refused, and asks the board to load it.
+  const frame = await serveApp(get(appPath(runId, "game"), { "sec-fetch-dest": "iframe" }), noUpgrade, false);
+  expect(frame?.status).toBe(403);
+  expect(await frame?.text()).toContain('type:"reload-me"');
   // What the page loads needs only the key, since a sandboxed page cannot send the sign-in.
   expect((await serveApp(get(`${appPath(runId, "game")}main.js`, { "sec-fetch-dest": "script" }), noUpgrade, false))?.status).toBe(200);
   shareApp(runId, "game", true);

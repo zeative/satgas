@@ -374,11 +374,16 @@ export interface AppSocket {
   queue: (string | ArrayBuffer)[];
 }
 
-const page = (status: number, title: string, line: string, refresh = false) =>
+const page = (status: number, title: string, line: string, refresh = false, script = "") =>
   new Response(
-    `<!doctype html><meta charset="utf-8">${refresh ? '<meta http-equiv="refresh" content="2">' : ""}<title>${title}</title><style>body{font:14px system-ui,sans-serif;display:grid;place-items:center;height:100vh;margin:0;background:#111;color:#ddd}p{color:#999}</style><div><b>${title}</b><p>${line}</p></div>`,
+    `<!doctype html><meta charset="utf-8">${refresh ? '<meta http-equiv="refresh" content="2">' : ""}<title>${title}</title><style>body{font:14px system-ui,sans-serif;display:grid;place-items:center;height:100vh;margin:0;background:#111;color:#ddd}p{color:#999}</style><div><b>${title}</b><p>${line}</p></div>${script}`,
     { status, headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } },
   );
+
+// A board's frame that reloads itself (a dev server's full reload) asks from its sandbox, where the sign-in cookie does
+// not go, so it is refused like a stranger. The refusal asks the board around it to load it again; the board's own load
+// carries the cookie, and a page opened on its own still gets only the refusal.
+const RELOAD_FROM_BOARD = `<script>parent!==window&&parent.postMessage({satgas:true,type:"reload-me"},"*")</script>`;
 
 const APP_PATH = /^\/apps\/([^/]+)\/([^/]+)\/([a-z0-9-]+)(\/.*)?$/;
 
@@ -399,7 +404,8 @@ export async function serveApp(
   if (rest === undefined) return Response.redirect(`${url.pathname}/${url.search}`, 302);
   const dest = req.headers.get("sec-fetch-dest");
   const isPage = dest === "document" || dest === "iframe" || (!dest && (req.headers.get("accept") ?? "").includes("text/html"));
-  if (isPage && !signedIn && !app.shared) return page(403, "This app is private", "Ask its owner to share it.");
+  if (isPage && !signedIn && !app.shared)
+    return page(403, "This app is private", "Ask its owner to share it.", false, dest === "iframe" ? RELOAD_FROM_BOARD : "");
   let port = portOf(runId, name);
   if (!port) {
     if (app.status !== "starting") void startApp(runId, name);
