@@ -18,8 +18,8 @@ export interface TokenWrite {
   missed: string[];
 }
 
-const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-const declaration = (name: string) => new RegExp(`(^|[\\s;{])(${escape(name)}\\s*:\\s*)([^;}\\n]+?)(\\s*(?:!important\\s*)?[;}\\n])`, "g");
+const literal = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const declaration = (name: string) => new RegExp(`(^|[\\s;{])(${literal(name)}\\s*:\\s*)([^;}\\n]+?)(\\s*(?:!important\\s*)?[;}\\n])`, "g");
 
 async function sources(dir: string): Promise<string[]> {
   const out: string[] = [];
