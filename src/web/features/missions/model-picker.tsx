@@ -162,14 +162,14 @@ export function ModelPicker() {
           type="button"
           aria-label={missingNote ? `${t.picker.label}: ${missingNote}` : t.picker.label}
           title={missingNote}
-          className="flex h-8 max-w-[24rem] min-w-0 items-center gap-1.5 rounded-lg px-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none data-[state=open]:bg-muted data-[state=open]:text-foreground"
+          className="flex h-8 max-w-[24rem] min-w-0 items-center gap-1.5 rounded-lg px-2 text-[13px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none data-[state=open]:bg-muted data-[state=open]:text-foreground"
         >
           {missing ? (
             <TriangleAlert className="size-4 shrink-0 text-destructive" aria-hidden="true" />
           ) : (
-            leadDef && <ProviderLogo def={leadDef} className="size-4 shrink-0" />
+            leadDef && <ProviderLogo def={leadDef} className="size-3.5 shrink-0" />
           )}
-          <span className={cn("truncate", missing ? "text-muted-foreground line-through" : "text-foreground")}>{leadName}</span>
+          <span className={cn("truncate", missing ? "text-muted-foreground line-through" : "text-foreground/90")}>{leadName}</span>
           {lead.effort && leadEfforts.includes(lead.effort) && (
             <span className={cn("shrink-0", TOP_EFFORTS.has(lead.effort) && "satgas-gold")}>{ti.effort[lead.effort] ?? lead.effort}</span>
           )}

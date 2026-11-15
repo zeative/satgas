@@ -992,7 +992,8 @@ function Conversation({
   const [all, setAll] = useState(false);
   const hidden = all ? 0 : Math.max(0, beats.length - BEATS_SHOWN);
   return (
-    <div className="flex flex-col gap-3">
+    // Task lines sit together like a log; someone's own words get room around them.
+    <div className="flex flex-col gap-0.5">
       {hidden > 0 && (
         <button
           type="button"
@@ -1005,7 +1006,7 @@ function Conversation({
       )}
       {beats.slice(hidden).map((b) =>
         b.kind === "say" ? (
-          <Say key={`say:${b.t}:${b.who.id}`} who={b.who}>
+          <Say key={`say:${b.t}:${b.who.id}`} who={b.who} className="py-2 first:pt-0 last:pb-0">
             <div className="flex flex-col gap-1.5">
               {b.texts.map((text) => (
                 <p key={text} className="whitespace-pre-line">
@@ -1098,9 +1099,9 @@ type Who = { id: string; name: string; role?: string };
 const lead: Who = { id: "Lead", name: t.team.lead, role: t.chat.leadRole };
 
 // One turn in the team's conversation: who speaks, with their face and role, and what they said.
-function Say({ who, children }: { who: Who; children: React.ReactNode }) {
+function Say({ who, className, children }: { who: Who; className?: string; children: React.ReactNode }) {
   return (
-    <div className="flex gap-2.5">
+    <div className={cn("flex gap-2.5", className)}>
       <MiniFace seed={who.id} className="mt-0.5 size-6 shrink-0" />
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <p className="truncate text-xs text-muted-foreground">
