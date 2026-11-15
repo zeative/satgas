@@ -84,8 +84,7 @@ export function PageFrame({
   // a wider card grows to fit it instead of sitting on a mat.
   const view = device === "desktop" ? Math.max(DEVICE_W.desktop, size.w) : DEVICE_W[device];
   const scale = size.w > 0 ? size.w / view : 1;
-  const left = 0;
-  useLayoutEffect(() => onGeometry?.({ scale, left }), [onGeometry, scale, left]);
+  useLayoutEffect(() => onGeometry?.({ scale, left: 0 }), [onGeometry, scale]);
   return (
     // While the page does not take the pointer, the frame itself is where the card is picked up and moved.
     <div ref={box} className={cn("relative min-h-0 flex-1 overflow-hidden", !interactive && "card-handle")}>
@@ -102,7 +101,7 @@ export function PageFrame({
             ? {
                 width: view,
                 height: size.h / scale,
-                left,
+                left: 0,
                 transform: scale !== 1 ? `scale(${scale})` : undefined,
               }
             : undefined
