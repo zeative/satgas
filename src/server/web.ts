@@ -1,4 +1,5 @@
 import { extname, join, normalize, resolve } from "node:path";
+import { brotliCompress, constants, gzip } from "node:zlib";
 import { config } from "./config";
 
 // The UI is built by Vite into dist/web. A compiled binary carries those files in a generated
@@ -25,7 +26,42 @@ export function decodePath(path: string): string | null {
   }
 }
 
-export async function serveWeb(pathname: string): Promise<Response> {
+// Text assets go out compressed: the UI's scripts and styles are several megabytes raw and a fifth of that in Brotli.
+// Built assets never change under their hashed names, so each is compressed once and kept.
+const COMPRESSIBLE = new Set([".js", ".mjs", ".css", ".html", ".svg", ".json", ".txt", ".map", ".wasm"]);
+const MIN_COMPRESS = 1024;
+const packed = new Map<string, Promise<Uint8Array<ArrayBuffer> | null>>();
+
+type Encoding = "br" | "gzip";
+
+export function pickEncoding(accept: string | null | undefined): Encoding | null {
+  const a = (accept ?? "").toLowerCase();
+  if (/\bbr\b/.test(a)) return "br";
+  if (/\bgzip\b/.test(a)) return "gzip";
+  return null;
+}
+
+function compress(data: Uint8Array, encoding: Encoding): Promise<Uint8Array<ArrayBuffer> | null> {
+  return new Promise((done) => {
+    const cb = (err: Error | null, out: Buffer) => done(err ? null : new Uint8Array(out));
+    if (encoding === "br")
+      brotliCompress(data, { params: { [constants.BROTLI_PARAM_QUALITY]: 9, [constants.BROTLI_PARAM_SIZE_HINT]: data.length } }, cb);
+    else gzip(data, { level: 9 }, cb);
+  });
+}
+
+async function compressed(key: string, file: ReturnType<typeof Bun.file>, encoding: Encoding, keep: boolean) {
+  const id = `${encoding}:${key}`;
+  let job = packed.get(id);
+  if (!job) {
+    job = file.bytes().then((b) => (b.length < MIN_COMPRESS ? null : compress(b, encoding)));
+    // Only hashed assets are kept; the shell can change with every build, so it is compressed per request.
+    if (keep) packed.set(id, job);
+  }
+  return job;
+}
+
+export async function serveWeb(pathname: string, acceptEncoding?: string | null): Promise<Response> {
   const decoded = decodePath(pathname);
   if (decoded === null) return new Response("Not found.", { status: 404, headers: NO_FRAMING });
   const file = await lookup(decoded);
@@ -41,7 +77,19 @@ export async function serveWeb(pathname: string): Promise<Response> {
     });
   }
   const headers: Record<string, string> = { ...NO_FRAMING };
-  if (file && CACHEABLE.test(decoded)) headers["cache-control"] = "public, max-age=31536000, immutable";
+  const immutable = !!file && CACHEABLE.test(decoded);
+  if (immutable) headers["cache-control"] = "public, max-age=31536000, immutable";
+  const encoding = pickEncoding(acceptEncoding);
+  const ext = extname(file ? decoded : "/index.html").toLowerCase();
+  if (encoding && COMPRESSIBLE.has(ext)) {
+    const body = await compressed(file ? decoded : "/index.html", target, encoding, immutable);
+    if (body) {
+      headers["content-encoding"] = encoding;
+      headers.vary = "accept-encoding";
+      headers["content-type"] = target.type;
+      return new Response(body, { headers });
+    }
+  }
   return new Response(target, { headers });
 }
 

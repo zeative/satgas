@@ -26,6 +26,7 @@ import {
   sweepIdleApps,
 } from "./apps";
 import { authorized, fileKey, loadToken, rotateToken, signIn, signInCookie, signInLink, signOutCookie, validFileKey } from "./auth";
+import { avatarSvg } from "./avatar";
 import { channelsView, logoutWhatsApp, newPairing, removePerson, startChannels, stopChannels, updateChannel } from "./channels";
 import { isChannelKind } from "./channels/hub";
 import { cloudInfo, cloudSignIn, isCloud, startCloud, stopCloud } from "./cloud";
@@ -376,6 +377,14 @@ const server: Server<SocketData> = Bun.serve({
     }),
     // Asked by the composer while an image is attached: can the agents see it, and who reads it for them if not.
     "/api/vision": api(async () => Response.json(await visionStatus())),
+    // A team member's face, drawn here so the page never downloads the drawing library; the same seed is always the
+    // same face, so browsers keep it.
+    "/api/avatar/:seed": api((req) => {
+      const seed = decodePath(req.params.seed.replace(/\.svg$/, ""))?.slice(0, 64) ?? "";
+      return new Response(avatarSvg(seed), {
+        headers: { "content-type": "image/svg+xml", "cache-control": "public, max-age=2592000, immutable" },
+      });
+    }),
     // The emoji picker's data, served from the local package instead of a CDN so Satgas works offline.
     "/api/emojibase/:locale/:file": api(async (req) => {
       const { locale, file } = req.params;
@@ -1080,7 +1089,7 @@ const server: Server<SocketData> = Bun.serve({
     const { pathname } = new URL(req.url);
     if (pathname.startsWith("/apps/"))
       return serveApp(req, (data, headers) => srv.upgrade(req, { data: { watching: null, app: data }, headers }), authorized(req));
-    if (pathname !== "/ws") return serveWeb(pathname);
+    if (pathname !== "/ws") return serveWeb(pathname, req.headers.get("accept-encoding"));
     if (!isTrusted(req, false)) return forbidden();
     if (!authorized(req)) return signInFirst();
     return srv.upgrade(req, { data: { watching: null } }) ? undefined : error(400, "WebSocket upgrade failed.");

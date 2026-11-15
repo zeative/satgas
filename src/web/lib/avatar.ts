@@ -1,16 +1,6 @@
-import { createAvatar } from "@dicebear/core";
-import * as notionists from "@dicebear/notionists";
-
-// Notionists by Zoish (CC0 1.0) via DiceBear: a drawn face per seed, made in the browser with nothing fetched.
-const cache = new Map<string, string>();
-
+// A drawn face per seed (Notionists by Zoish, CC0, via DiceBear), drawn by the server and cached by the browser.
 export function avatarUri(seed: string): string {
-  let uri = cache.get(seed);
-  if (!uri) {
-    uri = createAvatar(notionists, { seed }).toDataUri();
-    cache.set(seed, uri);
-  }
-  return uri;
+  return `/api/avatar/${encodeURIComponent(seed)}.svg`;
 }
 
 // One soft tint per person behind the line drawing; same lightness and chroma, so a team reads as one set.
