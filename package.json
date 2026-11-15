@@ -1,6 +1,6 @@
 {
   "name": "satgas",
-  "version": "0.1.15",
+  "version": "0.1.16",
   "devDependencies": {
     "@biomejs/biome": "^2.6.4",
     "@tailwindcss/vite": "^4.3.3",
