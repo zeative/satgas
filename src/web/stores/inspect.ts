@@ -148,6 +148,10 @@ export function editToken(name: string, value: string) {
   target.send({ type: "tokens-set", vars: { [name]: value } });
 }
 
+export function hoverLayer(ref: number | null) {
+  useInspect.getState().target?.send({ type: "hover", ref });
+}
+
 export function selectLayer(ref: number) {
   useInspect.getState().target?.send({ type: "select", ref });
 }

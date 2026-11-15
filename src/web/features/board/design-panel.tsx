@@ -51,6 +51,7 @@ import {
   editStyle,
   editText,
   editToken,
+  hoverLayer,
   type Layer,
   type PickedEl,
   resetEdits,
@@ -719,6 +720,8 @@ function Layers({ layers, picked }: { layers: Layer[]; picked?: number }) {
                 type="button"
                 aria-current={on || undefined}
                 onClick={() => selectLayer(l.ref)}
+                onPointerEnter={() => hoverLayer(l.ref)}
+                onPointerLeave={() => hoverLayer(null)}
                 style={{ paddingInlineStart: 8 + l.depth * 12 }}
                 className={cn(
                   "flex h-7 w-full items-center gap-1.5 pe-2 text-start text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground focus-visible:bg-muted focus-visible:outline-none",

@@ -462,15 +462,32 @@
         if (type === "click") {
           const el = target(e);
           if (el) select(el);
+          // The cancelled mousedown kept focus out of the page; take it, so the layer keys reach this page.
+          window.focus();
         }
       },
       true,
     );
   }
+  // Moving through layers the way design tools do: Enter goes into the first child, Shift+Enter out to the parent, Tab
+  // and Shift+Tab to the next and previous sibling.
+  const walkLayers = (e) => {
+    let next = null;
+    if (e.key === "Enter") next = e.shiftKey ? picked.parentElement : kids(picked)[0];
+    else if (e.key === "Tab") {
+      const sibs = picked.parentElement ? kids(picked.parentElement) : [];
+      const i = sibs.indexOf(picked);
+      next = sibs[(i + (e.shiftKey ? -1 : 1) + sibs.length) % sibs.length];
+    }
+    if (!next || next === picked || next === document.documentElement) return;
+    e.preventDefault();
+    select(next);
+  };
   addEventListener(
     "keydown",
     (e) => {
       if (e.key === "Escape" && (picking || picked)) post({ type: "escape" });
+      else if (picking && picked && !e.target.closest?.("input,textarea,select,[contenteditable='true']")) walkLayers(e);
     },
     true,
   );
@@ -506,6 +523,12 @@
     } else if (m.type === "select") {
       const el = refs[Number(m.ref)];
       if (el?.isConnected) select(el);
+    } else if (m.type === "hover") {
+      const el = m.ref === null || m.ref === undefined ? null : refs[Number(m.ref)];
+      hovered = el?.isConnected ? el : null;
+      hoverBox = hoverBox || outline(true);
+      place(hoverBox, hovered && hovered !== picked ? hovered : null);
+
     } else if (m.type === "attr" && picked) {
       const el = m.name === "href" ? picked.closest("a") : picked;
       if (el && /^[a-z-]+$/.test(String(m.name))) el.setAttribute(String(m.name), String(m.value));
