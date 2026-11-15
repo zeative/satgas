@@ -46,9 +46,10 @@ const HEAVY = new Set<Card["kind"]>(["doc", "table", "code", "preview", "files",
 // Below this zoom body text is a few pixels tall and unreadable anyway.
 export const DETAIL_ZOOM = 0.4;
 const isFar = (s: ReactFlowState) => s.transform[2] < DETAIL_ZOOM;
-// Live pages stay on screen when zoomed out, up to this many on a board; past that each one is a frame, since a board
-// full of loaded pages is what makes zooming out slow.
-const FAR_LIVE_PAGES = 8;
+// Live pages stay on screen when zoomed out, up to this many on a board. They hold still while the canvas moves, so
+// zooming over fifteen of them measured a steady 16.7 ms a frame, while swapping them for placeholders cost a 33 ms
+// frame and reloaded every app on the way back in. Only a very large board falls back to placeholders.
+const FAR_LIVE_PAGES = 40;
 const fewPages = (s: ReactFlowState) => {
   let n = 0;
   for (const node of s.nodes) if ((node.data as { card?: Card }).card?.kind === "preview" && ++n > FAR_LIVE_PAGES) return false;
