@@ -29,6 +29,8 @@
   --signal: oklch(0.83 0.17 80);
   --signal-foreground: oklch(0.2 0.03 70);
   --signal-ink: oklch(0.64 0.17 60);
+  /* What is selected on the canvas and in a page, in the blue design tools use for it. */
+  --selection: oklch(0.6 0.2 257);
 
   --sidebar: var(--background);
   --sidebar-foreground: var(--foreground);
@@ -68,6 +70,7 @@
   --signal: oklch(0.83 0.17 80);
   --signal-foreground: oklch(0.2 0.03 70);
   --signal-ink: oklch(0.83 0.17 80);
+  --selection: oklch(0.66 0.18 257);
 }
 
 @theme inline {
@@ -105,6 +108,7 @@
   --color-signal: var(--signal);
   --color-signal-foreground: var(--signal-foreground);
   --color-signal-ink: var(--signal-ink);
+  --color-selection: var(--selection);
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);

@@ -99,7 +99,7 @@ export const CardNode = memo(function CardNode({ data, selected, width, height }
       {/* A label above the card: what a widget is, or the card's title, and a lock when it is locked. It keeps one
           size on screen at any zoom, as a design canvas names its frames; a page frame keeps its controls and Play
           here instead of a bar inside the page. */}
-      {(card.title || lockShown || card.widget || author || isPage) && (
+      {(card.title || lockShown || card.widget || author || isPage || (hasQuick && !far)) && (
         <div className="satgas-label absolute bottom-full left-0">
           <div className="flex h-7 w-full min-w-0 items-center gap-1.5 pb-1 text-xs text-muted-foreground">
             {lockShown && (
@@ -124,11 +124,18 @@ export const CardNode = memo(function CardNode({ data, selected, width, height }
             {card.title && (
               <span className={cn("card-handle min-w-0 truncate", isPage ? "max-w-[55%] shrink-0" : "flex-1")}>{card.title}</span>
             )}
-            {isPage && (
+            {isPage ? (
               <>
                 <span ref={setSlot} className="flex min-w-0 flex-1 items-center gap-0.5" />
                 <PlayChip label={t.board.play} onClick={() => expand(card)} />
               </>
+            ) : (
+              hasQuick &&
+              !far && (
+                <span className={cn("satgas-reveal ms-auto flex shrink-0 items-center", quick && "opacity-100")}>
+                  <QuickActions card={card} />
+                </span>
+              )
             )}
           </div>
         </div>
@@ -143,7 +150,8 @@ export const CardNode = memo(function CardNode({ data, selected, width, height }
             card.kind === "frame" && "overflow-visible",
             HEAVY.has(card.kind) && "[contain:content]",
             far && "shadow-none",
-            selected && card.kind !== "drawing" && "ring-2 ring-foreground/35",
+            // A lone card shows the resizer's rectangle; several selected, or one being edited or locked, a ring.
+            selected && card.kind !== "drawing" && !(solo && !editing && !card.locked) && "ring-[1.5px] ring-selection",
           )}
         >
           {far && HEAVY.has(card.kind) && !staysLive ? (
@@ -157,17 +165,6 @@ export const CardNode = memo(function CardNode({ data, selected, width, height }
               w={card.kind === "shape" ? width : undefined}
               h={card.kind === "shape" ? height : undefined}
             />
-          )}
-          {/* A preview carries its actions in its own header bar; every other card in its top corner, on hover or selected. */}
-          {hasQuick && card.kind !== "preview" && !far && (
-            <span
-              className={cn(
-                "nodrag absolute top-1.5 right-1.5 z-10 flex items-center rounded-md border bg-card/95 p-0.5 opacity-0 shadow-xs transition-opacity group-hover/card:opacity-100 [@media(hover:none)]:opacity-100",
-                quick && "opacity-100",
-              )}
-            >
-              <QuickActions card={card} />
-            </span>
           )}
         </div>
       </LabelSlot>
@@ -490,8 +487,8 @@ function CardResizer({ card, onStart, onEnd }: { card: Card; onStart: () => void
       keepAspectRatio={card.kind === "image" || shift}
       minWidth={minW}
       minHeight={minH}
-      lineClassName="border-foreground/30!"
-      handleClassName="size-2! rounded-[2px]! border-foreground/50! bg-background!"
+      lineClassName="satgas-select-line border-selection!"
+      handleClassName="satgas-select-handle size-2! rounded-[1px]! border-selection! bg-background!"
       onResizeStart={onStart}
       onResizeEnd={(_, p) => onEnd({ x: p.x, y: p.y, w: p.width, h: p.height })}
     />

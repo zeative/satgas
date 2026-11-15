@@ -503,3 +503,20 @@
     opacity: 0;
   }
 }
+/* The selection rectangle stays one and a half pixels on screen at any zoom, and its handles sit exactly on it. */
+.react-flow__resize-control.line.satgas-select-line.left {
+  border-left-width: calc(1.5px / var(--sg-zoom, 1));
+}
+.react-flow__resize-control.line.satgas-select-line.right {
+  border-right-width: calc(1.5px / var(--sg-zoom, 1));
+}
+.react-flow__resize-control.line.satgas-select-line.top {
+  border-top-width: calc(1.5px / var(--sg-zoom, 1));
+}
+.react-flow__resize-control.line.satgas-select-line.bottom {
+  border-bottom-width: calc(1.5px / var(--sg-zoom, 1));
+}
+.react-flow__resize-control.handle.satgas-select-handle {
+  border-width: 1.5px;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.18);
+}

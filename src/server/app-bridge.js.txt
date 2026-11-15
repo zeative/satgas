@@ -108,10 +108,10 @@
   const outline = (dashed) => {
     const d = document.createElement("div");
     d.setAttribute("data-satgas-ui", "");
-    d.style.cssText = `position:fixed;pointer-events:none;z-index:2147483647;box-sizing:border-box;border:${dashed ? "1px dashed" : "2px solid"} #d97706;border-radius:2px;display:none`;
+    d.style.cssText = `position:fixed;pointer-events:none;z-index:2147483647;box-sizing:border-box;border:${dashed ? "1px dashed" : "2px solid"} #3b82f6;border-radius:2px;display:none`;
     const tag = document.createElement("span");
     tag.style.cssText =
-      "position:absolute;left:-2px;bottom:100%;margin-bottom:2px;padding:1px 4px;font:500 10px/14px ui-monospace,monospace;color:#fff;background:#d97706;border-radius:2px;white-space:nowrap";
+      "position:absolute;left:-2px;bottom:100%;margin-bottom:2px;padding:1px 4px;font:500 10px/14px ui-monospace,monospace;color:#fff;background:#3b82f6;border-radius:2px;white-space:nowrap";
     d.appendChild(tag);
     document.documentElement.appendChild(d);
     return d;
