@@ -66,6 +66,7 @@ const files = {
     2,
   )}\n`,
   "vite.config.ts": `${api ? 'import { spawn } from "node:child_process";\n' : ""}import { relative } from "node:path";
+import { fileURLToPath } from "node:url";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig${api ? ", type Plugin" : ""} } from "vite";
@@ -113,6 +114,8 @@ function satgasApi(): Plugin {
 export default defineConfig(({ command }) => ({
   base,
   plugins: [react({ babel: { plugins: command === "serve" ? [satgasLoc()] : [] } }), tailwindcss()${api ? ", satgasApi()" : ""}],
+  // The same "@/" the TypeScript paths name, so \`import { Heading } from "@/kit"\` resolves when Vite builds too.
+  resolve: { alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) } },
   server: {
     host: "127.0.0.1",
     port: Number(process.env.PORT) || 5173,

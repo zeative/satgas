@@ -77,3 +77,15 @@ test("a phone app is scaffolded so every page shows as a phone frame", async () 
   });
   await rm(dir, { recursive: true, force: true });
 });
+
+// Pages import the kit as "@/kit"; TypeScript knows that from tsconfig, but Vite needs its own alias or every new app's
+// first page fails to load.
+test("the starter's Vite config resolves @ to src, as its tsconfig does", async () => {
+  const dir = await unpack();
+  expect(Bun.spawnSync(["node", join(dir, "skill/scripts/scaffold.mjs"), join(dir, "app")]).exitCode).toBe(0);
+  const vite = await readFile(join(dir, "app/vite.config.ts"), "utf8");
+  expect(vite).toContain('import { fileURLToPath } from "node:url";');
+  expect(vite).toContain('resolve: { alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) } }');
+  expect(JSON.parse(await readFile(join(dir, "app/tsconfig.json"), "utf8")).compilerOptions.paths["@/*"]).toEqual(["src/*"]);
+  await rm(dir, { recursive: true, force: true });
+});
