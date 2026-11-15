@@ -275,6 +275,40 @@ export function SessionBar({ run }: { run: Run }) {
   );
 }
 
+// The chat panel beside the board: the title pill already names the board, so its header names the open session and
+// switches between them, with a new one a click away.
+export function SessionSwitch({ run }: { run: Run }) {
+  const current = useCurrent(run);
+  if (!current) return null;
+  return (
+    <>
+      <SessionMenu
+        run={run}
+        trigger={
+          <button
+            type="button"
+            aria-label={t.session.menu}
+            className="flex h-7 min-w-0 items-center gap-1.5 rounded-md px-1.5 text-sm font-medium transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+          >
+            <span className="truncate">{sessionTitle(current)}</span>
+            <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
+          </button>
+        }
+      />
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        className="text-muted-foreground hover:text-foreground"
+        aria-label={t.session.new}
+        title={t.session.new}
+        onClick={() => start(run.id)}
+      >
+        <Plus />
+      </Button>
+    </>
+  );
+}
+
 // Chat Only's title bar names the open session after the board; on a narrow screen it is the switcher too.
 export function SessionCrumb({ run }: { run: Run }) {
   const current = useCurrent(run);

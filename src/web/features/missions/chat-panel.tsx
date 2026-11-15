@@ -109,7 +109,7 @@ import { ModelPicker } from "./model-picker";
 import { ProviderNotice, useNeedsProvider } from "./provider-gate";
 import { AskedNote, QuestionComposer } from "./questions";
 import { type Round, roundsOf } from "./rounds";
-import { SessionBar, SessionEmpty, sessionTitle } from "./sessions";
+import { SessionBar, SessionEmpty, SessionSwitch, sessionTitle } from "./sessions";
 import { knownFromRefs, TokenField, TokenText, useTokenCatalog } from "./token-field";
 
 // Only a round that changed the setup shows this, and it carries the connector catalog, so it loads when needed.
@@ -274,10 +274,14 @@ export const ChatPanel = memo(function ChatPanel({ run, onOpenTask, onOpenReport
       className={cn("flex flex-col overflow-hidden", page ? "bg-background" : "rounded-2xl border bg-card shadow-lg", className)}
     >
       {!page && (
-        <header className="flex h-12 shrink-0 items-center gap-1 border-b ps-3.5 pe-1.5">
-          <div className="flex min-w-0 flex-1 items-center">
+        <header className="flex h-12 shrink-0 items-center gap-1 border-b ps-2 pe-1.5">
+          {/* On a phone the panel covers the board's title pill, so it names the board itself. */}
+          <div className="flex min-w-0 items-center ps-1.5 md:hidden">
             {run.icon && <span className="me-1.5 shrink-0 text-sm">{run.icon}</span>}
             <BoardName run={run} as="h2" className="text-sm font-medium" />
+          </div>
+          <div className="flex min-w-0 flex-1 items-center gap-0.5 max-md:hidden">
+            <SessionSwitch run={run} />
           </div>
           <Button
             variant="ghost"
@@ -312,7 +316,11 @@ export const ChatPanel = memo(function ChatPanel({ run, onOpenTask, onOpenReport
           </Button>
         </header>
       )}
-      {!page && <SessionBar run={run} />}
+      {!page && (
+        <div className="md:hidden">
+          <SessionBar run={run} />
+        </div>
+      )}
 
       <div className="relative flex min-h-0 flex-1 flex-col">
         <div
