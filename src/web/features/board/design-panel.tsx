@@ -62,6 +62,7 @@ import {
   selectLayer,
   setDesignTab,
   setPicking,
+  settleStyles,
   settleText,
   settleTokens,
   type Token,
@@ -242,9 +243,24 @@ export default function DesignPanel({ className }: { className?: string }) {
           words = null;
         }
       }
-      const rest = Object.keys(edits).length + (words !== null ? 1 : 0) + Object.keys(attrs).length + Object.keys(tokens).length;
+      // Style changes that map to Tailwind classes go into the element's own class name; the rest goes to the team.
+      let styles = edits;
+      if (el?.loc && Object.keys(edits).length) {
+        const res = await fetch(`/api/runs/${target.runId}/apps/${target.app}/style`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ loc: el.loc, tag: el.tag, css: edits }),
+        });
+        const r = res.ok ? ((await res.json()) as { ok: boolean; file?: string; written?: string[]; rest?: Record<string, string> }) : null;
+        if (r?.ok && r.file && r.written?.length) {
+          styles = r.rest ?? {};
+          settleStyles(styles);
+          toast.success(ti.savedStyles(r.written.length, r.file));
+        }
+      }
+      const rest = Object.keys(styles).length + (words !== null ? 1 : 0) + Object.keys(attrs).length + Object.keys(tokens).length;
       if (!rest && !ask.trim()) return;
-      await sendPrompt(target.runId, editPrompt(target.app, el, edits, words, attrs, tokens, ask.trim()), [], [target.cardId]);
+      await sendPrompt(target.runId, editPrompt(target.app, el, styles, words, attrs, tokens, ask.trim()), [], [target.cardId]);
       toast.success(ti.sent);
       setAsk("");
       setPicking(null);

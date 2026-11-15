@@ -228,3 +228,11 @@ export function settleText(value: string) {
   if (!target?.el) return;
   useInspect.setState({ text: null, target: { ...target, el: { ...target.el, text: value } } });
 }
+
+// Style changes now in the element's classes: only what is left stays pending and previewed on the page.
+export function settleStyles(rest: Record<string, string>) {
+  const { target } = useInspect.getState();
+  useInspect.setState({ edits: rest, past: [], future: [] });
+  // The page picks up the new classes from its dev server; then the inline preview of what was written can go.
+  setTimeout(() => target?.send({ type: "restyle", css: rest }), 800);
+}

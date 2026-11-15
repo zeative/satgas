@@ -110,6 +110,7 @@ import {
   setPublisher,
   topicOf,
 } from "./store";
+import { writeClasses } from "./style-edit";
 import { teamCall } from "./team";
 import { writeText } from "./text-edit";
 import { cleanTokens, writeTokens } from "./tokens";
@@ -1070,6 +1071,23 @@ const server: Server<SocketData> = Bun.serve({
         if (action === "share" || action === "unshare") {
           shareApp(run.id, name, action === "share");
           return Response.json({ ok: true });
+        }
+        // Style changes from the design panel, written into the element's own Tailwind classes where they map cleanly.
+        if (action === "style") {
+          const body = (await req.json().catch(() => null)) as { loc?: unknown; tag?: unknown; css?: unknown } | null;
+          const css = body?.css;
+          if (
+            typeof body?.loc !== "string" ||
+            typeof body.tag !== "string" ||
+            !css ||
+            typeof css !== "object" ||
+            !Object.entries(css).every(([k, v]) => /^[a-zA-Z]{1,40}$/.test(k) && typeof v === "string" && v.length <= 200)
+          )
+            return error(400, "Send { loc, tag, css }.");
+          const app = run.apps[name];
+          const dir = app ? folderOf(run.cwd, app.dir) : null;
+          if (!dir) return error(404, "App not found.");
+          return Response.json(await writeClasses(dir, body.loc, body.tag, css as Record<string, string>));
         }
         // Words rewritten in the design panel, written into the source line the element came from when it is unambiguous.
         if (action === "text") {
