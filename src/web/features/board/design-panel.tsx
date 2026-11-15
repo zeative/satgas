@@ -20,6 +20,7 @@ import {
   Hash,
   Heading,
   Image,
+  Keyboard,
   Link2,
   List,
   Minus,
@@ -42,7 +43,8 @@ import {
 import { type ReactNode, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { t } from "@/i18n";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { isMac, t } from "@/i18n";
 import { cn } from "@/lib/utils";
 import {
   closeInspect,
@@ -271,6 +273,7 @@ export default function DesignPanel({ className }: { className?: string }) {
             </button>
           ))}
         </div>
+        <Shortcuts />
         <Button
           variant="ghost"
           size="icon"
@@ -1268,5 +1271,47 @@ function CopyRow({ label, value }: { label: string; value: string }) {
       <Copy className="size-3.5" aria-hidden="true" />
       {label}
     </button>
+  );
+}
+
+// What the panel and the page answer to, which nothing on screen shows otherwise.
+function Shortcuts() {
+  const mod = isMac ? "⌘" : "Ctrl ";
+  const alt = isMac ? "⌥" : "Alt";
+  const rows: [string, string][] = [
+    [ti.keys.editText, ti.keys.doubleClick],
+    [ti.keys.measure, `${alt} + ${ti.keys.hover}`],
+    [ti.keys.child, "Enter"],
+    [ti.keys.parent, "⇧ Enter"],
+    [ti.keys.sibling, "Tab"],
+    [ti.keys.scrub, ti.keys.dragLabel],
+    [ti.keys.undo, `${mod}Z`],
+    [ti.keys.redo, `${mod}⇧Z`],
+  ];
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label={ti.keys.title}
+          title={ti.keys.title}
+          className="size-7 text-muted-foreground hover:text-foreground [&_svg]:size-3.5"
+        >
+          <Keyboard />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-64 p-1.5 text-xs">
+        <p className="px-1.5 pt-0.5 pb-1.5 font-medium">{ti.keys.title}</p>
+        <dl className="m-0 flex flex-col">
+          {rows.map(([what, key]) => (
+            <div key={what} className="flex h-7 items-center justify-between gap-3 px-1.5">
+              <dt className="text-muted-foreground">{what}</dt>
+              <dd className="m-0 shrink-0 rounded border bg-muted/60 px-1.5 font-mono text-[10px] leading-4">{key}</dd>
+            </div>
+          ))}
+        </dl>
+      </PopoverContent>
+    </Popover>
   );
 }
