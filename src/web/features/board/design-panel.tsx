@@ -39,7 +39,7 @@ import {
   Video,
   X,
 } from "lucide-react";
-import { type ReactNode, useMemo, useState } from "react";
+import { type ReactNode, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { t } from "@/i18n";
@@ -412,19 +412,22 @@ function Properties({
       </div>
 
       <Section title={ti.size}>
-        <Row label={ti.width}>
+        <Row label={ti.width} scrub={{ value: shown(s.width), min: 0, onCommit: (v) => set("width", withUnit(v)) }}>
           <div className="grid grid-cols-[1fr_5.5rem] gap-1.5">
             <Field value={shown(s.width)} unit="px" onCommit={(v) => set("width", withUnit(v))} />
             <Select value={sizingOf("w")} options={SIZINGS} onChange={(v) => setSizing("w", v as Sizing)} label={ti.width} />
           </div>
         </Row>
-        <Row label={ti.height}>
+        <Row label={ti.height} scrub={{ value: shown(s.height), min: 0, onCommit: (v) => set("height", withUnit(v)) }}>
           <div className="grid grid-cols-[1fr_5.5rem] gap-1.5">
             <Field value={shown(s.height)} unit="px" onCommit={(v) => set("height", withUnit(v))} />
             <Select value={sizingOf("h")} options={SIZINGS} onChange={(v) => setSizing("h", v as Sizing)} label={ti.height} />
           </div>
         </Row>
-        <Row label={ti.maxWidth}>
+        <Row
+          label={ti.maxWidth}
+          scrub={{ value: s.maxWidth === "none" ? "" : shown(s.maxWidth), min: 0, onCommit: (v) => set("maxWidth", withUnit(v)) }}
+        >
           <Field
             value={s.maxWidth === "none" ? "" : shown(s.maxWidth)}
             placeholder="—"
@@ -441,7 +444,7 @@ function Properties({
           />
         </Row>
         {pFlex && (
-          <Row label={ti.grow}>
+          <Row label={ti.grow} scrub={{ value: s.flexGrow ?? "0", min: 0, onCommit: (v) => set("flexGrow", v) }}>
             <Field value={s.flexGrow ?? "0"} onCommit={(v) => set("flexGrow", v || "0")} />
           </Row>
         )}
@@ -470,7 +473,10 @@ function Properties({
           </Row>
         )}
         {flex && (
-          <Row label={ti.gap}>
+          <Row
+            label={ti.gap}
+            scrub={{ value: shown(s.gap === "normal" ? "0px" : s.gap), min: 0, onCommit: (v) => set("gap", withUnit(v)) }}
+          >
             <Field value={shown(s.gap === "normal" ? "0px" : s.gap)} unit="px" onCommit={(v) => set("gap", withUnit(v))} />
           </Row>
         )}
@@ -509,7 +515,7 @@ function Properties({
           <Row label={ti.weight}>
             <Select label={ti.weight} value={weight} options={Object.entries(ti.weights)} onChange={(v) => set("fontWeight", v)} />
           </Row>
-          <Row label={ti.fontSize}>
+          <Row label={ti.fontSize} scrub={{ value: shown(s.fontSize), min: 1, onCommit: (v) => set("fontSize", withUnit(v)) }}>
             <Field value={shown(s.fontSize)} unit="px" onCommit={(v) => set("fontSize", withUnit(v))} />
           </Row>
           <Row label={ti.spacing}>
@@ -562,7 +568,7 @@ function Properties({
         <Row label={ti.fill}>
           <ColorField label={ti.fill} value={hex(s.backgroundColor)} onChange={(v) => set("backgroundColor", v)} />
         </Row>
-        <Row label={ti.opacity}>
+        <Row label={ti.opacity} scrub={{ value: String(opacity), min: 0, onCommit: (v) => set("opacity", String(clamp01(v))) }}>
           <div className="flex items-center gap-2">
             <Field className="w-20 shrink-0" value={String(opacity)} unit="%" onCommit={(v) => set("opacity", String(clamp01(v)))} />
             <input
@@ -882,10 +888,48 @@ function Fold({ title, children }: { title: string; children: ReactNode }) {
   );
 }
 
-function Row({ label, mono, children }: { label: string; mono?: boolean; children: ReactNode }) {
+// A number a label can scrub: drag the label sideways to change it, one step per pixel, ten with Shift.
+interface Scrub {
+  value: string;
+  onCommit: (v: string) => void;
+  step?: number;
+  min?: number;
+}
+
+function Row({ label, mono, scrub, children }: { label: string; mono?: boolean; scrub?: Scrub; children: ReactNode }) {
+  const live = scrub && /^-?[\d.]+$/.test(scrub.value) ? scrub : undefined;
+  const drag = useRef<{ x: number; from: number; frame: number } | null>(null);
   return (
     <div className="grid min-h-7 grid-cols-[5.25rem_minmax(0,1fr)] items-center gap-2">
-      <span className={cn("truncate text-muted-foreground", mono && "font-mono text-[11px]")} title={label}>
+      <span
+        className={cn(
+          "truncate text-muted-foreground select-none",
+          mono && "font-mono text-[11px]",
+          live && "cursor-ew-resize touch-none hover:text-foreground",
+        )}
+        title={label}
+        onPointerDown={(e) => {
+          if (!live || e.button !== 0) return;
+          e.currentTarget.setPointerCapture(e.pointerId);
+          drag.current = { x: e.clientX, from: Number.parseFloat(live.value), frame: 0 };
+        }}
+        onPointerMove={(e) => {
+          const d = drag.current;
+          if (!live || !d) return;
+          const step = (live.step ?? 1) * (e.shiftKey ? 10 : 1);
+          const next = Math.max(live.min ?? Number.NEGATIVE_INFINITY, d.from + Math.round(e.clientX - d.x) * step);
+          const decimals = Math.max(0, -Math.floor(Math.log10(live.step ?? 1)));
+          cancelAnimationFrame(d.frame);
+          // One change a frame reaches the page, however fast the pointer moves.
+          d.frame = requestAnimationFrame(() => live.onCommit(String(round(next, decimals))));
+        }}
+        onPointerUp={() => {
+          drag.current = null;
+        }}
+        onPointerCancel={() => {
+          drag.current = null;
+        }}
+      >
         {label}
       </span>
       <div className="min-w-0">{children}</div>
@@ -960,7 +1004,10 @@ function Corners({ s }: { s: Record<string, string> }) {
   const [split, setSplit] = useState(!vals.every((v) => v === vals[0]));
   return (
     <>
-      <Row label={ti.radius}>
+      <Row
+        label={ti.radius}
+        scrub={split ? undefined : { value: vals[0] ?? "0", min: 0, onCommit: (v) => editStyle({ borderRadius: withUnit(v) }) }}
+      >
         <div className="flex items-center gap-1">
           <Field
             className="flex-1"
