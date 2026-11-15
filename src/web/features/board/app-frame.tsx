@@ -155,11 +155,12 @@ export function AppBody({ card, interactive, large }: { card: Card; interactive:
   height.current = card.h;
   useEffect(() => {
     if (large || !pageH || !scale) return;
-    const want = Math.ceil(pageH * scale);
+    // Never shorter than one screen of its device, so a page still loading, empty or showing its error stays readable.
+    const want = Math.ceil(Math.max(pageH, SCREEN_H[device]) * scale);
     if (Math.abs(want - height.current) <= 8) return;
     const id = setTimeout(() => commit([{ op: "patch", id: card.id, patch: { h: want } }]), 300);
     return () => clearTimeout(id);
-  }, [large, pageH, scale, card.id, commit]);
+  }, [large, pageH, scale, device, card.id, commit]);
   // A frame that leaves the board takes its selection with it; the large view closing leaves the board's frame as it is.
   useEffect(
     () => () => {
