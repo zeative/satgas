@@ -305,7 +305,8 @@
     if (!el.children.length && el.textContent.trim()) return "text";
     return "group";
   };
-  const snippet = (el) => (el.tagName === "BODY" ? "" : (el.textContent || "").replace(/\s+/g, " ").trim().slice(0, 48));
+  // The words as drawn, so a line break reads as a space rather than gluing two lines together.
+  const snippet = (el) => (el.tagName === "BODY" ? "" : (el.innerText ?? el.textContent ?? "").replace(/\s+/g, " ").trim().slice(0, 48));
   const layerOf = (el, depth) => ({ ref: refOf(el), kind: kindOf(el), tag: el.tagName.toLowerCase(), text: snippet(el), depth, kids: kids(el).length });
   const layers = (el) => {
     refs = [];
