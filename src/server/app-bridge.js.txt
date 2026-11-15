@@ -335,7 +335,9 @@
       const v = el.style.getPropertyValue(kebab(k)).trim();
       if (v) out[k] = v;
     }
-    for (const k of Object.keys(out)) if (out[k].startsWith("var(")) delete out[k];
+    // A value built from variables (Tailwind writes gap-2 as calc(var(--spacing) * 2)) says nothing to a designer; the
+    // computed pixels do.
+    for (const k of Object.keys(out)) if (out[k].includes("var(")) delete out[k];
     return out;
   };
   // The layer tree around the picked element: a few ancestors, its siblings, and its own children.
