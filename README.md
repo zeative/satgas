@@ -90,6 +90,13 @@ flowchart LR
 - **A visible team.** Everyone the lead hires has a name, a role and a face, and stays on the board for later requests.
 - **A board you can use.** Notes, docs, tables, code, images, live page previews, shapes, frames, connectors and freehand drawing, with grouping, alignment and snapping.
 - **Live widgets.** Checklists, variables, buttons, triggers, and the status of branches and pull requests.
+
+**Design on the canvas**
+
+- **Real apps as frames.** Every screen the team builds runs live on the board, one frame per page, named above it with ▷ Play to open it large.
+- **A design panel.** Pick any element in a frame to see its layers and properties: size with hug and fill, padding and margin, text styles, fill, border, radius, effects. Changes preview on the page at once; Apply hands them to the team to write into the source.
+- **Direct edits.** Double-click words to rewrite them in place, drag a label to scrub a number, hold <kbd>⌥</kbd> to measure spacing, and undo with <kbd>⌘Z</kbd>.
+- **Tweaks.** The page's design tokens in one list. Change a colour or a radius and the whole page follows; a token defined once is written straight into the stylesheet.
 - **Canvas or chat.** Switch with <kbd>⌘J</kbd>. Chat Only shows the same cards inline and is the default on small screens.
 - **Sessions and forks.** A board holds several chats that share its canvas and team. A fork copies the whole board so you can try another direction.
 
