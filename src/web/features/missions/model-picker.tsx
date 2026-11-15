@@ -11,6 +11,7 @@ import { t } from "@/i18n";
 import { cn } from "@/lib/utils";
 import { loadProviders, useProviders } from "@/stores/providers";
 import { loadSettings, saveSettings, useSettings } from "@/stores/settings";
+import { parseClaudeId, prettyClaude } from "../../../shared/claude-id";
 import { CLAUDE_EFFORTS, nativeClaude, PROVIDERS, type ProviderKind, providerDef } from "../../../shared/providers";
 import { activeAgent, type Settings, withAgent } from "../../../shared/settings";
 import type { ModelInfo, ProviderStatus } from "../../../shared/types";
@@ -134,16 +135,16 @@ export function ModelPicker() {
   const setEffort = (effort: string) => void persist({ ...settings, agents: { ...settings.agents, [runtime]: { ...agent, effort } } });
 
   const leadDef = providerDef.get(lead.provider);
+  const leadStatus = statusOf(lead.provider);
+  // Claude Code lists its families (opus, sonnet…); a full id such as claude-haiku-5-5 is one of them, pinned to a version.
+  const leadInfo =
+    leadStatus?.models.find((m) => m.id === lead.model) ?? leadStatus?.models.find((m) => m.id === parseClaudeId(lead.model ?? "")?.family);
   const leadName = lead.model
-    ? (statusOf(lead.provider)?.models.find((m) => m.id === lead.model)?.name ?? lead.model)
+    ? (leadStatus?.models.find((m) => m.id === lead.model)?.name ?? prettyClaude(lead.model) ?? lead.model)
     : t.picker.defaultOf(leadDef?.name ?? t.agent[working]);
   // A saved model the provider no longer lists would only fail at the next mission, so the pill says so now.
-  const leadStatus = statusOf(lead.provider);
-  const missing =
-    !!lead.model && leadStatus?.state === "ok" && leadStatus.models.length > 0 && !leadStatus.models.some((m) => m.id === lead.model);
+  const missing = !!lead.model && leadStatus?.state === "ok" && leadStatus.models.length > 0 && !leadInfo;
   const missingNote = missing ? t.picker.unavailable(lead.model, leadDef?.name ?? lead.provider) : undefined;
-  // A level saved before this model's levels were known must not read as if it applied.
-  const leadInfo = leadStatus?.models.find((m) => m.id === lead.model);
   const leadEfforts: readonly string[] = leadInfo?.efforts ?? (nativeClaude(lead.provider) ? CLAUDE_EFFORTS : []);
 
   return (
