@@ -39,7 +39,8 @@ solid with a hairline only once the page scrolls.
 
 ## Base
 
-- **Color:** one neutral graphite ramp in light and dark. `--signal` (amber) is the only accent; `--signal-ink` is its
+- **Color:** one neutral graphite ramp in light and dark. `--selection` (blue) marks what is selected on the canvas and
+  inside a page, as in design tools. `--signal` (amber) is the only other accent; `--signal-ink` is its
   readable shade for icons and edges on light surfaces. Semantic green and red only mean done and failed. Sticky
   notes are the one paper-tinted surface, because they are content.
 - **Type:** Inter Variable, weights 400 and 500 (600 only inside markdown). Mono for codes, paths, logs and timers;
@@ -121,10 +122,14 @@ solid with a hairline only once the page scrolls.
   notes, text, shapes, frames, docs, tables (one row per line, cells split by commas; a quoted cell keeps its commas)
   and code edit in place on double-click or Enter; an edit cut short by scrolling away or zooming out is saved, one on
   a card deleted elsewhere is reported. Agent-made docs mirror files and open to read. The expanded view follows the
-  live card and closes when it is deleted. A card's title sits above it; a lone selected
-  card adds quick open actions (expand, open in a tab) and resize handles; a multi-selection shows rings only. There is no
-  inline delete: card actions live in the right-click menu. A locked card shows a lock glyph by its title. Connector dots
-  show on hover.
+  live card and closes when it is deleted. A card's label sits above it at one size on screen at any zoom (12px, scaled
+  by the `--sg-zoom` variable the canvas sets without a render): author, title, and on the right its actions (expand,
+  open, download), shown on hover or selection, never over the content. A page frame has no bar inside it: the page
+  runs edge to edge, and its label holds the status dot, the route (click to edit), inspect, Tweaks, screen size,
+  reload, share, ⋯ and a ▷ PLAY chip that opens it large with the full browser bar. A phone or tablet page fills its
+  frame's width. A lone selected card shows a blue (`--selection`) rectangle 1.5px on screen with square handles on
+  its corners; a multi-selection shows blue rings. A locked card shows a lock glyph in its label. There is no inline
+  delete: card actions live in the right-click menu. Connector dots show on hover.
 - **Right-click menu** (`features/board/board-menu.tsx`, actions in `board-actions.ts`, pure edits in `edit.ts`): one
   menu per target, built on the compact dropdown primitives, groups split by inset hairlines, shortcuts right-aligned.
   - Cards: Edit/Expand/Open · Cut/Copy/Paste/Duplicate · Copy as PNG/Copy style/Paste style · Color ▸, Group/Ungroup,
