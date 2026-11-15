@@ -129,10 +129,65 @@
     tag.style.top = r.top < 18 ? "100%" : "";
     tag.style.bottom = r.top < 18 ? "auto" : "100%";
   };
+  // Alt held over another element measures the space between it and the picked one, the way design tools redline.
+  let alt = false;
+  let rulers = null;
+  const MEASURE = "#f43f5e";
+  const rule = (x, y, w, h, label) => {
+    const line = document.createElement("div");
+    line.style.cssText = `position:fixed;left:${x}px;top:${y}px;width:${Math.max(w, 1)}px;height:${Math.max(h, 1)}px;background:${MEASURE}`;
+    rulers.appendChild(line);
+    if (label <= 0) return;
+    const tag = document.createElement("span");
+    const horizontal = w > h;
+    tag.textContent = String(Math.round(label));
+    tag.style.cssText = `position:fixed;left:${horizontal ? x + w / 2 : x + 4}px;top:${horizontal ? y + 4 : y + h / 2}px;transform:translate(${horizontal ? "-50%" : "0"},${horizontal ? "0" : "-50%"});padding:1px 4px;border-radius:3px;background:${MEASURE};color:#fff;font:500 10px/14px ui-sans-serif,system-ui,sans-serif;white-space:nowrap`;
+    rulers.appendChild(tag);
+  };
+  const measure = () => {
+    if (!rulers) {
+      rulers = document.createElement("div");
+      rulers.setAttribute("data-satgas-ui", "");
+      rulers.style.cssText = "position:fixed;inset:0;pointer-events:none;z-index:2147483647";
+      document.documentElement.appendChild(rulers);
+    }
+    rulers.replaceChildren();
+    if (!alt || !picking || !picked || !hovered || hovered === picked || !hovered.isConnected) return;
+    const a = picked.getBoundingClientRect();
+    const b = hovered.getBoundingClientRect();
+    const inside = b.left <= a.left && b.top <= a.top && b.right >= a.right && b.bottom >= a.bottom;
+    const midY = (Math.max(a.top, b.top) + Math.min(a.bottom, b.bottom)) / 2;
+    const midX = (Math.max(a.left, b.left) + Math.min(a.right, b.right)) / 2;
+    const y = Math.max(a.top, b.top) < Math.min(a.bottom, b.bottom) ? midY : a.top + a.height / 2;
+    const x = Math.max(a.left, b.left) < Math.min(a.right, b.right) ? midX : a.left + a.width / 2;
+    if (inside) {
+      // Inside its container: the space to each of the container's edges.
+      rule(b.left, a.top + a.height / 2, a.left - b.left, 1, a.left - b.left);
+      rule(a.right, a.top + a.height / 2, b.right - a.right, 1, b.right - a.right);
+      rule(a.left + a.width / 2, b.top, 1, a.top - b.top, a.top - b.top);
+      rule(a.left + a.width / 2, a.bottom, 1, b.bottom - a.bottom, b.bottom - a.bottom);
+      return;
+    }
+    if (b.left >= a.right) rule(a.right, y, b.left - a.right, 1, b.left - a.right);
+    else if (a.left >= b.right) rule(b.right, y, a.left - b.right, 1, a.left - b.right);
+    if (b.top >= a.bottom) rule(x, a.bottom, 1, b.top - a.bottom, b.top - a.bottom);
+    else if (a.top >= b.bottom) rule(x, b.bottom, 1, a.top - b.bottom, a.top - b.bottom);
+  };
   const redraw = () => {
     place(box, picked);
     place(hoverBox, picking && hovered !== picked ? hovered : null);
+    measure();
   };
+  for (const type of ["keydown", "keyup"])
+    addEventListener(type, (e) => {
+      if (e.key !== "Alt" || alt === (type === "keydown")) return;
+      alt = type === "keydown";
+      redraw();
+    });
+  addEventListener("blur", () => {
+    alt = false;
+    redraw();
+  });
   addEventListener("scroll", redraw, true);
   addEventListener("resize", redraw);
 
@@ -448,6 +503,7 @@
     "pointermove",
     (e) => {
       if (!picking) return;
+      alt = e.altKey;
       hovered = target(e);
       hoverBox = hoverBox || outline(true);
       redraw();
