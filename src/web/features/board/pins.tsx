@@ -5,6 +5,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { fmtAgo, t } from "@/i18n";
 import { sendBoardOps, sendPrompt } from "@/stores/runs";
 import type { Card, Pin } from "../../../shared/board";
+import { randomUuid } from "../../../shared/random-uuid";
 
 const tp = t.board.pins;
 
@@ -127,7 +128,7 @@ export function PinLayer({
 
 // A new pin from the design panel, on the element it has picked.
 export function addPin(runId: string, card: Card, pin: Omit<Pin, "id" | "at">) {
-  const next: Pin = { ...pin, id: crypto.randomUUID().slice(0, 12), at: Date.now() };
+  const next: Pin = { ...pin, id: randomUuid().slice(0, 12), at: Date.now() };
   patchPins(runId, card, [...(card.pins ?? []), next]);
   return next;
 }
