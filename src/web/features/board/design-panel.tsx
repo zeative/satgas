@@ -59,6 +59,7 @@ import {
   selectLayer,
   setDesignTab,
   setPicking,
+  settleTokens,
   type Token,
   useInspect,
 } from "@/stores/inspect";
@@ -199,17 +200,40 @@ export default function DesignPanel({ className }: { className?: string }) {
   const el = target.el;
   const count = Object.keys(edits).length + (text !== null ? 1 : 0) + Object.keys(attrs).length + Object.keys(tokenEdits).length;
 
-  const apply = () => {
+  // Tokens defined once in the app's stylesheets are written there at once; whatever is left (element changes, tokens
+  // defined in several places, the request in words) goes to the team.
+  const apply = async () => {
     setSending(true);
-    sendPrompt(target.runId, editPrompt(target.app, el, edits, text, attrs, tokenEdits, ask.trim()), [], [target.cardId])
-      .then(() => {
-        toast.success(ti.sent);
-        setAsk("");
-        setPicking(null);
-        closeInspect(true);
-      })
-      .catch((e: Error) => toast.error(e.message))
-      .finally(() => setSending(false));
+    try {
+      let tokens = tokenEdits;
+      if (Object.keys(tokenEdits).length) {
+        const res = await fetch(`/api/runs/${target.runId}/apps/${target.app}/tokens`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ vars: tokenEdits }),
+        });
+        if (res.ok) {
+          const r = (await res.json()) as { written: { name: string; file: string }[]; missed: string[] };
+          if (r.written.length) {
+            settleTokens(r.written.map((w) => w.name));
+            const files = [...new Set(r.written.map((w) => w.file))];
+            toast.success(ti.savedTokens(r.written.length, files.join(", ")));
+          }
+          tokens = Object.fromEntries(Object.entries(tokenEdits).filter(([k]) => r.missed.includes(k)));
+        }
+      }
+      const rest = Object.keys(edits).length + (text !== null ? 1 : 0) + Object.keys(attrs).length + Object.keys(tokens).length;
+      if (!rest && !ask.trim()) return;
+      await sendPrompt(target.runId, editPrompt(target.app, el, edits, text, attrs, tokens, ask.trim()), [], [target.cardId]);
+      toast.success(ti.sent);
+      setAsk("");
+      setPicking(null);
+      closeInspect(true);
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setSending(false);
+    }
   };
   const close = () => {
     setPicking(null);
@@ -272,7 +296,7 @@ export default function DesignPanel({ className }: { className?: string }) {
           placeholder={ti.askHint}
           onChange={(e) => setAsk(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && (count || ask.trim())) apply();
+            if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && (count || ask.trim())) void apply();
           }}
           className="min-h-12 resize-none rounded-md border bg-background px-2 py-1.5 outline-none placeholder:text-muted-foreground focus:border-ring"
         />
@@ -283,7 +307,7 @@ export default function DesignPanel({ className }: { className?: string }) {
               {ti.reset}
             </Button>
           )}
-          <Button size="sm" className="h-7 px-3 text-xs" disabled={sending || (!count && !ask.trim())} onClick={apply}>
+          <Button size="sm" className="h-7 px-3 text-xs" disabled={sending || (!count && !ask.trim())} onClick={() => void apply()}>
             {ti.apply}
           </Button>
         </div>

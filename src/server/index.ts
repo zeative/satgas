@@ -17,6 +17,7 @@ import {
   appLog,
   appSocket,
   cleanAppName,
+  folderOf,
   serveApp,
   settleApps,
   shareApp,
@@ -110,6 +111,7 @@ import {
   topicOf,
 } from "./store";
 import { teamCall } from "./team";
+import { cleanTokens, writeTokens } from "./tokens";
 import { toolStatus } from "./tools";
 import { startUpdate, updateInfo } from "./updates";
 import { claimUploads, pruneUploads, stageUpload } from "./uploads";
@@ -1067,6 +1069,16 @@ const server: Server<SocketData> = Bun.serve({
         if (action === "share" || action === "unshare") {
           shareApp(run.id, name, action === "share");
           return Response.json({ ok: true });
+        }
+        // Tweaks from the design panel, written into the app's stylesheets where each token is defined once.
+        if (action === "tokens") {
+          const body = (await req.json().catch(() => null)) as { vars?: unknown } | null;
+          const vars = cleanTokens(body?.vars);
+          if (!vars) return error(400, 'Send the tokens as { vars: { "--name": "value" } }.');
+          const app = run.apps[name];
+          const dir = app ? folderOf(run.cwd, app.dir) : null;
+          if (!dir) return error(404, "App not found.");
+          return Response.json(await writeTokens(dir, vars));
         }
         return error(404, "Unknown action.");
       }),

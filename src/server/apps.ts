@@ -100,7 +100,7 @@ function setApp(runId: string, name: string, patch: Partial<RunApp>) {
 }
 
 // A board's folder, or a folder inside it; never a way out of it.
-function folderOf(cwd: string, dir: string): string | null {
+export function folderOf(cwd: string, dir: string): string | null {
   const full = resolve(cwd, dir || ".");
   return full === cwd || full.startsWith(cwd + sep) ? full : null;
 }

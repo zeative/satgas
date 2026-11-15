@@ -173,3 +173,13 @@ export function closeInspect(keepPreview = false) {
   target?.send({ type: "deselect" });
   useInspect.setState({ target: null, ...blank, tokens: null, tokenEdits: {} });
 }
+
+// Tokens the server wrote into the source: no longer pending, and their new value is what the page's source says.
+export function settleTokens(names: string[]) {
+  const { tokenEdits, tokens } = useInspect.getState();
+  const left = Object.fromEntries(Object.entries(tokenEdits).filter(([k]) => !names.includes(k)));
+  const next = tokens?.map((tk) =>
+    names.includes(tk.name) && tokenEdits[tk.name] ? { ...tk, value: tokenEdits[tk.name] ?? tk.value } : tk,
+  );
+  useInspect.setState({ tokenEdits: left, ...(next ? { tokens: next } : {}) });
+}
