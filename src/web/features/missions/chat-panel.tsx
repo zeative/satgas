@@ -110,9 +110,10 @@ import { ProviderNotice, useNeedsProvider } from "./provider-gate";
 import { AskedNote, QuestionComposer } from "./questions";
 import { type Round, roundsOf } from "./rounds";
 import { SessionBar, SessionEmpty, sessionTitle } from "./sessions";
-import { SetupLine } from "./setup-line";
 import { knownFromRefs, TokenField, TokenText, useTokenCatalog } from "./token-field";
 
+// Only a round that changed the setup shows this, and it carries the connector catalog, so it loads when needed.
+const SetupLine = lazy(() => import("./setup-line").then((m) => ({ default: m.SetupLine })));
 const MARK = { claude: ClaudeMark, codex: CodexMark };
 
 // Lets the chat point at something on the board; the canvas listens and brings it into view.
@@ -799,11 +800,19 @@ function LeadActions({ run, round }: { run: Run; round: number }) {
   ].filter((p): p is string => !!p);
   return (
     <>
-      {waiting && setup && <SetupLine runId={run.id} round={round} rec={setup} />}
+      {waiting && setup && (
+        <Suspense fallback={null}>
+          <SetupLine runId={run.id} round={round} rec={setup} />
+        </Suspense>
+      )}
       {parts.length > 0 && (
         <ActionRow icon={Hammer} summary={parts.join(" · ")}>
           {memory && <MemoryLine runId={run.id} round={round} rec={memory} />}
-          {setup && !waiting && <SetupLine runId={run.id} round={round} rec={setup} />}
+          {setup && !waiting && (
+            <Suspense fallback={null}>
+              <SetupLine runId={run.id} round={round} rec={setup} />
+            </Suspense>
+          )}
           {edit && <EditLine runId={run.id} round={round} edit={edit} />}
         </ActionRow>
       )}

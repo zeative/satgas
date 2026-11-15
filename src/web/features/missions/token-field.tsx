@@ -25,7 +25,6 @@ import { cn } from "@/lib/utils";
 import { loadSettings, useSettings } from "@/stores/settings";
 import { loadSkills, useSkills } from "@/stores/skills";
 import type { Card } from "../../../shared/board";
-import { catalogOf } from "../../../shared/catalog";
 import { atToken, cardMentions, type Refs, splitTokens } from "../../../shared/refs";
 import type { Run } from "../../../shared/types";
 import { keyedSrc } from "../board/context";
@@ -81,12 +80,30 @@ const AGENT = {
 } as const;
 
 // What `/` and `@` can name right now: actions and skills, files and cards of this board, agents and connectors.
+// The connector catalog is large and the @ menu only needs it for names and logos of connectors that are on, so it
+// loads the first time there is one to show.
+type CatalogModule = typeof import("../../../shared/catalog");
+let catalogModule: CatalogModule | null = null;
+let catalogLoad: Promise<CatalogModule> | null = null;
+const loadCatalog = () => {
+  catalogLoad ??= import("../../../shared/catalog").then((m) => {
+    catalogModule = m;
+    return m;
+  });
+  return catalogLoad;
+};
+
 export function useTokenCatalog(run?: Run) {
   const settings = useSettings((s) => s.settings);
   const skills = useSkills((s) => s.skills);
   const cards = run?.board?.cards;
   const runId = run?.id;
   const [tree, setTree] = useState<{ id: string; paths: string[] } | null>(null);
+  const [catalog, setCatalog] = useState(catalogModule);
+  const wantsCatalog = !!settings?.mcpServers?.some((s) => s.enabled);
+  useEffect(() => {
+    if (wantsCatalog && !catalog) void loadCatalog().then(setCatalog);
+  }, [wantsCatalog, catalog]);
 
   useEffect(() => {
     if (!useSettings.getState().settings) void loadSettings();
@@ -166,19 +183,20 @@ export function useTokenCatalog(run?: Run) {
     }
     for (const s of settings?.mcpServers ?? []) {
       if (!s.enabled) continue;
-      const logo = catalogOf(s)?.logo;
+      const item = catalog?.catalogOf(s);
+      const logo = item?.logo;
       out.push({
         kind: "@",
         group: "connectors",
         name: s.name.toLowerCase(),
         insert: atToken(s.name),
-        label: catalogOf(s)?.name ?? s.name,
+        label: item?.name ?? s.name,
         desc: `@${s.name}`,
         icon: logo ? <ConnectorLogo src={logo.src} dark={logo.dark} /> : <Plug />,
       });
     }
     return out;
-  }, [settings, skills, tree, runId, cards, run?.fileKey]);
+  }, [settings, skills, tree, runId, cards, run?.fileKey, catalog]);
 
   const known = useMemo(() => {
     const names = new Set(items.map((i) => `${i.kind}${i.name}`));
