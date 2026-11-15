@@ -328,7 +328,7 @@ export const CardBody = memo(function CardBody({ card, active = false, large = f
       );
     case "code":
       return card.from || large ? (
-        <CodeText text={card.text ?? ""} name={card.title} />
+        <CodeText text={card.text ?? ""} name={card.title} fit={large ? undefined : card} />
       ) : (
         <EditableText
           card={card}
@@ -648,7 +648,7 @@ const MAX_HIGHLIGHT = 40_000;
 
 // Code with the file's name as its header and the diff view's colours, from the same highlighter, loaded the first time
 // a code card shows. Until then, and for very long files, it reads as plain text.
-function CodeText({ text, name }: { text: string; name?: string }) {
+function CodeText({ text, name, fit }: { text: string; name?: string; fit?: Card }) {
   const [lines, setLines] = useState<Token[][] | null>(null);
   useEffect(() => {
     if (text.length > MAX_HIGHLIGHT) return;
@@ -666,28 +666,31 @@ function CodeText({ text, name }: { text: string; name?: string }) {
   }, [text, name]);
   return (
     <div className="flex size-full flex-col">
-      {name && (
+      {/* On the board the label above already names the file; the expanded view has no label, so it keeps this. */}
+      {name && !fit && (
         <div className="card-handle flex h-8 shrink-0 items-center border-b px-3 font-mono text-[11px] text-muted-foreground">
           <span className="truncate">{name.split("/").pop()}</span>
         </div>
       )}
       <pre className="satgas-code nowheel min-h-0 flex-1 overflow-auto p-3 font-mono text-xs leading-5 whitespace-pre">
-        <code>
-          {lines
-            ? lines.map((line, i) => (
-                // biome-ignore lint/suspicious/noArrayIndexKey: lines of one immutable text, never reordered.
-                <span key={i}>
-                  {line.map((t, j) => (
-                    // biome-ignore lint/suspicious/noArrayIndexKey: tokens of one line, never reordered.
-                    <span key={j} style={t.style}>
-                      {t.text}
-                    </span>
-                  ))}
-                  {"\n"}
-                </span>
-              ))
-            : text}
-        </code>
+        <FitsContent card={fit} on={!!fit} pad={24}>
+          <code>
+            {lines
+              ? lines.map((line, i) => (
+                  // biome-ignore lint/suspicious/noArrayIndexKey: lines of one immutable text, never reordered.
+                  <span key={i}>
+                    {line.map((t, j) => (
+                      // biome-ignore lint/suspicious/noArrayIndexKey: tokens of one line, never reordered.
+                      <span key={j} style={t.style}>
+                        {t.text}
+                      </span>
+                    ))}
+                    {"\n"}
+                  </span>
+                ))
+              : text}
+          </code>
+        </FitsContent>
       </pre>
     </div>
   );
@@ -744,16 +747,17 @@ function TableBody({ rows, fit }: { rows: string[][]; fit?: Card }) {
 
 // Doc and table cards the team made take the height of what they hold, up to a limit, so a short report does not sit in
 // a tall empty card; a card a person resized keeps their size.
-const FITS = new Set<Card["kind"]>(["doc", "table"]);
+const FITS = new Set<Card["kind"]>(["doc", "table", "code"]);
 const FIT_MAX = 720;
 const FIT_MIN = 120;
 
-function FitsContent({ card, on, pad, children }: { card: Card; on: boolean; pad: number; children: ReactNode }) {
+function FitsContent({ card, on, pad, children }: { card?: Card; on: boolean; pad: number; children: ReactNode }) {
   const { commit, hasCard } = useBoard();
   const box = useRef<HTMLDivElement>(null);
-  const h = useRef(card.h);
-  h.current = card.h;
-  const active = on && !!card.from && !card.sized && !card.locked;
+  const h = useRef(card?.h ?? 0);
+  h.current = card?.h ?? 0;
+  const id = card?.id ?? "";
+  const active = on && !!card?.from && !card.sized && !card.locked;
   useEffect(() => {
     const el = box.current;
     if (!active || !el) return;
@@ -762,7 +766,7 @@ function FitsContent({ card, on, pad, children }: { card: Card; on: boolean; pad
       clearTimeout(timer);
       timer = setTimeout(() => {
         const want = Math.round(Math.min(FIT_MAX, Math.max(FIT_MIN, el.offsetHeight + pad)));
-        if (Math.abs(want - h.current) > 8 && hasCard(card.id)) commit([{ op: "patch", id: card.id, patch: { h: want } }]);
+        if (Math.abs(want - h.current) > 8 && hasCard(id)) commit([{ op: "patch", id, patch: { h: want } }]);
       }, 250);
     });
     ro.observe(el);
@@ -770,7 +774,7 @@ function FitsContent({ card, on, pad, children }: { card: Card; on: boolean; pad
       clearTimeout(timer);
       ro.disconnect();
     };
-  }, [active, pad, card.id, commit, hasCard]);
+  }, [active, pad, id, commit, hasCard]);
   return <div ref={box}>{children}</div>;
 }
 
