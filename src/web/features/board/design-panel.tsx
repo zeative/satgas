@@ -54,6 +54,7 @@ import {
   hoverLayer,
   type Layer,
   type PickedEl,
+  redoStyle,
   resetEdits,
   type Sizing,
   selectLayer,
@@ -61,6 +62,7 @@ import {
   setPicking,
   settleTokens,
   type Token,
+  undoStyle,
   useInspect,
 } from "@/stores/inspect";
 import { sendPrompt } from "@/stores/runs";
@@ -241,7 +243,16 @@ export default function DesignPanel({ className }: { className?: string }) {
   };
 
   return (
-    <section aria-label={ti.label} className={cn("flex flex-col overflow-hidden rounded-xl border bg-card text-xs shadow-sm", className)}>
+    <section
+      aria-label={ti.label}
+      className={cn("flex flex-col overflow-hidden rounded-xl border bg-card text-xs shadow-sm", className)}
+      // Cmd+Z and Cmd+Shift+Z step through style changes, unless a field is focused and undoes its own typing.
+      onKeyDown={(e) => {
+        if (!(e.metaKey || e.ctrlKey) || e.key.toLowerCase() !== "z") return;
+        if ((e.target as HTMLElement).closest("input:not([type=range]):not([type=color]), textarea")) return;
+        if (e.shiftKey ? redoStyle() : undoStyle()) e.preventDefault();
+      }}
+    >
       <header className="flex h-11 shrink-0 items-center gap-1 border-b ps-2 pe-1.5">
         <div role="tablist" aria-label={ti.label} className="flex min-w-0 flex-1 items-center gap-0.5">
           {(["properties", "code", "tweaks"] as DesignTab[]).map((k) => (

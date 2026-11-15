@@ -36,10 +36,12 @@ import {
   openTweaks,
   type PickedEl,
   pickElement,
+  redoStyle,
   setPicking,
   setTokens,
   type Token,
   textFromPage,
+  undoStyle,
   useInspect,
 } from "@/stores/inspect";
 import { useRuns } from "@/stores/runs";
@@ -73,8 +75,9 @@ const urlOf = (base: string, route: string | undefined) => base + (route ?? "").
 
 interface BridgeMsg {
   satgas: true;
-  type: "nav" | "pick" | "escape" | "layout" | "size" | "tokens" | "text-edit";
+  type: "nav" | "pick" | "escape" | "layout" | "size" | "tokens" | "text-edit" | "undo";
   value?: string;
+  redo?: boolean;
   tokens?: Token[];
   h?: number;
   path?: string;
@@ -126,6 +129,7 @@ export function AppBody({ card, interactive, large }: { card: Card; interactive:
       else if (m.type === "pick" && m.el) pickElement({ runId, cardId: card.id, app: name, el: m.el, send }, !!m.keep);
       else if (m.type === "tokens" && m.tokens) setTokens(card.id, m.tokens);
       else if (m.type === "text-edit" && typeof m.value === "string") textFromPage(m.value);
+      else if (m.type === "undo") void (m.redo ? redoStyle() : undoStyle());
       else if (m.type === "escape") {
         if (useInspect.getState().picking === card.id) setPicking(null);
         else closeInspect();

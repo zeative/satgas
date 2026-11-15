@@ -68,9 +68,15 @@ interface Inspect {
   attrs: Record<string, string>;
   tokens: Token[] | null;
   tokenEdits: Record<string, string>;
+  // Style changes before and after the current one, for Cmd+Z and Cmd+Shift+Z in the panel or the page.
+  past: Record<string, string>[];
+  future: Record<string, string>[];
 }
 
-const blank = { edits: {}, text: null, attrs: {} };
+const blank = { edits: {}, text: null, attrs: {}, past: [], future: [] };
+// Changes this close together (a drag on a label, arrows held on a field) undo as one step.
+const COALESCE_MS = 500;
+let lastEdit = { at: 0, keys: "" };
 
 export const useInspect = create<Inspect>(() => ({
   picking: null,
@@ -121,10 +127,37 @@ export function setTokens(cardId: string, tokens: Token[]) {
 }
 
 export function editStyle(css: Record<string, string>) {
-  const { target, edits } = useInspect.getState();
+  const { target, edits, past } = useInspect.getState();
   if (!target?.el) return;
-  useInspect.setState({ edits: { ...edits, ...css } });
+  const keys = Object.keys(css).sort().join();
+  const now = Date.now();
+  const same = now - lastEdit.at < COALESCE_MS && lastEdit.keys === keys;
+  lastEdit = { at: now, keys };
+  useInspect.setState({ edits: { ...edits, ...css }, past: same ? past : [...past, edits].slice(-100), future: [] });
   target.send({ type: "style", css });
+}
+
+function restyle(edits: Record<string, string>) {
+  useInspect.getState().target?.send({ type: "restyle", css: edits });
+  lastEdit = { at: 0, keys: "" };
+}
+
+export function undoStyle(): boolean {
+  const { past, future, edits } = useInspect.getState();
+  const prev = past.at(-1);
+  if (!prev) return false;
+  useInspect.setState({ edits: prev, past: past.slice(0, -1), future: [...future, edits] });
+  restyle(prev);
+  return true;
+}
+
+export function redoStyle(): boolean {
+  const { past, future, edits } = useInspect.getState();
+  const next = future.at(-1);
+  if (!next) return false;
+  useInspect.setState({ edits: next, past: [...past, edits], future: future.slice(0, -1) });
+  restyle(next);
+  return true;
 }
 
 export function editText(value: string) {

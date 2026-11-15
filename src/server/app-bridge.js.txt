@@ -420,11 +420,13 @@
     return el === document.documentElement ? document.body : el;
   };
   const select = (el) => {
-    if (picked && picked !== el) clear();
+    // Picking the element already picked keeps its changes, on the page and in the panel alike.
+    const same = picked === el;
+    if (picked && !same) clear();
     picked = el;
     box = box || outline(false);
     redraw();
-    post({ type: "pick", el: describe(el) });
+    post({ type: "pick", el: describe(el), keep: same });
   };
   const clear = () => {
     if (picked) for (const k of Object.keys(edits)) picked.style[k] = "";
@@ -518,7 +520,10 @@
   addEventListener(
     "keydown",
     (e) => {
-      if (editing && (e.key === "Escape" || (e.key === "Enter" && !e.shiftKey))) {
+      if (picked && !editing && (e.metaKey || e.ctrlKey) && (e.key === "z" || e.key === "Z" || e.key === "y")) {
+        e.preventDefault();
+        post({ type: "undo", redo: e.shiftKey || e.key === "y" });
+      } else if (editing && (e.key === "Escape" || (e.key === "Enter" && !e.shiftKey))) {
         e.preventDefault();
         stopEditing();
       } else if (e.key === "Escape" && (picking || picked)) post({ type: "escape" });
@@ -585,6 +590,16 @@
       if (picked === editing && picked.textContent === String(m.value)) return;
       picked.textContent = String(m.value);
       redraw();
+    } else if (m.type === "restyle" && picked) {
+      // The panel's undo and redo: the picked element goes back to exactly these changes.
+      clear();
+      for (const [k, v] of Object.entries(m.css || {})) {
+        if (k === "fontFamily") loadFont(v);
+        picked.style[k] = v;
+        edits[k] = v;
+      }
+      redraw();
+      post({ type: "pick", el: describe(picked), keep: true });
     } else if (m.type === "reset") {
       clear();
       redraw();
