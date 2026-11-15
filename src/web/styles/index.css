@@ -485,3 +485,21 @@
   --diffs-dark-bg: var(--background);
   --diffs-light-bg: var(--background);
 }
+
+/* A card's label keeps one size on screen at any zoom, the way a design canvas names its frames: its box spans the
+   card's on-screen width and is scaled back by the zoom. The canvas sets --sg-zoom without re-rendering. */
+.satgas-label {
+  width: calc(100% * var(--sg-zoom, 1));
+  transform: scale(calc(1 / var(--sg-zoom, 1)));
+  transform-origin: bottom left;
+  container-type: inline-size;
+}
+/* A frame's tools stay out of the way until its card is hovered or selected; touch screens always show them. */
+.satgas-reveal {
+  transition: opacity 150ms ease-out;
+}
+@media (hover: hover) {
+  .react-flow__node:not(:hover, .selected) .satgas-reveal:not(:focus-within, :has([aria-expanded="true"], [aria-pressed="true"])) {
+    opacity: 0;
+  }
+}

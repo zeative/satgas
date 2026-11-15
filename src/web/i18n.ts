@@ -1057,6 +1057,7 @@ export const en = {
     expand: "Expand",
     open: "Open in a new tab",
     reload: "Reload",
+    play: "Play",
     remove: "Delete",
     app: {
       status: { starting: "Starting", running: "Running", stopped: "Stopped", failed: "Failed" } as Record<string, string>,
@@ -2867,6 +2868,7 @@ export const id: typeof en = {
     expand: "Perbesar",
     open: "Buka di tab baru",
     reload: "Muat ulang",
+    play: "Putar",
     remove: "Hapus",
     app: {
       status: { starting: "Menyala", running: "Berjalan", stopped: "Berhenti", failed: "Gagal" },

@@ -1,4 +1,5 @@
-import { createContext, useContext } from "react";
+import { createContext, type ReactNode, useContext } from "react";
+import { createPortal } from "react-dom";
 import type { BoardOp, Card } from "../../../shared/board";
 import { randomUuid } from "../../../shared/random-uuid";
 
@@ -32,4 +33,13 @@ export function keyedSrc(src: string | undefined, runId: string, key: string | u
   const prefix = `/api/runs/${runId}/files/`;
   if (!src || !key || !src.startsWith(prefix) || src.startsWith(`${prefix}~`)) return src;
   return `${prefix}~${key}/${src.slice(prefix.length)}`;
+}
+
+// The label row above a card on the board, where a page frame keeps its controls, the way a design canvas names its
+// frames. Absent in the expanded view, where the card shows its full bar instead.
+export const LabelSlot = createContext<HTMLElement | null>(null);
+
+export function LabelControls({ children }: { children: ReactNode }) {
+  const slot = useContext(LabelSlot);
+  return slot ? createPortal(children, slot) : null;
 }

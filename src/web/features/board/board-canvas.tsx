@@ -12,6 +12,7 @@ import {
   ReactFlowProvider,
   useReactFlow,
   useStore,
+  useStoreApi,
   useViewport,
   ViewportPortal,
 } from "@xyflow/react";
@@ -220,6 +221,19 @@ function Canvas({ run, selectedTaskId, onSelectTask, panelOpen }: Props) {
   const filePicker = useRef<HTMLInputElement>(null);
   // Set on the element directly, so starting and stopping a pan never re-renders the canvas.
   useEffect(() => useCanvasMoving.subscribe((s) => surface.current?.classList.toggle("satgas-moving", s.moving)), []);
+  // The zoom as a CSS variable, so labels over cards keep one size on screen at any zoom (as a design tool's frame
+  // names do) without a render per zoom frame.
+  const flowStore = useStoreApi();
+  useEffect(() => {
+    let last = 0;
+    const apply = (zoom: number) => {
+      if (zoom === last) return;
+      last = zoom;
+      surface.current?.style.setProperty("--sg-zoom", String(zoom));
+    };
+    apply(flowStore.getState().transform[2]);
+    return flowStore.subscribe((s) => apply(s.transform[2]));
+  }, [flowStore]);
 
   const [tool, setTool] = useState<Tool>("select");
   const [toolStyle, setToolStyle] = useState<ToolStyle>({

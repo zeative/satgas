@@ -7,6 +7,7 @@ import {
   Link2,
   Lock,
   Monitor,
+  MoreHorizontal,
   Plus,
   Power,
   RotateCw,
@@ -19,6 +20,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { openExternal } from "@/components/outbound-link";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { t } from "@/i18n";
 import { cn } from "@/lib/utils";
@@ -26,7 +34,7 @@ import { dropFrame, type FileBox, setFrameLayout, useCanvasMoving, useFrames } f
 import { closeInspect, openTweaks, type PickedEl, pickElement, setPicking, setTokens, type Token, useInspect } from "@/stores/inspect";
 import { useRuns } from "@/stores/runs";
 import { type Card, DEVICES, type Device } from "../../../shared/board";
-import { newId, useBoard } from "./context";
+import { LabelControls, newId, useBoard } from "./context";
 import { BarButton, PageFrame } from "./page-frame";
 
 const tb = t.board.browser;
@@ -68,7 +76,9 @@ interface BridgeMsg {
 
 // A web app the team runs, live on the board as a small browser: its address, history, screen size, and a pick mode
 // that hands the element under the pointer to the inspector.
-export function AppBody({ card, interactive }: { card: Card; interactive: boolean }) {
+// On the board the page fills its frame and the controls sit in the label above it; large (Play, or expanded) it is a
+// small browser with its full bar.
+export function AppBody({ card, interactive, large }: { card: Card; interactive: boolean; large?: boolean }) {
   const { runId, commit } = useBoard();
   const name = card.app ?? "";
   const app = useRuns((s) => (s.run?.id === runId ? s.run.apps?.[name] : undefined));
@@ -88,6 +98,8 @@ export function AppBody({ card, interactive }: { card: Card; interactive: boolea
   const route = path !== null && base ? routeOf(path, base) : (card.route ?? "/");
 
   const geometry = useCallback((g: { scale: number; left: number }) => setFrameLayout(card.id, g), [card.id]);
+  const largeRef = useRef(large);
+  largeRef.current = large;
   const send = useCallback((msg: Record<string, unknown>) => {
     frame.current?.contentWindow?.postMessage({ satgas: true, ...msg }, "*");
   }, []);
@@ -98,7 +110,8 @@ export function AppBody({ card, interactive }: { card: Card; interactive: boolea
       const m = e.data;
       if (m.type === "nav" && m.path) setPath(m.path);
       else if (m.type === "size" && m.h) setPageH(Math.min(MAX_PAGE_H, m.h));
-      else if (m.type === "layout" && m.files) setFrameLayout(card.id, { files: m.files, scrollY: m.scrollY ?? 0, vh: m.vh ?? 0 });
+      else if (m.type === "layout" && m.files && !largeRef.current)
+        setFrameLayout(card.id, { files: m.files, scrollY: m.scrollY ?? 0, vh: m.vh ?? 0 });
       else if (m.type === "pick" && m.el) pickElement({ runId, cardId: card.id, app: name, el: m.el, send }, !!m.keep);
       else if (m.type === "tokens" && m.tokens) setTokens(card.id, m.tokens);
       else if (m.type === "escape") {
@@ -125,15 +138,16 @@ export function AppBody({ card, interactive }: { card: Card; interactive: boolea
   const height = useRef(card.h);
   height.current = card.h;
   useEffect(() => {
-    if (!pageH || !scale) return;
-    const want = BAR_H + Math.ceil(pageH * scale);
+    if (large || !pageH || !scale) return;
+    const want = Math.ceil(pageH * scale);
     if (Math.abs(want - height.current) <= 8) return;
     const id = setTimeout(() => commit([{ op: "patch", id: card.id, patch: { h: want } }]), 300);
     return () => clearTimeout(id);
-  }, [pageH, scale, card.id, commit]);
-  // A frame that leaves the board takes its selection with it.
+  }, [large, pageH, scale, card.id, commit]);
+  // A frame that leaves the board takes its selection with it; the large view closing leaves the board's frame as it is.
   useEffect(
     () => () => {
+      if (largeRef.current) return;
       const s = useInspect.getState();
       if (s.picking === card.id) setPicking(null);
       if (s.target?.cardId === card.id) closeInspect();
@@ -193,57 +207,24 @@ export function AppBody({ card, interactive }: { card: Card; interactive: boolea
   const running = status === "running" && !!app;
   // A phone-width frame keeps the address, inspect and screen size; the rest lives on the wider frames and the menu.
   const narrow = card.w < 640;
-  return (
-    <div className="flex size-full flex-col" onPointerEnter={() => setHovered(true)} onPointerLeave={() => setHovered(false)}>
-      <div className="card-handle flex h-8 shrink-0 items-center gap-1 border-b bg-muted/40 px-1.5">
-        <span
-          aria-hidden="true"
-          title={t.board.app.status[status]}
-          className={cn(
-            "mx-1 size-1.5 shrink-0 rounded-full",
-            status === "running"
-              ? "bg-emerald-500"
-              : status === "starting"
-                ? "bg-signal-ink"
-                : status === "failed"
-                  ? "bg-destructive"
-                  : "bg-muted-foreground/50",
-          )}
-        />
-        {!narrow && (
-          <>
-            <BarButton label={tb.back} disabled={!running} onClick={() => send({ type: "back" })}>
-              <ArrowLeft />
-            </BarButton>
-            <BarButton label={tb.forward} disabled={!running} onClick={() => send({ type: "forward" })}>
-              <ArrowRight />
-            </BarButton>
-          </>
-        )}
-        <BarButton label={t.board.reload} onClick={reload}>
-          <RotateCw />
-        </BarButton>
-        <form
-          className="nodrag mx-1 min-w-0 flex-1"
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (draft !== null) go(draft.trim() || "/");
-            setDraft(null);
-            (document.activeElement as HTMLElement | null)?.blur();
-          }}
-        >
-          <input
-            aria-label={tb.address}
-            value={draft ?? route}
-            disabled={!running}
-            spellCheck={false}
-            onChange={(e) => setDraft(e.target.value)}
-            onFocus={(e) => e.currentTarget.select()}
-            onBlur={() => setDraft(null)}
-            onKeyDown={(e) => e.key === "Escape" && e.currentTarget.blur()}
-            className="h-6 w-full rounded-md border border-transparent bg-background px-2 font-mono text-xs text-muted-foreground transition-colors outline-none hover:border-border focus:border-ring focus:text-foreground disabled:opacity-60"
-          />
-        </form>
+  const dot = cn(
+    "size-1.5 shrink-0 rounded-full",
+    status === "running"
+      ? "bg-emerald-500"
+      : status === "starting"
+        ? "bg-signal-ink"
+        : status === "failed"
+          ? "bg-destructive"
+          : "bg-muted-foreground/50",
+  );
+  const DeviceIcon = DEVICE_ICON[device];
+  const nextDevice = DEVICES[(DEVICES.indexOf(device) + 1) % DEVICES.length] ?? "desktop";
+  // What the label above the frame holds on the board: the page it shows, then its tools, quiet until hovered.
+  const controls = (
+    <>
+      <span aria-hidden="true" title={t.board.app.status[status]} className={cn(dot, "mx-0.5")} />
+      <RouteField route={route} disabled={!running} onGo={go} />
+      <span className="satgas-reveal ms-auto flex shrink-0 items-center">
         <BarButton label={tb.inspect} pressed={picking} disabled={!running} onClick={() => setPicking(picking ? null : card.id)}>
           <SquareDashedMousePointer />
         </BarButton>
@@ -255,35 +236,158 @@ export function AppBody({ card, interactive }: { card: Card; interactive: boolea
         >
           <SlidersHorizontal />
         </BarButton>
-        <fieldset aria-label={tb.device} className="m-0 flex items-center border-0 p-0">
-          {DEVICES.map((d) => {
-            const Icon = DEVICE_ICON[d];
-            return (
-              <BarButton key={d} label={tb.devices[d]} pressed={device === d} onClick={() => setDevice(d)}>
-                <Icon />
-              </BarButton>
-            );
-          })}
-        </fieldset>
-        {!narrow && (
-          <>
-            <BarButton label={tb.newFrame} disabled={!running} onClick={addFrame}>
+        <BarButton label={`${tb.device}: ${tb.devices[device]}`} onClick={() => setDevice(nextDevice)} className="@max-[16rem]:hidden">
+          <DeviceIcon />
+        </BarButton>
+        <BarButton label={t.board.reload} onClick={reload} className="@max-[20rem]:hidden">
+          <RotateCw />
+        </BarButton>
+        {app && (
+          <span className="@max-[24rem]:hidden">
+            <AppShare runId={runId} name={name} shared={!!app.shared} path={app.path} />
+          </span>
+        )}
+        <DropdownMenu modal={false}>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label={t.selectionBar.more}
+              title={t.selectionBar.more}
+              className="nodrag size-6 rounded-md text-muted-foreground hover:text-foreground [&_svg]:size-3.5"
+            >
+              <MoreHorizontal />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-52">
+            <DropdownMenuItem disabled={!running} onSelect={() => send({ type: "back" })}>
+              <ArrowLeft />
+              {tb.back}
+            </DropdownMenuItem>
+            <DropdownMenuItem disabled={!running} onSelect={() => send({ type: "forward" })}>
+              <ArrowRight />
+              {tb.forward}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem disabled={!running} onSelect={addFrame}>
               <Plus />
-            </BarButton>
-            {app && <AppShare runId={runId} name={name} shared={!!app.shared} path={app.path} />}
+              {tb.newFrame}
+            </DropdownMenuItem>
             {app && (
-              <BarButton label={t.board.open} onClick={() => openExternal(`${location.origin}${urlOf(app.path, route)}`)}>
+              <DropdownMenuItem onSelect={() => openExternal(`${location.origin}${urlOf(app.path, route)}`)}>
                 <ExternalLink />
-              </BarButton>
+                {t.board.open}
+              </DropdownMenuItem>
             )}
             {running && (
-              <BarButton label={t.board.app.stop} disabled={busy} onClick={() => act("stop")}>
-                <Power />
-              </BarButton>
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem disabled={busy} onSelect={() => act("stop")}>
+                  <Power />
+                  {t.board.app.stop}
+                </DropdownMenuItem>
+              </>
             )}
-          </>
-        )}
-      </div>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </span>
+    </>
+  );
+  return (
+    <div className="flex size-full flex-col" onPointerEnter={() => setHovered(true)} onPointerLeave={() => setHovered(false)}>
+      {large ? (
+        <div className="card-handle flex h-8 shrink-0 items-center gap-1 border-b bg-muted/40 px-1.5">
+          <span
+            aria-hidden="true"
+            title={t.board.app.status[status]}
+            className={cn(
+              "mx-1 size-1.5 shrink-0 rounded-full",
+              status === "running"
+                ? "bg-emerald-500"
+                : status === "starting"
+                  ? "bg-signal-ink"
+                  : status === "failed"
+                    ? "bg-destructive"
+                    : "bg-muted-foreground/50",
+            )}
+          />
+          {!narrow && (
+            <>
+              <BarButton label={tb.back} disabled={!running} onClick={() => send({ type: "back" })}>
+                <ArrowLeft />
+              </BarButton>
+              <BarButton label={tb.forward} disabled={!running} onClick={() => send({ type: "forward" })}>
+                <ArrowRight />
+              </BarButton>
+            </>
+          )}
+          <BarButton label={t.board.reload} onClick={reload}>
+            <RotateCw />
+          </BarButton>
+          <form
+            className="nodrag mx-1 min-w-0 flex-1"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (draft !== null) go(draft.trim() || "/");
+              setDraft(null);
+              (document.activeElement as HTMLElement | null)?.blur();
+            }}
+          >
+            <input
+              aria-label={tb.address}
+              value={draft ?? route}
+              disabled={!running}
+              spellCheck={false}
+              onChange={(e) => setDraft(e.target.value)}
+              onFocus={(e) => e.currentTarget.select()}
+              onBlur={() => setDraft(null)}
+              onKeyDown={(e) => e.key === "Escape" && e.currentTarget.blur()}
+              className="h-6 w-full rounded-md border border-transparent bg-background px-2 font-mono text-xs text-muted-foreground transition-colors outline-none hover:border-border focus:border-ring focus:text-foreground disabled:opacity-60"
+            />
+          </form>
+          <BarButton label={tb.inspect} pressed={picking} disabled={!running} onClick={() => setPicking(picking ? null : card.id)}>
+            <SquareDashedMousePointer />
+          </BarButton>
+          <BarButton
+            label={tb.tweaks}
+            pressed={tweaking}
+            disabled={!running}
+            onClick={() => (tweaking ? closeInspect(true) : openTweaks({ runId, cardId: card.id, app: name, send }))}
+          >
+            <SlidersHorizontal />
+          </BarButton>
+          <fieldset aria-label={tb.device} className="m-0 flex items-center border-0 p-0">
+            {DEVICES.map((d) => {
+              const Icon = DEVICE_ICON[d];
+              return (
+                <BarButton key={d} label={tb.devices[d]} pressed={device === d} onClick={() => setDevice(d)}>
+                  <Icon />
+                </BarButton>
+              );
+            })}
+          </fieldset>
+          {!narrow && (
+            <>
+              <BarButton label={tb.newFrame} disabled={!running} onClick={addFrame}>
+                <Plus />
+              </BarButton>
+              {app && <AppShare runId={runId} name={name} shared={!!app.shared} path={app.path} />}
+              {app && (
+                <BarButton label={t.board.open} onClick={() => openExternal(`${location.origin}${urlOf(app.path, route)}`)}>
+                  <ExternalLink />
+                </BarButton>
+              )}
+              {running && (
+                <BarButton label={t.board.app.stop} disabled={busy} onClick={() => act("stop")}>
+                  <Power />
+                </BarButton>
+              )}
+            </>
+          )}
+        </div>
+      ) : (
+        <LabelControls>{controls}</LabelControls>
+      )}
       {running ? (
         <PageFrame
           key={nonce}
@@ -300,7 +404,8 @@ export function AppBody({ card, interactive }: { card: Card; interactive: boolea
             send({ type: "screen", h: SCREEN_H[device] });
             send({ type: "mode", pick: useInspect.getState().picking === card.id });
           }}
-          onGeometry={geometry}
+          onGeometry={large ? undefined : geometry}
+          inset={large ? BAR_H : 0}
         />
       ) : (
         <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
@@ -324,6 +429,46 @@ export function AppBody({ card, interactive }: { card: Card; interactive: boolea
         </div>
       )}
     </div>
+  );
+}
+
+// The page a frame shows, in the label above it; clicking it turns it into an address field.
+function RouteField({ route, disabled, onGo }: { route: string; disabled: boolean; onGo: (to: string) => void }) {
+  const [draft, setDraft] = useState<string | null>(null);
+  if (draft === null)
+    return (
+      <button
+        type="button"
+        disabled={disabled}
+        title={tb.address}
+        onClick={() => setDraft(route)}
+        className="nodrag min-w-0 truncate rounded px-1 font-mono text-[11px] opacity-70 transition-[opacity,background-color] hover:bg-accent hover:opacity-100 disabled:pointer-events-none"
+      >
+        {route}
+      </button>
+    );
+  return (
+    <form
+      className="nodrag min-w-0 flex-1"
+      onSubmit={(e) => {
+        e.preventDefault();
+        onGo(draft.trim() || "/");
+        setDraft(null);
+      }}
+    >
+      <input
+        aria-label={tb.address}
+        // biome-ignore lint/a11y/noAutofocus: the field appears because the person clicked the address to edit it.
+        autoFocus
+        value={draft}
+        spellCheck={false}
+        onChange={(e) => setDraft(e.target.value)}
+        onFocus={(e) => e.currentTarget.select()}
+        onBlur={() => setDraft(null)}
+        onKeyDown={(e) => e.key === "Escape" && setDraft(null)}
+        className="h-5 w-full rounded border bg-background px-1 font-mono text-[11px] text-foreground outline-none focus:border-ring"
+      />
+    </form>
   );
 }
 

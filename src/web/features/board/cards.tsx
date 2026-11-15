@@ -10,9 +10,9 @@ import { cn } from "@/lib/utils";
 import { type Card, isPdf } from "../../../shared/board";
 import { MiniFace } from "../team/face";
 import { AppBody } from "./app-frame";
-import { FullDetail, keyedSrc, useBoard } from "./context";
+import { FullDetail, keyedSrc, LabelControls, LabelSlot, useBoard } from "./context";
 import { useShiftKey } from "./keys";
-import { BarButton, PageFrame } from "./page-frame";
+import { BarButton, PageFrame, PlayChip } from "./page-frame";
 import { PALETTE } from "./palette";
 import { savedStrokePath } from "./stroke";
 import { TableEditor } from "./table-editor";
@@ -65,7 +65,9 @@ export const editableCard = (card: Card) =>
 
 export const CardNode = memo(function CardNode({ data, selected, width, height }: NodeProps<CardNodeType>) {
   const { card, editing, solo, author } = data;
-  const { commit } = useBoard();
+  const { commit, expand } = useBoard();
+  const isPage = card.kind === "preview";
+  const [slot, setSlot] = useState<HTMLElement | null>(null);
   // A boolean selector, so panning re-renders nothing and zooming only re-renders when the threshold is crossed.
   // Deferred, starting as a placeholder: crossing the threshold or scrolling a card into view fills detail in the
   // background, interruptibly, instead of blocking the pan or zoom.
@@ -94,68 +96,81 @@ export const CardNode = memo(function CardNode({ data, selected, width, height }
         />
       )}
 
-      {/* A label above the card: what a widget is, or the card's title, and a lock when it is locked. Quick actions sit
-          inside the card's corner. */}
-      {(card.title || lockShown || card.widget || author) && (
-        <div className="absolute -top-7 left-0 flex h-6 max-w-full items-center gap-1 text-[11px] text-muted-foreground">
-          {lockShown && (
-            <span title={t.boardMenu.locked} className="flex shrink-0 px-0.5">
-              <Lock aria-hidden="true" className="size-3" />
-              <span className="sr-only">{t.boardMenu.locked}</span>
-            </span>
-          )}
-          {card.widget && <WidgetLabel widget={card.widget} />}
-          {/* Who made it, in place of a thread back to them across the board. */}
-          {author && (
-            <span className="flex shrink-0 items-center gap-2 ps-0.5">
-              <MiniFace seed={author.id} className="size-3.5" />
-              {author.name}
-              {card.title && (
-                <span aria-hidden="true" className="text-muted-foreground">
-                  ·
-                </span>
-              )}
-            </span>
-          )}
-          {card.title && <span className="card-handle truncate px-0.5">{card.title}</span>}
+      {/* A label above the card: what a widget is, or the card's title, and a lock when it is locked. It keeps one
+          size on screen at any zoom, as a design canvas names its frames; a page frame keeps its controls and Play
+          here instead of a bar inside the page. */}
+      {(card.title || lockShown || card.widget || author || isPage) && (
+        <div className="satgas-label absolute bottom-full left-0">
+          <div className="flex h-7 w-full min-w-0 items-center gap-1.5 pb-1 text-xs text-muted-foreground">
+            {lockShown && (
+              <span title={t.boardMenu.locked} className="flex shrink-0">
+                <Lock aria-hidden="true" className="size-3" />
+                <span className="sr-only">{t.boardMenu.locked}</span>
+              </span>
+            )}
+            {card.widget && <WidgetLabel widget={card.widget} />}
+            {/* Who made it, in place of a thread back to them across the board. */}
+            {author && (
+              <span className="card-handle flex shrink-0 items-center gap-1.5">
+                <MiniFace seed={author.id} className="size-3.5" />
+                {author.name}
+                {card.title && (
+                  <span aria-hidden="true" className="opacity-60">
+                    ·
+                  </span>
+                )}
+              </span>
+            )}
+            {card.title && (
+              <span className={cn("card-handle min-w-0 truncate", isPage ? "max-w-[55%] shrink-0" : "flex-1")}>{card.title}</span>
+            )}
+            {isPage && (
+              <>
+                <span ref={setSlot} className="flex min-w-0 flex-1 items-center gap-0.5" />
+                <PlayChip label={t.board.play} onClick={() => expand(card)} />
+              </>
+            )}
+          </div>
         </div>
       )}
 
-      <div
-        className={cn(
-          "group/card relative size-full overflow-hidden rounded-xl",
-          shellOf(card),
-          card.kind === "drawing" && "pointer-events-none",
-          card.kind === "frame" && "overflow-visible",
-          HEAVY.has(card.kind) && "[contain:content]",
-          far && "shadow-none",
-          selected && card.kind !== "drawing" && "ring-2 ring-foreground/35",
-        )}
-      >
-        {far && HEAVY.has(card.kind) && !staysLive ? (
-          <FarBody card={card} />
-        ) : (
-          // Only a shape draws from its size, and only it gets the live one, so other bodies stay memoized through a resize.
-          <CardBody
-            card={card}
-            active={selected && !resizing}
-            editing={editing}
-            w={card.kind === "shape" ? width : undefined}
-            h={card.kind === "shape" ? height : undefined}
-          />
-        )}
-        {/* A preview carries its actions in its own header bar; every other card in its top corner, on hover or selected. */}
-        {hasQuick && card.kind !== "preview" && !far && (
-          <span
-            className={cn(
-              "nodrag absolute top-1.5 right-1.5 z-10 flex items-center rounded-md border bg-card/95 p-0.5 opacity-0 shadow-xs transition-opacity group-hover/card:opacity-100 [@media(hover:none)]:opacity-100",
-              quick && "opacity-100",
-            )}
-          >
-            <QuickActions card={card} />
-          </span>
-        )}
-      </div>
+      <LabelSlot value={slot}>
+        <div
+          className={cn(
+            "group/card relative size-full overflow-hidden rounded-xl",
+            shellOf(card),
+            card.kind === "drawing" && "pointer-events-none",
+            card.kind === "frame" && "overflow-visible",
+            HEAVY.has(card.kind) && "[contain:content]",
+            far && "shadow-none",
+            selected && card.kind !== "drawing" && "ring-2 ring-foreground/35",
+          )}
+        >
+          {far && HEAVY.has(card.kind) && !staysLive ? (
+            <FarBody card={card} />
+          ) : (
+            // Only a shape draws from its size, and only it gets the live one, so other bodies stay memoized through a resize.
+            <CardBody
+              card={card}
+              active={selected && !resizing}
+              editing={editing}
+              w={card.kind === "shape" ? width : undefined}
+              h={card.kind === "shape" ? height : undefined}
+            />
+          )}
+          {/* A preview carries its actions in its own header bar; every other card in its top corner, on hover or selected. */}
+          {hasQuick && card.kind !== "preview" && !far && (
+            <span
+              className={cn(
+                "nodrag absolute top-1.5 right-1.5 z-10 flex items-center rounded-md border bg-card/95 p-0.5 opacity-0 shadow-xs transition-opacity group-hover/card:opacity-100 [@media(hover:none)]:opacity-100",
+                quick && "opacity-100",
+              )}
+            >
+              <QuickActions card={card} />
+            </span>
+          )}
+        </div>
+      </LabelSlot>
 
       {card.kind === "drawing" && !card.from ? null : BARE.has(card.kind) ? (
         // Frames and ink take no connectors from people, but an agent's frame hangs off its task, and React Flow only
@@ -199,13 +214,7 @@ const FAR_COLS = 5;
 // What a heavy card shows from far away: its real words or rows, unstyled and capped, in a handful of elements. A live
 // page stays a frame, since a board of loaded pages is what makes zooming out slow.
 function FarBody({ card }: { card: Card }) {
-  if (card.kind === "preview")
-    return (
-      <div aria-hidden="true" className="flex size-full flex-col">
-        <div className="h-8 shrink-0 border-b bg-muted/40" />
-        <div className="flex-1 bg-muted/30" />
-      </div>
-    );
+  if (card.kind === "preview") return <div aria-hidden="true" className="size-full bg-muted/30" />;
   if ((card.kind === "doc" || card.kind === "code") && card.text) {
     const text = card.kind === "doc" ? plainText(card.text) : card.text.slice(0, FAR_CHARS);
     const [first = "", ...rest] = text.split("\n").filter((l) => l.trim());
@@ -312,7 +321,11 @@ export const CardBody = memo(function CardBody({ card, active = false, large = f
     case "image":
       return card.src ? <ImageBody card={card} src={keyedSrc(card.src, runId, fileKey) ?? card.src} /> : null;
     case "preview":
-      return card.app ? <AppBody card={card} interactive={active || large} /> : <PreviewBody card={card} interactive={active || large} />;
+      return card.app ? (
+        <AppBody card={card} interactive={active || large} large={large} />
+      ) : (
+        <PreviewBody card={card} interactive={active || large} large={large} />
+      );
     case "code":
       return card.from || large ? (
         <CodeText text={card.text ?? ""} name={card.title} />
@@ -720,25 +733,41 @@ function TableBody({ rows }: { rows: string[][] }) {
   );
 }
 
-function PreviewBody({ card, interactive }: { card: Card; interactive: boolean }) {
+function PreviewBody({ card, interactive, large }: { card: Card; interactive: boolean; large?: boolean }) {
   const [nonce, setNonce] = useState(0);
   const [phone, setPhone] = useState(false);
   const page = !isPdf(card.src ?? "");
   const { runId, fileKey } = useBoard();
+  const file = card.src?.split("/files/")[1] ?? card.src;
+  const actions = (
+    <>
+      {page && (
+        <BarButton label={phone ? t.board.desktop : t.board.mobile} onClick={() => setPhone((v) => !v)}>
+          {phone ? <Monitor /> : <Smartphone />}
+        </BarButton>
+      )}
+      <BarButton label={t.board.reload} onClick={() => setNonce((n) => n + 1)}>
+        <RotateCw />
+      </BarButton>
+    </>
+  );
   return (
     <div className="flex size-full flex-col">
-      <div className="card-handle flex h-8 shrink-0 items-center gap-2 border-b bg-muted/40 px-2.5">
-        <span className="min-w-0 flex-1 truncate font-mono text-xs text-muted-foreground">{card.src?.split("/files/")[1] ?? card.src}</span>
-        <QuickActions card={card} />
-        {page && (
-          <BarButton label={phone ? t.board.desktop : t.board.mobile} onClick={() => setPhone((v) => !v)}>
-            {phone ? <Monitor /> : <Smartphone />}
-          </BarButton>
-        )}
-        <BarButton label={t.board.reload} onClick={() => setNonce((n) => n + 1)}>
-          <RotateCw />
-        </BarButton>
-      </div>
+      {large ? (
+        <div className="card-handle flex h-8 shrink-0 items-center gap-2 border-b bg-muted/40 px-2.5">
+          <span className="min-w-0 flex-1 truncate font-mono text-xs text-muted-foreground">{file}</span>
+          <QuickActions card={card} />
+          {actions}
+        </div>
+      ) : (
+        <LabelControls>
+          {!card.title && <span className="card-handle min-w-0 truncate font-mono text-[11px]">{file}</span>}
+          <span className="satgas-reveal ms-auto flex shrink-0 items-center">
+            {actions}
+            <QuickActions card={card} only="open" />
+          </span>
+        </LabelControls>
+      )}
       <PageFrame
         key={nonce}
         src={keyedSrc(card.src, runId, fileKey)}
@@ -748,6 +777,7 @@ function PreviewBody({ card, interactive }: { card: Card; interactive: boolean }
         interactive={interactive}
         w={card.w}
         h={card.h}
+        inset={large ? 32 : 0}
       />
     </div>
   );
@@ -793,12 +823,12 @@ export function imageFitInside(w: number, h: number, ratio: number): { w: number
 }
 
 // Expand and open-in-tab, the same two buttons wherever a card shows them.
-function QuickActions({ card }: { card: Card }) {
+function QuickActions({ card, only }: { card: Card; only?: "open" }) {
   const { expand, runId, fileKey } = useBoard();
   const opensInTab = (card.kind === "preview" || card.kind === "image") && card.src;
   return (
     <>
-      {EXPANDABLE.has(card.kind) && (
+      {!only && EXPANDABLE.has(card.kind) && (
         <BarButton label={t.board.expand} onClick={() => expand(card)}>
           <Maximize2 />
         </BarButton>
@@ -808,7 +838,7 @@ function QuickActions({ card }: { card: Card }) {
           <ExternalLink />
         </BarButton>
       )}
-      {(card.kind === "doc" || card.kind === "table") && card.src && (
+      {!only && (card.kind === "doc" || card.kind === "table") && card.src && (
         <BarButton
           label={t.board.download(card.src.split("/").pop() ?? "")}
           onClick={() => {
