@@ -197,11 +197,15 @@ solid with a hairline only once the page scrolls.
 - **Images** show an "Adding…" toast that turns into the result; a drop, paste or pick with no image says only images
   can be added.
 
-### Sidebar (modelled on VS Code)
+### Sidebar (the left workspace panel)
 
-Every tab of the left sidebar is built from `workspace/tree-row.tsx`: 22px rows edge to edge in 13px type, 8px a level,
-foldable sections, indent guides on hover, row actions on hover, arrow-key navigation. Tabs are plain words with a line
-under the chosen one, in a 36px header. New sidebar content uses these, never cards or boxes.
+A floating card in its own column (`py-3 ps-3`, radius 16, border, `shadow-lg`), the pair of the chat on the right; a
+full-screen sheet on a phone. A 48px header with the design panel's pill tabs (Changes · Files · Git · Outline) and the
+close button. Every tab is built from `workspace/tree-row.tsx`: 28px rows with a rounded hover inside the card, 13px
+type, 16px a level so a row's icon sits under its group's name, guide lines only from the second level, foldable
+sections, row actions on hover, arrow-key navigation. A group with no face or icon (Pages, Branch) is a quiet 12px label
+with its count on the right; a task or folder reads as a name. The outline lists frames, then loose cards by kind:
+pages, documents, notes, images, other.
 
 Files open in editor tabs over the canvas (`file-view.tsx`): one tab per file with a breadcrumb under them, kept when going
 back to the canvas, gone when leaving the board. The code fills the view and scrolls past its last line.
