@@ -221,3 +221,10 @@ export function settleTokens(names: string[]) {
   );
   useInspect.setState({ tokenEdits: left, ...(next ? { tokens: next } : {}) });
 }
+
+// The new words are in the source now: the picked element says them, and nothing is pending.
+export function settleText(value: string) {
+  const { target } = useInspect.getState();
+  if (!target?.el) return;
+  useInspect.setState({ text: null, target: { ...target, el: { ...target.el, text: value } } });
+}

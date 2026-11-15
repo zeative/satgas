@@ -62,6 +62,7 @@ import {
   selectLayer,
   setDesignTab,
   setPicking,
+  settleText,
   settleTokens,
   type Token,
   undoStyle,
@@ -226,9 +227,24 @@ export default function DesignPanel({ className }: { className?: string }) {
           tokens = Object.fromEntries(Object.entries(tokenEdits).filter(([k]) => r.missed.includes(k)));
         }
       }
-      const rest = Object.keys(edits).length + (text !== null ? 1 : 0) + Object.keys(attrs).length + Object.keys(tokens).length;
+      // New words for an element with its source line go straight there when they can be placed without guessing.
+      let words = text;
+      if (el?.loc && el.ownText && text !== null && text.trim() !== el.text.trim()) {
+        const res = await fetch(`/api/runs/${target.runId}/apps/${target.app}/text`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ loc: el.loc, from: el.text, to: text }),
+        });
+        const r = res.ok ? ((await res.json()) as { ok: boolean; file?: string }) : null;
+        if (r?.ok && r.file) {
+          settleText(text);
+          toast.success(ti.savedText(r.file));
+          words = null;
+        }
+      }
+      const rest = Object.keys(edits).length + (words !== null ? 1 : 0) + Object.keys(attrs).length + Object.keys(tokens).length;
       if (!rest && !ask.trim()) return;
-      await sendPrompt(target.runId, editPrompt(target.app, el, edits, text, attrs, tokens, ask.trim()), [], [target.cardId]);
+      await sendPrompt(target.runId, editPrompt(target.app, el, edits, words, attrs, tokens, ask.trim()), [], [target.cardId]);
       toast.success(ti.sent);
       setAsk("");
       setPicking(null);

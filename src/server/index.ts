@@ -111,6 +111,7 @@ import {
   topicOf,
 } from "./store";
 import { teamCall } from "./team";
+import { writeText } from "./text-edit";
 import { cleanTokens, writeTokens } from "./tokens";
 import { toolStatus } from "./tools";
 import { startUpdate, updateInfo } from "./updates";
@@ -1069,6 +1070,16 @@ const server: Server<SocketData> = Bun.serve({
         if (action === "share" || action === "unshare") {
           shareApp(run.id, name, action === "share");
           return Response.json({ ok: true });
+        }
+        // Words rewritten in the design panel, written into the source line the element came from when it is unambiguous.
+        if (action === "text") {
+          const body = (await req.json().catch(() => null)) as { loc?: unknown; from?: unknown; to?: unknown } | null;
+          if (typeof body?.loc !== "string" || typeof body.from !== "string" || typeof body.to !== "string")
+            return error(400, "Send { loc, from, to }.");
+          const app = run.apps[name];
+          const dir = app ? folderOf(run.cwd, app.dir) : null;
+          if (!dir) return error(404, "App not found.");
+          return Response.json(await writeText(dir, body.loc, body.from, body.to));
         }
         // Tweaks from the design panel, written into the app's stylesheets where each token is defined once.
         if (action === "tokens") {
