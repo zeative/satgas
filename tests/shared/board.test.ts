@@ -206,3 +206,10 @@ describe("app frames", () => {
     expect(ops).not.toBeNull();
   });
 });
+
+test("a card a person sized keeps that mark, and only as a yes or no", () => {
+  expect(sanitizeOps([{ op: "patch", id: "a", patch: { h: 300, sized: true } }])).toEqual([
+    { op: "patch", id: "a", patch: { h: 300, sized: true } },
+  ]);
+  expect(sanitizeOps([{ op: "patch", id: "a", patch: { sized: "yes" } }])).toBeNull();
+});

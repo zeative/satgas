@@ -77,6 +77,8 @@ export interface Card {
   rough?: number;
   // A locked card cannot be moved, resized, edited or deleted until it is unlocked.
   locked?: boolean;
+  // A person set this card's size by hand, so it no longer grows or shrinks to fit what it holds.
+  sized?: boolean;
   // Stacking order within its layer; frames always sit under everything else.
   z?: number;
   // Cards sharing a group id are selected and moved as one.
@@ -252,6 +254,7 @@ const REMOVABLE = [
   "opacity",
   "rough",
   "locked",
+  "sized",
   "z",
   "group",
   "ref",
@@ -319,7 +322,7 @@ function cleanCardFields(input: Record<string, unknown>): Partial<Card> | null {
     if (!Array.isArray(p) || p.length > LIMITS.points / 2 || !p.every((v) => num(v) && v >= 0 && v <= 1)) return null;
     out.pressure = p as number[];
   }
-  for (const k of ["highlight", "locked"] as const) {
+  for (const k of ["highlight", "locked", "sized"] as const) {
     if (raw[k] === undefined) continue;
     if (typeof raw[k] !== "boolean") return null;
     out[k] = raw[k] as boolean;

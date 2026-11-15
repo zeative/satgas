@@ -1,6 +1,6 @@
 import { Handle, type Node, type NodeProps, NodeResizer, Position, type ReactFlowState, useStore } from "@xyflow/react";
 import { Download, ExternalLink, Lock, Maximize2, Monitor, RotateCw, Smartphone } from "lucide-react";
-import { type CSSProperties, lazy, memo, Suspense, useContext, useDeferredValue, useEffect, useRef, useState } from "react";
+import { type CSSProperties, lazy, memo, type ReactNode, Suspense, useContext, useDeferredValue, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { LinkedText } from "@/components/linked-text";
 import { InlineText, Markdown } from "@/components/markdown";
@@ -92,7 +92,7 @@ export const CardNode = memo(function CardNode({ data, selected, width, height }
           onStart={() => setResizing(true)}
           onEnd={(p) => {
             setResizing(false);
-            commit([{ op: "patch", id: card.id, patch: p }]);
+            commit([{ op: "patch", id: card.id, patch: FITS.has(card.kind) ? { ...p, sized: true } : p }]);
           }}
         />
       )}
@@ -295,7 +295,9 @@ export const CardBody = memo(function CardBody({ card, active = false, large = f
     case "doc":
       return card.from || large ? (
         <div className={cn("nowheel size-full overflow-auto", large ? "p-6" : "p-4")}>
-          <Markdown text={card.text ?? ""} />
+          <FitsContent card={card} on={!large} pad={32}>
+            <Markdown text={card.text ?? ""} />
+          </FitsContent>
         </div>
       ) : (
         <EditableText
@@ -308,7 +310,7 @@ export const CardBody = memo(function CardBody({ card, active = false, large = f
       );
     case "table":
       return card.from || large ? (
-        <TableBody rows={card.rows ?? []} />
+        <TableBody rows={card.rows ?? []} fit={large ? undefined : card} />
       ) : editing ? (
         <TableEditor card={card} />
       ) : (card.rows ?? []).some((r) => r.some(Boolean)) ? (
@@ -696,39 +698,80 @@ interface Token {
   style?: CSSProperties;
 }
 
-function TableBody({ rows }: { rows: string[][] }) {
+function TableBody({ rows, fit }: { rows: string[][]; fit?: Card }) {
   const [head, ...body] = rows;
+  const table = (
+    <table className="w-full border-collapse text-xs">
+      {head && (
+        <thead>
+          <tr>
+            {head.map((cell, i) => (
+              // biome-ignore lint/suspicious/noArrayIndexKey: columns have no identity beyond their position.
+              <th key={i} className={HEAD_CELL}>
+                <InlineText text={cell} />
+              </th>
+            ))}
+          </tr>
+        </thead>
+      )}
+      <tbody>
+        {body.map((row, r) => (
+          // biome-ignore lint/suspicious/noArrayIndexKey: rows are parsed from immutable data and never reorder.
+          <tr key={r} className="border-b last:border-0">
+            {row.map((cell, c) => (
+              // biome-ignore lint/suspicious/noArrayIndexKey: cells have no identity beyond their position.
+              <td key={c} className="px-3 py-2 align-top tabular-nums">
+                <InlineText text={cell} />
+              </td>
+            ))}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
   return (
     <div className="nowheel size-full overflow-auto">
-      <table className="w-full border-collapse text-xs">
-        {head && (
-          <thead>
-            <tr>
-              {head.map((cell, i) => (
-                // biome-ignore lint/suspicious/noArrayIndexKey: columns have no identity beyond their position.
-                <th key={i} className={HEAD_CELL}>
-                  <InlineText text={cell} />
-                </th>
-              ))}
-            </tr>
-          </thead>
-        )}
-        <tbody>
-          {body.map((row, r) => (
-            // biome-ignore lint/suspicious/noArrayIndexKey: rows are parsed from immutable data and never reorder.
-            <tr key={r} className="border-b last:border-0">
-              {row.map((cell, c) => (
-                // biome-ignore lint/suspicious/noArrayIndexKey: cells have no identity beyond their position.
-                <td key={c} className="px-3 py-2 align-top tabular-nums">
-                  <InlineText text={cell} />
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      {fit ? (
+        <FitsContent card={fit} on pad={0}>
+          {table}
+        </FitsContent>
+      ) : (
+        table
+      )}
     </div>
   );
+}
+
+// Doc and table cards the team made take the height of what they hold, up to a limit, so a short report does not sit in
+// a tall empty card; a card a person resized keeps their size.
+const FITS = new Set<Card["kind"]>(["doc", "table"]);
+const FIT_MAX = 720;
+const FIT_MIN = 120;
+
+function FitsContent({ card, on, pad, children }: { card: Card; on: boolean; pad: number; children: ReactNode }) {
+  const { commit, hasCard } = useBoard();
+  const box = useRef<HTMLDivElement>(null);
+  const h = useRef(card.h);
+  h.current = card.h;
+  const active = on && !!card.from && !card.sized && !card.locked;
+  useEffect(() => {
+    const el = box.current;
+    if (!active || !el) return;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const ro = new ResizeObserver(() => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        const want = Math.round(Math.min(FIT_MAX, Math.max(FIT_MIN, el.offsetHeight + pad)));
+        if (Math.abs(want - h.current) > 8 && hasCard(card.id)) commit([{ op: "patch", id: card.id, patch: { h: want } }]);
+      }, 250);
+    });
+    ro.observe(el);
+    return () => {
+      clearTimeout(timer);
+      ro.disconnect();
+    };
+  }, [active, pad, card.id, commit, hasCard]);
+  return <div ref={box}>{children}</div>;
 }
 
 function PreviewBody({ card, interactive, large }: { card: Card; interactive: boolean; large?: boolean }) {
