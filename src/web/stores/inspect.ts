@@ -33,6 +33,8 @@ export interface PickedEl {
   html: string;
   selector: string;
   loc?: string;
+  // Elements on the page drawn from the same source line; above one, the element is a shared component's.
+  uses?: number;
   path: string;
   styles: Record<string, string>;
   // The values its stylesheets write (clamp(), %, em…), where the computed px would hide the intent.
@@ -235,4 +237,19 @@ export function settleStyles(rest: Record<string, string>) {
   useInspect.setState({ edits: rest, past: [], future: [] });
   // The page picks up the new classes from its dev server; then the inline preview of what was written can go.
   setTimeout(() => target?.send({ type: "restyle", css: rest }), 800);
+}
+
+// The component an element comes from, when its source line is in a shared component or drawn more than once here.
+export function componentOf(el: Pick<PickedEl, "loc" | "uses">): { name: string; uses: number } | null {
+  const file = el.loc?.replace(/:\d+(?::\d+)?$/, "");
+  if (!file) return null;
+  const uses = el.uses ?? 1;
+  if (uses < 2 && !/(^|\/)components\//.test(file)) return null;
+  const base =
+    file
+      .split("/")
+      .at(-1)
+      ?.replace(/\.[jt]sx?$/, "") ?? file;
+  const name = base.replace(/(^|[-_])(\w)/g, (_, _s, c: string) => c.toUpperCase());
+  return { name, uses };
 }

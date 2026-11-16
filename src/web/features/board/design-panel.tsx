@@ -13,6 +13,7 @@ import {
   ChevronDown,
   ChevronRight,
   Columns3,
+  Component,
   Copy,
   Crosshair,
   FileText,
@@ -49,6 +50,7 @@ import { isMac, t } from "@/i18n";
 import { cn } from "@/lib/utils";
 import {
   closeInspect,
+  componentOf,
   type DesignTab,
   editAttr,
   editStyle,
@@ -468,9 +470,20 @@ function Properties({
     )?.name ?? "custom";
   const weight = String(Math.round(Number(s.fontWeight) / 100) * 100);
 
+  const component = componentOf(el);
   return (
     <>
       {el.layers && el.layers.length > 0 && <Layers layers={el.layers} picked={el.ref} />}
+      {component && (
+        // A component's element, the way a design tool marks an instance: a change here lands in the component.
+        <div className="flex items-start gap-2 border-b bg-violet-500/8 px-2.5 py-2 text-xs">
+          <Component className="mt-px size-3.5 shrink-0 text-violet-500" aria-hidden="true" />
+          <p className="min-w-0 text-muted-foreground">
+            <span className="font-medium text-foreground">{component.name}</span>{" "}
+            {component.uses > 1 ? ti.componentUses(component.uses) : ti.componentShared}
+          </p>
+        </div>
+      )}
       <div className="flex h-9 items-center justify-between border-b px-2.5">
         {(
           [

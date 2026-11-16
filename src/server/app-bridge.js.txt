@@ -489,6 +489,10 @@
       html: el.outerHTML.slice(0, 900),
       selector: selector(el),
       loc: loc ? loc.getAttribute("data-satgas-loc") || loc.getAttribute("data-inspector-relative-path") : undefined,
+      // How many elements on the page come from the same source line: more than one means a shared component.
+      uses: loc?.hasAttribute("data-satgas-loc")
+        ? document.querySelectorAll(`[data-satgas-loc="${CSS.escape(loc.getAttribute("data-satgas-loc"))}"]`).length
+        : undefined,
       path: location.pathname,
       styles,
     };
