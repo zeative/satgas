@@ -96,6 +96,12 @@ export const CardNode = memo(function CardNode({ data, selected, width, height }
           }}
         />
       )}
+      {/* Its size under a lone selected card, live while resizing, as a design tool shows a frame's dimensions. */}
+      {card.kind !== "drawing" && solo && !editing && (
+        <span aria-hidden="true" className="satgas-size-badge pointer-events-none absolute left-1/2 z-10 -translate-x-1/2">
+          {Math.round(width ?? card.w)} × {Math.round(height ?? card.h)}
+        </span>
+      )}
 
       {/* A label above the card: what a widget is, or the card's title, and a lock when it is locked. It keeps one
           size on screen at any zoom, as a design canvas names its frames; a page frame keeps its controls and Play
