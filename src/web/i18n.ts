@@ -1112,6 +1112,10 @@ export const en = {
       device: "Screen size",
       devices: { desktop: "Desktop", tablet: "Tablet", phone: "Phone", post: "Post", story: "Story", slide: "Slide", email: "Email" },
       newFrame: "Open this page in a new frame",
+      exportPng: (w: number) => `Export PNG · ${w} wide`,
+      exporting: "Taking the picture…",
+      exported: "PNG saved",
+      exportFailed: "The picture failed",
       tweaks: "Tweaks",
     },
     inspect: {
@@ -2968,6 +2972,10 @@ export const id: typeof en = {
       device: "Ukuran layar",
       devices: { desktop: "Desktop", tablet: "Tablet", phone: "HP", post: "Post", story: "Story", slide: "Slide", email: "Email" },
       newFrame: "Buka halaman ini di frame baru",
+      exportPng: (w) => `Ekspor PNG · lebar ${w}`,
+      exporting: "Mengambil gambar…",
+      exported: "PNG tersimpan",
+      exportFailed: "Gambar gagal diambil",
       tweaks: "Tweaks",
     },
     inspect: {

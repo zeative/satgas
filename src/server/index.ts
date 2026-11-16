@@ -2,7 +2,7 @@ import { mkdir, stat } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import type { Server, ServerWebSocket } from "bun";
 import pkg from "../../package.json";
-import { sanitizeOps } from "../shared/board";
+import { DEVICES, type Device, sanitizeOps } from "../shared/board";
 import { describeOps, mergeEvents } from "../shared/board-edit";
 import { PROVIDERS } from "../shared/providers";
 import { maskSchedule, nextRun } from "../shared/schedules";
@@ -59,6 +59,7 @@ import {
   stopRun,
   unqueuePrompt,
 } from "./orchestrator";
+import { shootFrame } from "./page-shot";
 import { providerStatuses, testProvider } from "./providers";
 import { checkPull, linkPull, startPullWatch, updatePull } from "./pulls";
 import { workspaceTree } from "./refs";
@@ -1111,10 +1112,21 @@ const server: Server<SocketData> = Bun.serve({
         }
         return error(404, "Unknown action.");
       }),
-      GET: api((req) => {
+      GET: api(async (req) => {
         const run = getRun(req.params.id);
         const name = cleanAppName(req.params.name);
-        if (!run || !name || !run.apps?.[name] || req.params.action !== "log") return error(404, "App not found.");
+        if (!run || !name || !run.apps?.[name]) return error(404, "App not found.");
+        // A picture of one page at the size its frame is made for: a post at 1080 square, a page whole.
+        if (req.params.action === "export") {
+          const q = new URL(req.url).searchParams;
+          const route = q.get("route") ?? "/";
+          const device = (q.get("device") ?? "desktop") as Device;
+          if (!/^\/[\w\-./?=&%]{0,200}$/.test(route) || !DEVICES.includes(device)) return error(400, "Send a route and a device.");
+          const shot = await shootFrame(run.id, name, route, device);
+          if (!shot.ok) return error(409, shot.error);
+          return new Response(shot.png, { headers: { "content-type": "image/png", "cache-control": "no-store" } });
+        }
+        if (req.params.action !== "log") return error(404, "App not found.");
         return Response.json({ lines: appLog(run.id, name) });
       }),
     },

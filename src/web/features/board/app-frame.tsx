@@ -2,6 +2,7 @@ import {
   ArrowLeft,
   ArrowRight,
   Check,
+  Download,
   ExternalLink,
   Globe,
   Link2,
@@ -260,6 +261,21 @@ export function AppBody({ card, interactive, large }: { card: Card; interactive:
       },
     ]);
 
+  // The page as a picture at the size it is made for: a post at 1080 square, a page whole, from the team's own browser.
+  const exportPng = () => {
+    const q = new URLSearchParams({ route, device });
+    const done = fetch(`/api/runs/${runId}/apps/${name}/export?${q}`).then(async (res) => {
+      if (!res.ok) throw new Error(((await res.json().catch(() => null)) as { error?: string } | null)?.error ?? tb.exportFailed);
+      const url = URL.createObjectURL(await res.blob());
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${(card.title || name).replace(/[\\/:*?"<>|]+/g, "-")}.png`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 10_000);
+    });
+    toast.promise(done, { loading: tb.exporting, success: tb.exported, error: (e: Error) => e.message });
+  };
+
   const running = status === "running" && !!app;
   // A phone-width frame keeps the address, inspect and screen size; the rest lives on the wider frames and the menu.
   const narrow = card.w < 640;
@@ -347,6 +363,10 @@ export function AppBody({ card, interactive, large }: { card: Card; interactive:
                 {t.board.open}
               </DropdownMenuItem>
             )}
+            <DropdownMenuItem disabled={!running} onSelect={exportPng}>
+              <Download />
+              {tb.exportPng(DEVICE_SIZE[device].w)}
+            </DropdownMenuItem>
             {running && (
               <>
                 <DropdownMenuSeparator />

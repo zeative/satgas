@@ -58,7 +58,7 @@ const WIDTHS = [
 ] as const;
 
 // Async, so the server keeps answering while a browser loads pages.
-async function exec(cmd: string[], cwd: string, timeout = 60_000) {
+export async function exec(cmd: string[], cwd: string, timeout = 60_000) {
   const p = Bun.spawn(cmd, { cwd, stdout: "pipe", stderr: "pipe" });
   const timer = setTimeout(() => p.kill(), timeout);
   const [out, err, code] = await Promise.all([new Response(p.stdout).text(), new Response(p.stderr).text(), p.exited]);
@@ -78,7 +78,7 @@ const slug = (route: string) => route.replace(/^\/+|\/+$/g, "").replace(/[^a-z0-
 
 // A full-page picture never scrolls, so whatever waits to be seen (lazy pictures, charts and sections that reveal on
 // scroll) would show blank. The page is walked down a screen at a time first, then back to the top.
-async function scrollThrough(ab: (...args: string[]) => Promise<{ code: number; out: string }>, screen: number) {
+export async function scrollThrough(ab: (...args: string[]) => Promise<{ code: number; out: string }>, screen: number) {
   const height = Number((await ab("eval", "document.documentElement.scrollHeight")).out.match(/\d+/)?.[0] ?? 0);
   for (let y = screen; y < Math.min(height, screen * 14); y += screen) {
     await ab("eval", `scrollTo(0, ${y})`);
