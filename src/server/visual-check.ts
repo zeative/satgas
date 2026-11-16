@@ -1,8 +1,8 @@
 import { mkdir, readdir, stat } from "node:fs/promises";
 import { join } from "node:path";
+import { DEVICE_SIZE, type Format, isFixed, isFormat } from "../shared/board";
 import { runClaude } from "./agents/claude";
 import { runCodex } from "./agents/codex";
-import { DEVICE_SIZE, type Format, isFixed, isFormat } from "../shared/board";
 import { portOf, type Screen, screensOf } from "./apps";
 import { config } from "./config";
 import { repeatedDisplay } from "./fonts-used";
