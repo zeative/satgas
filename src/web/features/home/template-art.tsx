@@ -178,6 +178,49 @@ const ART: Record<string, ReactNode> = {
       </Sheet>
     </>
   ),
+  social: (
+    <>
+      <Sheet x={20} y={18} w={50} h={50} tilt={-9} fill="#fde68a" />
+      <Sheet x={36} y={14} w={54} h={54} tilt={-1} fill="url(#art-rose)">
+        <Bar x={6} y={8} w={20} h={3} fill="#fff" />
+        <Bar x={6} y={30} w={36} h={5} fill="#fff" />
+        <Bar x={6} y={38} w={28} h={5} fill="#fff" />
+        <rect x={6} y={46} width={16} height={4} rx={2} fill="#18181b" />
+      </Sheet>
+      <Sheet x={70} y={22} w={36} h={48} tilt={8} fill="#18181b">
+        <circle cx={18} cy={18} r={8} fill="#f97316" />
+        <Bar x={6} y={32} w={24} h={3} fill="#fafafa" />
+        <Bar x={6} y={38} w={16} fill="#71717a" />
+      </Sheet>
+    </>
+  ),
+  email: (
+    <>
+      <Sheet x={22} y={14} w={60} h={62} tilt={-7} fill="#99f6e4" />
+      <Sheet x={36} y={10} w={64} h={72} tilt={4}>
+        <Bar x={24} y={6} w={16} h={3} fill={INK} />
+        <rect x={5} y={14} width={54} height={22} rx={2} fill="url(#art-dusk)" />
+        <Bar x={5} y={41} w={40} h={4} fill={INK} />
+        <Bar x={5} y={48} w={54} />
+        <Bar x={5} y={53} w={48} />
+        <rect x={20} y={60} width={24} height={7} rx={3.5} fill="#0d9488" />
+      </Sheet>
+    </>
+  ),
+  deck: (
+    <>
+      <Sheet x={14} y={18} w={70} h={44} tilt={-7} fill="#bef264" />
+      <Sheet x={26} y={22} w={78} h={50} tilt={3} fill="#18181b">
+        <Bar x={7} y={9} w={14} h={2.5} fill="#a3e635" />
+        <Bar x={7} y={17} w={40} h={5} fill="#fafafa" />
+        <Bar x={7} y={25} w={30} h={5} fill="#fafafa" />
+        <rect x={50} y={30} width={6} height={12} rx={1} fill="#3f3f46" />
+        <rect x={58} y={24} width={6} height={18} rx={1} fill="#52525b" />
+        <rect x={66} y={14} width={6} height={28} rx={1} fill="#a3e635" />
+        <Bar x={7} y={38} w={22} fill="#71717a" />
+      </Sheet>
+    </>
+  ),
 };
 
 export function TemplateArt({ kind, className }: { kind: string; className?: string }) {

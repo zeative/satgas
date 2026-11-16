@@ -15,6 +15,8 @@ export const en = {
     title: "Templates",
     previous: "Previous templates",
     next: "More templates",
+    filter: "Show templates for",
+    groups: { all: "All", websites: "Websites", apps: "Apps", marketing: "Marketing" },
     items: {
       website: {
         name: "Landing page",
@@ -55,6 +57,21 @@ export const en = {
         name: "Browser game",
         prompt:
           "Build a browser game: {a space courier dodging asteroids to deliver parcels on time}. It starts right away on the keyboard, gets harder as it goes, and keeps a score and a restart.",
+      },
+      social: {
+        name: "Social posts",
+        prompt:
+          "Design a set of six Instagram posts for {Kopi Senja launching its new single-origin from Flores}: a square 1080 × 1080 page for each post, with the headline, the photo direction and the caption under it. Keep them one series, in one look.",
+      },
+      email: {
+        name: "Email newsletter",
+        prompt:
+          "Design an email newsletter for {Batik Lestari's new collection}: a header, the story behind the collection, four products with prices in rupiah and one clear button. Keep it 600 px wide and readable on a phone.",
+      },
+      deck: {
+        name: "Pitch deck",
+        prompt:
+          "Build a pitch deck as a web page of 16:9 slides for {Rute, route planning for small courier teams}: the problem, the product, how it works, the market, traction, the team and the ask. Use believable sample numbers, and move between slides with the arrow keys.",
       },
     },
   },
@@ -1853,6 +1870,8 @@ export const id: typeof en = {
     title: "Template",
     previous: "Template sebelumnya",
     next: "Template lainnya",
+    filter: "Tampilkan template untuk",
+    groups: { all: "Semua", websites: "Website", apps: "Aplikasi", marketing: "Marketing" },
     items: {
       website: {
         name: "Landing page",
@@ -1893,6 +1912,21 @@ export const id: typeof en = {
         name: "Game browser",
         prompt:
           "Bikin game browser: {kurir luar angkasa yang menghindari asteroid supaya paket sampai tepat waktu}. Langsung mulai pakai keyboard, makin lama makin susah, ada skor dan tombol ulang.",
+      },
+      social: {
+        name: "Konten sosmed",
+        prompt:
+          "Desain enam post Instagram untuk {Kopi Senja yang meluncurkan single-origin baru dari Flores}: satu halaman persegi 1080 × 1080 untuk tiap post, dengan headline, arahan fotonya, dan caption di bawahnya. Buat satu seri dengan satu gaya.",
+      },
+      email: {
+        name: "Newsletter email",
+        prompt:
+          "Desain newsletter email untuk {koleksi baru Batik Lestari}: header, cerita di balik koleksinya, empat produk dengan harga rupiah, dan satu tombol yang jelas. Lebarnya 600 px dan tetap enak dibaca di HP.",
+      },
+      deck: {
+        name: "Pitch deck",
+        prompt:
+          "Bikin pitch deck berupa halaman web berisi slide 16:9 untuk {Rute, perencana rute untuk tim kurir kecil}: masalahnya, produknya, cara kerjanya, pasarnya, traksi, tim, dan permintaannya. Pakai contoh angka yang masuk akal, dan pindah slide pakai tombol panah.",
       },
     },
   },
