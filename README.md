@@ -97,6 +97,10 @@ flowchart LR
 - **A design panel.** Pick any element in a frame to see its layers and properties: size with hug and fill, padding and margin, text styles, fill, border, radius, effects. Changes preview on the page at once; Apply hands them to the team to write into the source.
 - **Direct edits.** Double-click words to rewrite them in place, drag a label to scrub a number, hold <kbd>⌥</kbd> to measure spacing, and undo with <kbd>⌘Z</kbd>.
 - **Tweaks.** The page's design tokens in one list. Change a colour or a radius and the whole page follows; a token defined once is written straight into the stylesheet.
+- **Comments and components.** Pin a comment to an element and send it to the team when you are ready. An element drawn from a shared component says so, since a change there reaches every copy.
+- **Variations.** Ask for three takes on any page, by layout, by style or bolder, and they land as frames beside it.
+- **Marketing at its real size.** Social posts, stories, 16:9 slides and emails get frames of their own shape. Export any frame as a PNG at full size: a post at 1080 × 1080, a slide at 1920 × 1080.
+- **Start from a website.** Paste a site's address in the composer's + menu and the team gets a picture of it to rebuild or redesign. Only public addresses are opened.
 - **Canvas or chat.** Switch with <kbd>⌘J</kbd>. Chat Only shows the same cards inline and is the default on small screens.
 - **Sessions and forks.** A board holds several chats that share its canvas and team. A fork copies the whole board so you can try another direction.
 

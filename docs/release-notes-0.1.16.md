@@ -9,6 +9,13 @@ Design on the canvas, the way a design tool works.
 - **Direct manipulation.** Double-click words to edit them on the page, drag a label to scrub a number, hold Alt to measure spacing, walk layers with Enter, Shift+Enter and Tab, and undo with Cmd+Z.
 - **Frames like a design canvas.** Pages run edge to edge with their name, route and tools in a label above, and Play opens a page large and live. Labels keep one size at any zoom. Selection is a crisp blue rectangle with handles on its corners.
 - **Fitted cards.** The team's docs, tables and code take the height of what they hold.
+- **Pinned comments.** Pin a comment to an element of a page; it stays on that element and goes to the team when you send it.
+- **Components.** An element drawn from a shared component names it and warns that a change reaches every copy.
+- **Variations.** Explore three takes on a page by layout, style or a bolder direction, built beside it as frames.
+- **Marketing formats.** Social posts, stories, slides and emails get frames at their real shape, and the visual check photographs them at their own size.
+- **Export PNG.** Any frame exports as a picture at full size, from the same browser the team checks its work with.
+- **Start from a website.** The composer imports a public site as a picture with a redesign brief.
+- **Templates by kind.** Websites, Apps and Marketing, with new templates for social posts, an email newsletter and a pitch deck. Agent cursors name the model at work.
 
 ## Faster
 
