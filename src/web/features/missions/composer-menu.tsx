@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Blocks, Paperclip, Plus, ScrollText, Server, Settings2, TriangleAlert } from "lucide-react";
+import { Blocks, Globe, Paperclip, Plus, ScrollText, Server, Settings2, TriangleAlert } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -20,7 +20,15 @@ import { loadSkills, useSkills } from "@/stores/skills";
 import type { Settings } from "../../../shared/settings";
 
 // The composer's + menu, shared by Home and the board: files, skills, agent switches and connectors.
-export function ComposerMenu({ onSkill, onAddFiles }: { onSkill?: (name: string) => void; onAddFiles?: () => void }) {
+export function ComposerMenu({
+  onSkill,
+  onAddFiles,
+  onImportSite,
+}: {
+  onSkill?: (name: string) => void;
+  onAddFiles?: () => void;
+  onImportSite?: () => void;
+}) {
   const settings = useSettings((s) => s.settings);
   const loadError = useSettings((s) => s.error);
   const [retrying, setRetrying] = useState(false);
@@ -43,6 +51,12 @@ export function ComposerMenu({ onSkill, onAddFiles }: { onSkill?: (name: string)
           <DropdownMenuItem onClick={onAddFiles}>
             <Paperclip />
             {t.attach.add}
+          </DropdownMenuItem>
+        )}
+        {onImportSite && (
+          <DropdownMenuItem onClick={onImportSite}>
+            <Globe />
+            {t.importSite.menu}
           </DropdownMenuItem>
         )}
         {onSkill && <SkillsSub onPick={onSkill} />}

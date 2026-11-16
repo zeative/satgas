@@ -179,6 +179,18 @@ export const en = {
 
   plotting: "Plotting the route",
   cancel: "Cancel",
+  importSite: {
+    menu: "Start from a website",
+    title: "Start from a website",
+    lead: "Satgas opens the site and attaches a picture of how it looks today. The team rebuilds or redesigns it from there.",
+    field: "Website address",
+    action: "Import",
+    working: "Opening the site…",
+    failed: "The site could not be opened",
+    brief: (url: string) =>
+      `Redesign ${url} as a new site: keep what it offers, its pages and its content, and make it {clearer, faster to read and more modern}. The attached picture shows the site as it looks today.`,
+    line: (url: string) => `The attached picture shows ${url} as it looks today.`,
+  },
   save: "Save",
   cancelling: "Cancelling…",
   connected: "Connected",
@@ -2038,6 +2050,18 @@ export const id: typeof en = {
 
   plotting: "Komandan memetakan rute",
   cancel: "Batal",
+  importSite: {
+    menu: "Mulai dari website",
+    title: "Mulai dari website",
+    lead: "Satgas membuka situsnya dan melampirkan gambar tampilannya sekarang. Tim membangun ulang atau mendesain ulang dari situ.",
+    field: "Alamat website",
+    action: "Impor",
+    working: "Membuka situs…",
+    failed: "Situsnya tidak bisa dibuka",
+    brief: (url) =>
+      `Desain ulang ${url} jadi situs baru: pertahankan yang ditawarkan, halaman-halamannya, dan isinya, lalu buat {lebih jelas, lebih cepat dibaca, dan lebih modern}. Gambar terlampir menunjukkan tampilan situsnya sekarang.`,
+    line: (url) => `Gambar terlampir menunjukkan tampilan ${url} sekarang.`,
+  },
   save: "Simpan",
   cancelling: "Membatalkan…",
   connected: "Terhubung",

@@ -105,6 +105,8 @@ import { BoardName } from "./board-name";
 import { clearQuotes, QuoteChips, useBoardQuotes } from "./cite";
 import { DropHint, FilePicker } from "./composer";
 import { ComposerMenu } from "./composer-menu";
+import { withTemplate } from "./composer-seed";
+import { ImportSite } from "./import-site";
 import { ModelPicker } from "./model-picker";
 import { ProviderNotice, useNeedsProvider } from "./provider-gate";
 import { AskedNote, QuestionComposer } from "./questions";
@@ -1971,6 +1973,7 @@ function ChatComposer({ run, live, onSent }: { run: Run; live: boolean; onSent: 
   const draft = saved.text;
   const [sending, setSending] = useState(false);
   const [stopping, setStopping] = useState(false);
+  const [importing, setImporting] = useState(false);
   const field = useRef<HTMLTextAreaElement>(null);
   const picker = useRef<HTMLInputElement>(null);
   const { over, handlers } = useFileDrop(saved);
@@ -2030,6 +2033,12 @@ function ChatComposer({ run, live, onSent }: { run: Run; live: boolean; onSent: 
       )}
     >
       {over && <DropHint />}
+      <ImportSite
+        open={importing}
+        onOpenChange={setImporting}
+        draft={saved}
+        onBrief={(prompt) => saved.setText(withTemplate(saved.text, prompt).text)}
+      />
       {needsProvider && <ProviderNotice />}
       {context.length > 0 && <ContextChip cards={run.board?.cards ?? []} ids={context} onClear={() => setSetAside(selection.join(","))} />}
       <QuoteChips runId={run.id} />
@@ -2057,6 +2066,7 @@ function ChatComposer({ run, live, onSent }: { run: Run; live: boolean; onSent: 
       <div className="flex items-center gap-1 px-1.5 pt-1 pb-1.5">
         <ComposerMenu
           onAddFiles={() => picker.current?.click()}
+          onImportSite={() => setImporting(true)}
           onSkill={(name) => {
             const token = `/${name}`;
             if (!draft.split(/\s+/).includes(token)) saved.setText(`${token} ${draft.trimStart()}`);

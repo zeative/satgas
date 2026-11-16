@@ -12,6 +12,7 @@ import { loadSettings, useSettings } from "@/stores/settings";
 import { AttachmentTiles, attach, SightNote, useFileDrop, useSight } from "./attachments";
 import { ComposerMenu } from "./composer-menu";
 import { withTemplate } from "./composer-seed";
+import { ImportSite } from "./import-site";
 import { ModelPicker } from "./model-picker";
 import { ProviderGate, useNeedsProvider } from "./provider-gate";
 import { TokenField, useTokenCatalog } from "./token-field";
@@ -31,6 +32,7 @@ function ComposerForm({ className, seed }: { className?: string; seed?: Composer
   const value = draft.text;
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [importing, setImporting] = useState(false);
   const textarea = useRef<HTMLTextAreaElement>(null);
   const selecting = useRef<ReturnType<typeof withTemplate> | null>(null);
   const picker = useRef<HTMLInputElement>(null);
@@ -152,7 +154,7 @@ function ComposerForm({ className, seed }: { className?: string; seed?: Composer
           </p>
         )}
         <div className="flex items-center gap-1 px-2.5 pt-1 pb-2.5">
-          <ComposerMenu onSkill={pick} onAddFiles={() => picker.current?.click()} />
+          <ComposerMenu onSkill={pick} onAddFiles={() => picker.current?.click()} onImportSite={() => setImporting(true)} />
           <ModelPicker />
           <Button
             type="submit"
@@ -167,6 +169,7 @@ function ComposerForm({ className, seed }: { className?: string; seed?: Composer
         </div>
         <FilePicker inputRef={picker} onFiles={(files) => void attach(draft, files)} />
       </form>
+      <ImportSite open={importing} onOpenChange={setImporting} draft={draft} onBrief={fill} />
     </div>
   );
 }

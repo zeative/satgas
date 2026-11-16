@@ -59,7 +59,7 @@ import {
   stopRun,
   unqueuePrompt,
 } from "./orchestrator";
-import { shootFrame } from "./page-shot";
+import { shootFrame, shootSite } from "./page-shot";
 import { providerStatuses, testProvider } from "./providers";
 import { checkPull, linkPull, startPullWatch, updatePull } from "./pulls";
 import { workspaceTree } from "./refs";
@@ -1051,6 +1051,19 @@ const server: Server<SocketData> = Bun.serve({
         if (typeof body?.allow !== "boolean") return error(400, "Say allow true or false.");
         const problem = await decideSetup(req.params.id, round, index, body.allow);
         return problem ? error(409, problem) : new Response(null, { status: 204 });
+      }),
+    },
+    // A public site as a picture, to start a design from it the way a design tool imports a page.
+    "/api/capture": {
+      POST: api(async (req) => {
+        if (!isTrusted(req)) return forbidden();
+        const body = (await req.json().catch(() => null)) as { url?: unknown } | null;
+        if (typeof body?.url !== "string" || body.url.length > 2000) return error(400, "Send { url }.");
+        const shot = await shootSite(body.url);
+        if (!shot.ok) return error(409, shot.error);
+        return new Response(shot.png, {
+          headers: { "content-type": "image/png", "cache-control": "no-store", "x-satgas-url": encodeURI(shot.url ?? "") },
+        });
       }),
     },
     // A web app on the board: start or stop it, share it with anyone who has the link, read what it printed.

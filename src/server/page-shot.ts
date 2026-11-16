@@ -16,7 +16,8 @@ export type Shot = { ok: true; png: ArrayBuffer } | { ok: false; error: string }
 let queue: Promise<unknown> = Promise.resolve();
 const NO_BROWSER = "Pictures need agent-browser, which the Satgas image includes. Install it with: npm i -g agent-browser";
 
-async function shoot(url: string, w: number, h: number, full: boolean): Promise<Shot> {
+// full: the whole page; a number: the page down to that many pixels, so a very long site stays one readable picture.
+async function shoot(url: string, w: number, h: number, full: boolean | number): Promise<Shot> {
   const dir = join(config.dataDir, "shots");
   await mkdir(dir, { recursive: true });
   const file = join(dir, `${crypto.randomUUID()}.png`);
@@ -27,7 +28,13 @@ async function shoot(url: string, w: number, h: number, full: boolean): Promise<
     if ((await ab("open", url)).code !== 0) return { ok: false, error: "The page did not open." };
     await ab("wait", "1500");
     if (full) await scrollThrough(ab, h);
-    if ((await ab("screenshot", ...(full ? ["--full"] : []), file)).code !== 0) return { ok: false, error: "The picture failed." };
+    if (typeof full === "number") {
+      const tall = Number((await ab("eval", "document.documentElement.scrollHeight")).out.match(/\d+/)?.[0] ?? h);
+      await ab("set", "viewport", String(w), String(Math.max(h, Math.min(tall, full))));
+      await ab("wait", "600");
+    }
+    const whole = full === true;
+    if ((await ab("screenshot", ...(whole ? ["--full"] : []), file)).code !== 0) return { ok: false, error: "The picture failed." };
     const bytes = await readFile(file);
     return { ok: true, png: bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer };
   } finally {
@@ -105,6 +112,6 @@ export async function publicUrl(raw: string): Promise<URL | string> {
 export async function shootSite(raw: string): Promise<Shot & { url?: string }> {
   const url = await publicUrl(raw);
   if (typeof url === "string") return { ok: false, error: url };
-  const shot = await serial(() => shoot(url.href, 1440, 900, true));
+  const shot = await serial(() => shoot(url.href, 1440, 900, 900 * 6));
   return { ...shot, url: url.href };
 }
