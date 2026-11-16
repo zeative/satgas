@@ -20,7 +20,6 @@ import { cn } from "@/lib/utils";
 import { useRuns } from "@/stores/runs";
 import { loadSettings, saveSettings, useSettings } from "@/stores/settings";
 import { CATALOG, CATEGORIES } from "../../../shared/catalog";
-import type { Runtime } from "../../../shared/providers";
 import type { McpServer } from "../../../shared/settings";
 import type { PackId } from "../../../shared/skills";
 import type { ToolSetting } from "../../../shared/tools";
