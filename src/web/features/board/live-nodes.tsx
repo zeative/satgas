@@ -22,7 +22,10 @@ import type { Tail } from "../team/tail";
 import { SLOT_H, SLOT_PAD, SLOT_W, STEP_H, type Step } from "./live";
 
 export type SlotNodeType = Node<{ title: string; who: { id: string; name: string } | null; steps: Step[] }, "slot">;
-export type CursorNodeType = Node<{ who: { id: string; name: string }; now: Tail | null; typing: boolean; area?: Box }, "cursor">;
+export type CursorNodeType = Node<
+  { who: { id: string; name: string }; model?: string; now: Tail | null; typing: boolean; area?: Box },
+  "cursor"
+>;
 
 // Where a running task's work will land, showing the work as it happens: its latest steps, newest at the bottom.
 export const SlotNode = memo(function SlotNode({ data }: NodeProps<SlotNodeType>) {
@@ -99,7 +102,7 @@ const STEP_ICON: Partial<Record<Step["kind"], LucideIcon>> = {
 
 // A teammate's pointer on the board, on the card they touch this moment, tagged with their name in their own colour.
 export const CursorNode = memo(function CursorNode({ data }: NodeProps<CursorNodeType>) {
-  const { who, typing, area } = data;
+  const { who, model, typing, area } = data;
   const ink = avatarInk(who.id);
   return (
     // On a live page the part in work is outlined in the teammate's colour, as Figma shows a collaborator's selection,
@@ -121,8 +124,10 @@ export const CursorNode = memo(function CursorNode({ data }: NodeProps<CursorNod
         <svg viewBox="0 0 16 16" className="size-4 shrink-0">
           <path d="M2 1.5 14 7.2 8.4 8.6 6 14.5Z" fill={ink} stroke="#0d0d0e" strokeWidth="1" />
         </svg>
-        <span className="mt-3 rounded px-2 py-1 whitespace-nowrap" style={{ background: ink }}>
+        <span className="mt-3 flex items-center gap-1.5 rounded px-2 py-1 whitespace-nowrap" style={{ background: ink }}>
           {who.name}
+          {/* Which model does the work, the way a design tool names the agent behind a cursor. */}
+          {model && <span className="font-normal opacity-60">{model}</span>}
         </span>
       </div>
     </div>

@@ -15,3 +15,8 @@ export function prettyClaude(id: string): string | null {
   if (!p) return null;
   return `Claude ${p.family[0]?.toUpperCase()}${p.family.slice(1)} ${p.minor ? `${p.major}.${p.minor}` : p.major}`;
 }
+
+// A model's name as short as a label can carry it: "Haiku 5.5" for a Claude id, the id itself for anything else.
+export function shortModel(id: string): string {
+  return prettyClaude(id)?.replace(/^Claude /, "") ?? id;
+}

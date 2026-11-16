@@ -39,8 +39,10 @@ import { setCanvasMoving, useCanvasMoving, useFrames } from "@/stores/frames";
 import { usePanel } from "@/stores/panel";
 import { uploadImage, useRuns } from "@/stores/runs";
 import { setBoardSelection } from "@/stores/selection";
+import { useSettings } from "@/stores/settings";
 import { type Board, type BoardOp, type Card, type ColorName, DEFAULT_SIZE, emptyBoard, type ShapeKind } from "../../../shared/board";
 import { insideOwnFrame } from "../../../shared/board-blocks";
+import { shortModel } from "../../../shared/claude-id";
 import { flowLinks } from "../../../shared/flow";
 import {
   crew,
@@ -476,12 +478,18 @@ function Canvas({ run, selectedTaskId, onSelectTask, panelOpen }: Props) {
   const logs = useRuns((s) => s.logs);
   const layouts = useFrames();
   const live = useMemo(() => (exporting ? { slots: [], cursors: [] } : liveWork(run, logs, layouts)), [run, logs, layouts, exporting]);
+  const agents = useSettings((s) => s.settings?.agents);
   const liveNodes = useMemo<BoardNode[]>(() => {
     const names = new Map(people.map((m) => [m.id, m.name]));
     const who = (task: NodeState) => {
       const id = memberIdOf(task);
       const name = names.get(id);
       return name ? { id, name } : null;
+    };
+    // The model a running task works on, as the settings pin it; none when the CLI keeps its own default.
+    const modelOf = (task: NodeState) => {
+      const used = Object.keys(task.usage?.byModel ?? {})[0] ?? agents?.[task.agent]?.model;
+      return used ? shortModel(used) : undefined;
     };
     return [
       ...live.slots.map(
@@ -504,7 +512,7 @@ function Canvas({ run, selectedTaskId, onSelectTask, panelOpen }: Props) {
                 id: `cursor:${c.task.id}`,
                 type: "cursor",
                 position: { x: c.x, y: c.y },
-                data: { who: w, now: c.now, typing: c.typing, area: c.area },
+                data: { who: w, model: modelOf(c.task), now: c.now, typing: c.typing, area: c.area },
                 draggable: false,
                 selectable: false,
                 deletable: false,
@@ -516,7 +524,7 @@ function Canvas({ run, selectedTaskId, onSelectTask, panelOpen }: Props) {
           : [];
       }),
     ];
-  }, [live, people]);
+  }, [live, people, agents]);
   const shown = useMemo(() => (liveNodes.length ? [...nodes, ...liveNodes] : nodes), [nodes, liveNodes]);
   // Only a working round's talk is drawn; once it ends the chat keeps the words.
   const asks = isLiveRun(run) ? run.talk?.[Math.max(0, ...run.nodes.map((n) => n.round ?? 0))]?.asks : undefined;
