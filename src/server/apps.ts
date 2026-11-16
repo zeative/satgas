@@ -5,7 +5,7 @@
 
 import { join, resolve, sep } from "node:path";
 import type { Subprocess } from "bun";
-import type { BoardOp, Card } from "../shared/board";
+import { type BoardOp, type Card, DEVICE_SIZE, FORMATS, type Format, isFormat } from "../shared/board";
 import type { RunApp } from "../shared/types";
 import { ANSI, childEnv } from "./agents/process";
 import bridgeSource from "./app-bridge.js.txt" with { type: "text" };
@@ -230,21 +230,31 @@ export function shareApp(runId: string, name: string, shared: boolean) {
 }
 
 // The pages an app lists for the board, one frame each: `.satgas/screens.json` in its folder, as
-// [{ "route": "/", "name": "Home" }], or { "device": "phone", "screens": [...] } for a phone app. An app that lists none
-// shows its first page.
+// [{ "route": "/", "name": "Home" }], or { "device": "phone", "screens": [...] } for a phone app. A page can name its own
+// device too: "phone", or a piece of marketing at its real size ("post", "story", "slide", "email"). An app that lists
+// none shows its first page.
 const SCREENS_FILE = ".satgas/screens.json";
 const MAX_SCREENS = 12;
 const FRAME = { w: 960, h: 1000 };
 const PHONE_FRAME = { w: 420, h: 876 };
+// A piece of marketing is drawn at half its size (an email at its own), so a post and a slide read at a glance.
+const formatFrame = (f: Format) => {
+  const { w, h } = DEVICE_SIZE[f];
+  const k = f === "email" ? 1 : 0.5;
+  return { w: Math.round(w * k), h: Math.round(h * k) };
+};
 const FRAME_GAP = 80;
 
 export interface Screen {
   route: string;
   name: string;
-  device?: "phone";
+  device?: "phone" | Format;
   // The picture this page was cloned from (a reference or one of its parts), so it can be judged against it.
   target?: string;
 }
+
+const deviceOf = (d: unknown): Screen["device"] =>
+  d === "phone" ? "phone" : typeof d === "string" && (FORMATS as readonly string[]).includes(d) ? (d as Format) : undefined;
 
 export async function screensOf(runId: string, name: string): Promise<Screen[]> {
   const run = getRun(runId);
@@ -257,7 +267,7 @@ export async function screensOf(runId: string, name: string): Promise<Screen[]> 
     : null;
   const doc = list as { device?: unknown; screens?: unknown } | null;
   const items = Array.isArray(list) ? list : Array.isArray(doc?.screens) ? doc.screens : [];
-  const phone = !Array.isArray(list) && doc?.device === "phone";
+  const whole = Array.isArray(list) ? undefined : deviceOf(doc?.device);
   const seen = new Set<string>();
   const out: Screen[] = [];
   for (const s of items) {
@@ -270,7 +280,7 @@ export async function screensOf(runId: string, name: string): Promise<Screen[]> 
     out.push({
       route,
       name: title,
-      ...(phone || s?.device === "phone" ? { device: "phone" as const } : {}),
+      ...((deviceOf(s?.device) ?? whole) ? { device: deviceOf(s?.device) ?? whole } : {}),
       ...(target ? { target } : {}),
     });
     if (out.length >= MAX_SCREENS) break;
@@ -289,9 +299,13 @@ export async function showScreens(runId: string, name: string, from?: string) {
   const cards = run.board?.cards ?? [];
   const frames = cards.filter((c) => c.kind === "preview" && c.app === name);
   const phoneApp = screens.every((s) => s.device === "phone");
-  const shown = new Set(frames.filter((c) => (c.device === "phone") === phoneApp).map((c) => c.route ?? "/"));
-  const missing = screens.filter((s) => !shown.has(s.route));
-  const phone = phoneApp || frames.some((c) => c.device === "phone");
+  // Social posts, slides and emails are pieces at their own size: no extra phone copy in front of them.
+  const piecesOnly = screens.every((s) => isFormat(s.device));
+  // A frame shows a listed page when it is at that page's route and device; the phone copy of the first page aside.
+  const kind = (d: Card["device"]) => (d === "phone" || isFormat(d) ? d : "screen");
+  const shown = new Set(frames.map((c) => `${c.route ?? "/"}|${kind(c.device)}`));
+  const missing = screens.filter((s) => !shown.has(`${s.route}|${kind(s.device ?? (phoneApp ? "phone" : undefined))}`));
+  const phone = phoneApp || piecesOnly || frames.some((c) => c.device === "phone");
   // A page renamed in the list renames its frames.
   const renames: BoardOp[] = frames.flatMap((c) => {
     const s = screens.find((x) => x.route === (c.route ?? "/"));
@@ -314,7 +328,13 @@ export async function showScreens(runId: string, name: string, from?: string) {
   });
   const fresh: Omit<Card, "x" | "y">[] = [
     ...(phone ? [] : [{ ...base(screens[0] as Screen, 0, PHONE_FRAME), device: "phone" as const }]),
-    ...missing.map((s, i) => (s.device === "phone" ? { ...base(s, i + 1, PHONE_FRAME), device: "phone" as const } : base(s, i + 1, FRAME))),
+    ...missing.map((s, i) =>
+      s.device === "phone"
+        ? { ...base(s, i + 1, PHONE_FRAME), device: "phone" as const }
+        : isFormat(s.device)
+          ? { ...base(s, i + 1, formatFrame(s.device)), device: s.device }
+          : base(s, i + 1, FRAME),
+    ),
   ];
   // The row starts where the app's frames already are, or where the work that started it sits.
   let x: number;

@@ -265,3 +265,34 @@ test("a phone app's pages are all phone frames, with no desktop copy", async () 
   expect((await screensOf(id, "web")).map((s) => s.target)).toEqual(["design/refs/ref-01/part-1.jpg", undefined]);
   await stopApp(id, "web");
 });
+
+// Social posts and slides are pieces at their real size, side by side like a design file's frames, and no phone copy.
+test("marketing pieces get frames at their own format, and a format on the whole list applies to each page", async () => {
+  const cwd = join(dir, "workspaces", "post-screens");
+  await mkdir(join(cwd, ".satgas"), { recursive: true });
+  await Bun.write(
+    join(cwd, ".satgas/screens.json"),
+    JSON.stringify({
+      device: "post",
+      screens: [
+        { route: "/post-1", name: "Post 1" },
+        { route: "/post-2", name: "Post 2" },
+        { route: "/deck", name: "Deck", device: "slide" },
+        { route: "/x", name: "Odd", device: "billboard" },
+      ],
+    }),
+  );
+  const id = createRun("bikin konten sosmed", cwd).id;
+  expect((await startApp(id, "web", SERVER, ".", "t1")).ok).toBe(true);
+  const frames = () => (getRun(id)?.board?.cards ?? []).filter((c) => c.app === "web");
+  expect(frames().map((c) => [c.title, c.device, c.w, c.h])).toEqual([
+    ["Post 1", "post", 540, 540],
+    ["Post 2", "post", 540, 540],
+    ["Deck", "slide", 960, 540],
+    // A device Satgas does not know falls back to the list's own.
+    ["Odd", "post", 540, 540],
+  ]);
+  await showScreens(id, "web", "t2");
+  expect(frames()).toHaveLength(4);
+  await stopApp(id, "web");
+});

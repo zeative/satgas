@@ -6,13 +6,17 @@ import {
   Globe,
   Link2,
   Lock,
+  Mail,
   Monitor,
   MoreHorizontal,
   Plus,
   Power,
+  Presentation,
+  RectangleVertical,
   RotateCw,
   SlidersHorizontal,
   Smartphone,
+  Square,
   SquareDashedMousePointer,
   Tablet,
 } from "lucide-react";
@@ -45,18 +49,26 @@ import {
   useInspect,
 } from "@/stores/inspect";
 import { useRuns } from "@/stores/runs";
-import { type Card, DEVICES, type Device } from "../../../shared/board";
+import { type Card, DEVICE_SIZE, type Device, isFixed, isFormat, SCREENS } from "../../../shared/board";
 import { LabelControls, newId, useBoard } from "./context";
 import { BarButton, PageFrame } from "./page-frame";
 import { PinLayer, type PinRects } from "./pins";
 
 const tb = t.board.browser;
 // The screen each frame stands for, so the page's viewport units keep their real size while the frame shows all of it.
-const SCREEN_H: Record<Device, number> = { desktop: 800, tablet: 1024, phone: 844 };
+const screenH = (d: Device) => DEVICE_SIZE[d].h;
 const BAR_H = 32;
 // A page taller than this keeps its frame here and scrolls inside it.
 const MAX_PAGE_H = 16_000;
-const DEVICE_ICON = { desktop: Monitor, tablet: Tablet, phone: Smartphone } satisfies Record<Device, unknown>;
+const DEVICE_ICON = {
+  desktop: Monitor,
+  tablet: Tablet,
+  phone: Smartphone,
+  post: Square,
+  story: RectangleVertical,
+  slide: Presentation,
+  email: Mail,
+} satisfies Record<Device, unknown>;
 
 const appCall = async (runId: string, name: string, action: "start" | "stop" | "share" | "unshare") => {
   const res = await fetch(`/api/runs/${runId}/apps/${name}/${action}`, {
@@ -173,15 +185,16 @@ export function AppBody({ card, interactive, large }: { card: Card; interactive:
   const runRef = useRef(runMode);
   runRef.current = runMode;
   useEffect(() => send({ type: "run", mode: runMode }), [runMode, send]);
-  useEffect(() => send({ type: "screen", h: SCREEN_H[device] }), [device, send]);
+  useEffect(() => send({ type: "screen", h: screenH(device) }), [device, send]);
   // The frame is as tall as the whole page, the way a design file shows a screen, so nobody scrolls inside it.
   const scale = useFrames((s) => s[card.id]?.scale);
   const height = useRef(card.h);
   height.current = card.h;
   useEffect(() => {
     if (large || !pageH || !scale) return;
-    // Never shorter than one screen of its device, so a page still loading, empty or showing its error stays readable.
-    const want = Math.ceil(Math.max(pageH, SCREEN_H[device]) * scale);
+    // Never shorter than one screen of its device, so a page still loading, empty or showing its error stays readable;
+    // a post, a story or a slide is exactly its own size whatever its page holds.
+    const want = Math.ceil((isFixed(device) ? screenH(device) : Math.max(pageH, screenH(device))) * scale);
     if (Math.abs(want - height.current) <= 8) return;
     const id = setTimeout(() => commit([{ op: "patch", id: card.id, patch: { h: want } }]), 300);
     return () => clearTimeout(id);
@@ -261,7 +274,9 @@ export function AppBody({ card, interactive, large }: { card: Card; interactive:
           : "bg-muted-foreground/50",
   );
   const DeviceIcon = DEVICE_ICON[device];
-  const nextDevice = DEVICES[(DEVICES.indexOf(device) + 1) % DEVICES.length] ?? "desktop";
+  // A page cycles through the screens it is read on; a piece of marketing keeps its format and names it.
+  const format = isFormat(device);
+  const nextDevice = format ? device : (SCREENS[(SCREENS.indexOf(device as (typeof SCREENS)[number]) + 1) % SCREENS.length] ?? "desktop");
   // What the label above the frame holds on the board: the page it shows, then its tools, quiet until hovered.
   const controls = (
     <>
@@ -279,9 +294,19 @@ export function AppBody({ card, interactive, large }: { card: Card; interactive:
         >
           <SlidersHorizontal />
         </BarButton>
-        <BarButton label={`${tb.device}: ${tb.devices[device]}`} onClick={() => setDevice(nextDevice)} className="@max-[16rem]:hidden">
-          <DeviceIcon />
-        </BarButton>
+        {format ? (
+          <span
+            title={`${tb.devices[device]} · ${DEVICE_SIZE[device].w} × ${DEVICE_SIZE[device].h}`}
+            className="flex h-6 items-center gap-1 px-1.5 text-[11px] text-muted-foreground @max-[16rem]:hidden [&_svg]:size-3.5"
+          >
+            <DeviceIcon aria-hidden="true" />
+            {tb.devices[device]}
+          </span>
+        ) : (
+          <BarButton label={`${tb.device}: ${tb.devices[device]}`} onClick={() => setDevice(nextDevice)} className="@max-[16rem]:hidden">
+            <DeviceIcon />
+          </BarButton>
+        )}
         <BarButton label={t.board.reload} onClick={reload} className="@max-[20rem]:hidden">
           <RotateCw />
         </BarButton>
@@ -399,8 +424,8 @@ export function AppBody({ card, interactive, large }: { card: Card; interactive:
           >
             <SlidersHorizontal />
           </BarButton>
-          <fieldset aria-label={tb.device} className="m-0 flex items-center border-0 p-0">
-            {DEVICES.map((d) => {
+          <fieldset aria-label={tb.device} className={cn("m-0 flex items-center border-0 p-0", format && "hidden")}>
+            {SCREENS.map((d) => {
               const Icon = DEVICE_ICON[d];
               return (
                 <BarButton key={d} label={tb.devices[d]} pressed={device === d} onClick={() => setDevice(d)}>
@@ -445,7 +470,7 @@ export function AppBody({ card, interactive, large }: { card: Card; interactive:
             h={card.h}
             onLoad={() => {
               send({ type: "run", mode: runRef.current });
-              send({ type: "screen", h: SCREEN_H[device] });
+              send({ type: "screen", h: screenH(device) });
               send({ type: "mode", pick: useInspect.getState().picking === card.id });
             }}
             onGeometry={large ? undefined : geometry}

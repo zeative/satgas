@@ -2,6 +2,7 @@ import { mkdir, readdir, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { runClaude } from "./agents/claude";
 import { runCodex } from "./agents/codex";
+import { DEVICE_SIZE, type Format, isFixed, isFormat } from "../shared/board";
 import { portOf, type Screen, screensOf } from "./apps";
 import { config } from "./config";
 import { repeatedDisplay } from "./fonts-used";
@@ -116,7 +117,13 @@ export async function visualCheck(runId: string, label: string): Promise<VisualC
     // A phone app is seen the way a phone shows it: one screen with its bars in place, then the same screen scrolled to
     // the end. A full-page picture would leave a fixed tab bar floating in the middle.
     const phone = screens.every((s) => s.device === "phone");
-    const sizes = phone ? [WIDTHS[1]] : WIDTHS;
+    // A post, a story, a slide or an email is seen at its own size only, the way it will be posted or sent.
+    const pieces = screens.every((s) => isFormat(s.device));
+    const sizes: readonly (readonly [number, number])[] = pieces
+      ? [...new Set(screens.map((s) => s.device as Format))].map((f) => [DEVICE_SIZE[f].w, DEVICE_SIZE[f].h] as const)
+      : phone
+        ? [WIDTHS[1]]
+        : WIDTHS;
     const url = (s: Screen) => `http://127.0.0.1:${port}${app.path}${s.route.replace(/^\//, "")}`;
     const keep = (i: number, file: string) => {
       shots.push(file);
@@ -127,14 +134,17 @@ export async function visualCheck(runId: string, label: string): Promise<VisualC
       for (const [w, h] of sizes) {
         await ab("set", "viewport", String(w), String(h));
         for (const [i, s] of screens.entries()) {
+          if (pieces && DEVICE_SIZE[s.device as Format].w !== w) continue;
+          if (pieces && DEVICE_SIZE[s.device as Format].h !== h) continue;
           await ab("open", url(s));
           await ab("wait", "1500");
           const facts = evalJson((await ab("eval", COLLECT)).out) as PageFacts | null;
           const findings = facts?.texts ? auditFindings(facts, w) : [];
           if (findings.length) audit.push({ route: s.route, width: w, findings });
-          if (!phone) await scrollThrough(ab, h);
+          const fixed = phone || (pieces && isFixed(s.device));
+          if (!fixed) await scrollThrough(ab, h);
           const file = join(out, `${slug(s.route)}-${w}.png`);
-          if ((await ab("screenshot", ...(phone ? [] : ["--full"]), file)).code === 0) keep(i, file);
+          if ((await ab("screenshot", ...(fixed ? [] : ["--full"]), file)).code === 0) keep(i, file);
           if (!phone) continue;
           const tall = await ab("eval", "document.documentElement.scrollHeight > innerHeight + 40");
           if (!tall.out.includes("true")) continue;
@@ -277,7 +287,7 @@ export function checkMessage(check: VisualCheck, cwd: string, review?: Review | 
     );
   } else if (check.shots.length) {
     steps.push(
-      `Satgas took a picture of every page (full page at 1440 and 390 wide; a phone app as the phone shows it, then scrolled to the end). Open each one next to its target in design/refs/:\n${check.shots.map((s) => `- ${rel(s)}`).join("\n")}\nScore every page from 1 to 10 on each of: alignment to the grid, spacing rhythm, type scale and hierarchy, consistency with the hub screens in design/hubs/ and with the other pages, pictures (real, well cropped), states, and how it holds at 390. Then the hard test: set each picture beside its target. Would it sit on Dribbble's popular page next to it, or does it read as a template? Write the scores and every failure in design/review.md, then fix all of them.`,
+      `Satgas took a picture of every page (full page at 1440 and 390 wide; a phone app as the phone shows it, then scrolled to the end; a post, story, slide or email at its own size). Open each one next to its target in design/refs/:\n${check.shots.map((s) => `- ${rel(s)}`).join("\n")}\nScore every page from 1 to 10 on each of: alignment to the grid, spacing rhythm, type scale and hierarchy, consistency with the hub screens in design/hubs/ and with the other pages, pictures (real, well cropped), states, and how it holds at 390. Then the hard test: set each picture beside its target. Would it sit on Dribbble's popular page next to it, or does it read as a template? Write the scores and every failure in design/review.md, then fix all of them.`,
     );
   }
   steps.push(

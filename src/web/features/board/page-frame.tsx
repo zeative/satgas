@@ -1,10 +1,7 @@
 import { type Ref, useLayoutEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import type { Device } from "../../../shared/board";
-
-// The widths pages are drawn at: a common laptop, an iPad in portrait, an iPhone. Phones are where pages break.
-export const DEVICE_W: Record<Device, number> = { desktop: 1280, tablet: 768, phone: 390 };
+import { DEVICE_SIZE, type Device } from "../../../shared/board";
 
 export function BarButton({
   label,
@@ -82,7 +79,7 @@ export function PageFrame({
   }, []);
   // The page is laid out at its device's width and fills the frame's width, like a design file's frame: a phone page in
   // a wider card grows to fit it instead of sitting on a mat.
-  const view = device === "desktop" ? Math.max(DEVICE_W.desktop, size.w) : DEVICE_W[device];
+  const view = device === "desktop" ? Math.max(DEVICE_SIZE.desktop.w, size.w) : DEVICE_SIZE[device].w;
   const scale = size.w > 0 ? size.w / view : 1;
   useLayoutEffect(() => onGeometry?.({ scale, left: 0 }), [onGeometry, scale]);
   return (

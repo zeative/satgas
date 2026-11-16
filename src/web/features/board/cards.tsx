@@ -7,7 +7,7 @@ import { InlineText, Markdown } from "@/components/markdown";
 import { openExternal } from "@/components/outbound-link";
 import { t } from "@/i18n";
 import { cn } from "@/lib/utils";
-import { type Card, isPdf } from "../../../shared/board";
+import { type Card, DEVICE_SIZE, isFixed, isFormat, isPdf } from "../../../shared/board";
 import { MiniFace } from "../team/face";
 import { AppBody } from "./app-frame";
 import { FullDetail, keyedSrc, LabelControls, LabelSlot, useBoard } from "./context";
@@ -99,7 +99,10 @@ export const CardNode = memo(function CardNode({ data, selected, width, height }
       {/* Its size under a lone selected card, live while resizing, as a design tool shows a frame's dimensions. */}
       {card.kind !== "drawing" && solo && !editing && (
         <span aria-hidden="true" className="satgas-size-badge pointer-events-none absolute left-1/2 z-10 -translate-x-1/2">
-          {Math.round(width ?? card.w)} × {Math.round(height ?? card.h)}
+          {/* A post or a slide names the size it is made at, whatever room it takes on the board. */}
+          {card.kind === "preview" && isFormat(card.device)
+            ? `${DEVICE_SIZE[card.device].w} × ${isFixed(card.device) ? DEVICE_SIZE[card.device].h : Math.round(((height ?? card.h) * DEVICE_SIZE[card.device].w) / (width ?? card.w))}`
+            : `${Math.round(width ?? card.w)} × ${Math.round(height ?? card.h)}`}
         </span>
       )}
 
@@ -493,7 +496,7 @@ function CardResizer({ card, onStart, onEnd }: { card: Card; onStart: () => void
     <NodeResizer
       isVisible
       // A picture stretches only in proportion, like on any whiteboard; Shift keeps the proportion for anything else.
-      keepAspectRatio={card.kind === "image" || shift}
+      keepAspectRatio={card.kind === "image" || (card.kind === "preview" && isFixed(card.device)) || shift}
       minWidth={minW}
       minHeight={minH}
       lineClassName="satgas-select-line border-selection!"

@@ -126,8 +126,29 @@ export interface Board {
   moved: Record<string, { x: number; y: number }>;
 }
 
-export const DEVICES = ["desktop", "tablet", "phone"] as const;
+// What a page frame stands for: a screen a site is read on, or a piece of marketing made at its real size.
+export const SCREENS = ["desktop", "tablet", "phone"] as const;
+export const FORMATS = ["post", "story", "slide", "email"] as const;
+export const DEVICES = [...SCREENS, ...FORMATS] as const;
 export type Device = (typeof DEVICES)[number];
+export type Format = (typeof FORMATS)[number];
+
+// The size each one is drawn at, in CSS pixels: a common laptop, an iPad in portrait, an iPhone; a square social post,
+// a story, a 16:9 slide and an email at the width mail apps keep. The height is one screen of it.
+export const DEVICE_SIZE: Record<Device, { w: number; h: number }> = {
+  desktop: { w: 1280, h: 800 },
+  tablet: { w: 768, h: 1024 },
+  phone: { w: 390, h: 844 },
+  post: { w: 1080, h: 1080 },
+  story: { w: 1080, h: 1920 },
+  slide: { w: 1920, h: 1080 },
+  email: { w: 600, h: 900 },
+};
+
+export const isFormat = (d: Device | undefined): d is Format => !!d && (FORMATS as readonly string[]).includes(d);
+// A post, a story and a slide are exactly their size, the way a design file's frame is; a page and an email run as
+// long as what they hold.
+export const isFixed = (d: Device | undefined) => d === "post" || d === "story" || d === "slide";
 
 export type BoardOp =
   | { op: "put"; card: Card }

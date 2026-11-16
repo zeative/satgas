@@ -29,6 +29,12 @@ team ships a first version: real screens, real copy, real-looking data, working 
   Satgas shows each finished page to a reviewer who never saw you build it, beside that picture.
 - A phone app (scaffold it with `--phone`) lists its pages as `{ "device": "phone", "screens": [ ... ] }`, so every page
   is a phone frame and none is stretched to desktop width.
+- Marketing is made at its real size, one route per piece, and each piece names its format: `"post"` (1080 × 1080),
+  `"story"` (1080 × 1920), `"slide"` (1920 × 1080) or `"email"` (600 wide, as long as it runs), as
+  `{ "device": "post", "screens": [{ "route": "/post-1", "name": "Post 1" }, ...] }` or `"device"` on one page. Satgas
+  draws each as a frame of exactly that format, never at phone width, and the person exports it as a PNG at full size.
+  Lay a post, a story or a slide out to fill its canvas exactly (`h-screen w-screen overflow-hidden`), with nothing below
+  the fold; a deck is one route per slide, with the arrow keys moving to the next and previous route.
 - Pages that need data show believable sample data from the API or from `src/data/`, never an empty state as the main view.
 - Each section of a page is its own component, in `src/components/<page>/` (`Hero.tsx`, `ServiceList.tsx`), with shared
   pieces in `src/components/ui/`. Build one section to finished before starting the next.
