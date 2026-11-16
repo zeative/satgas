@@ -1128,6 +1128,13 @@ export const en = {
       exporting: "Taking the picture…",
       exported: "PNG saved",
       exportFailed: "The picture failed",
+      variations: "Explore variations",
+      variationsSent: "Asked the team for three variations",
+      variation: {
+        layout: { name: "Layout", hint: "Same look, new arrangement" },
+        style: { name: "Style", hint: "Same layout, new look" },
+        bolder: { name: "Bolder", hint: "Further from the original" },
+      },
       tweaks: "Tweaks",
     },
     inspect: {
@@ -3000,6 +3007,13 @@ export const id: typeof en = {
       exporting: "Mengambil gambar…",
       exported: "PNG tersimpan",
       exportFailed: "Gambar gagal diambil",
+      variations: "Jelajahi variasi",
+      variationsSent: "Tim diminta membuat tiga variasi",
+      variation: {
+        layout: { name: "Tata letak", hint: "Gaya sama, susunan baru" },
+        style: { name: "Gaya", hint: "Susunan sama, tampilan baru" },
+        bolder: { name: "Lebih berani", hint: "Lebih jauh dari aslinya" },
+      },
       tweaks: "Tweaks",
     },
     inspect: {

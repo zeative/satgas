@@ -75,7 +75,6 @@ export function ImportSite({
               aria-hidden="true"
             />
             <Input
-              // biome-ignore lint/a11y/noAutofocus: the dialog opens to take this one address.
               autoFocus
               type="url"
               inputMode="url"

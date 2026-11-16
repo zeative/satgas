@@ -15,6 +15,7 @@ import {
   Presentation,
   RectangleVertical,
   RotateCw,
+  Shuffle,
   SlidersHorizontal,
   Smartphone,
   Square,
@@ -30,6 +31,9 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -49,11 +53,12 @@ import {
   undoStyle,
   useInspect,
 } from "@/stores/inspect";
-import { useRuns } from "@/stores/runs";
+import { sendPrompt, useRuns } from "@/stores/runs";
 import { type Card, DEVICE_SIZE, type Device, isFixed, isFormat, SCREENS } from "../../../shared/board";
 import { LabelControls, newId, useBoard } from "./context";
 import { BarButton, PageFrame } from "./page-frame";
 import { PinLayer, type PinRects } from "./pins";
+import { VARIATIONS, variationsPrompt } from "./variations";
 
 const tb = t.board.browser;
 // The screen each frame stands for, so the page's viewport units keep their real size while the frame shows all of it.
@@ -363,6 +368,28 @@ export function AppBody({ card, interactive, large }: { card: Card; interactive:
                 {t.board.open}
               </DropdownMenuItem>
             )}
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger disabled={!running}>
+                <Shuffle />
+                {tb.variations}
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent className="w-56">
+                {VARIATIONS.map((kind) => (
+                  <DropdownMenuItem
+                    key={kind}
+                    className="flex-col items-start gap-0"
+                    onSelect={() =>
+                      void sendPrompt(runId, variationsPrompt(name, card.title || route, route, device, kind), [], [card.id])
+                        .then(() => toast.success(tb.variationsSent))
+                        .catch((e: Error) => toast.error(e.message))
+                    }
+                  >
+                    <span>{tb.variation[kind].name}</span>
+                    <span className="text-xs text-muted-foreground">{tb.variation[kind].hint}</span>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
             <DropdownMenuItem disabled={!running} onSelect={exportPng}>
               <Download />
               {tb.exportPng(DEVICE_SIZE[device].w)}
